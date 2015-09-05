@@ -38,7 +38,7 @@ find_package(poco REQUIRED HINTS ${POCO})
 add_definitions(-DPOCO_STATIC)
 add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K}/include ${DCMTK_INCLUDE_DIRS} ${POCO}/include )
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K}/include ${DCMTK_INCLUDE_DIRS} ${POCO}/include ${ZLIB_INCLUDE_DIRS})
 LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib)
 
 set(fmdscp_HEADERS
@@ -48,6 +48,7 @@ set(fmdscp_HEADERS
 set(fmdscp_SRCS
   ${fmdscp_HEADERS}
 	src/main.cpp
+	src/myscp.cpp
 	sqlite3/sqlite3.c
 	sqlite3/sqlite3_exec_stmt.c
 )
@@ -78,15 +79,14 @@ TARGET_LINK_LIBRARIES(fmdscp
 	${DCMTK_LIBRARIES}
 	${Boost_LIBRARIES}
 	${Poco_LIBRARIES}
-	PocoDatad
-PocoDataODBCd
-PocoDataSQLited
-PocoFoundationd
-PocoJSONd
-PocoMongoDBd
-PocoNetd
-PocoUtild
-PocoXMLd
-PocoZipd
+	debug PocoDatad optimized PocoData
+  debug PocoDataODBCd optimized PocoDataODBC
+  debug PocoDataSQLited optimized PocoDataSQLite
+  debug PocoFoundationd optimized PocoFoundation
+  PocoJSONd 
+  PocoNetd
+  PocoUtild
+  PocoXMLd
+  PocoZipd
 	${OS_SPECIFIC_LIBS}
 	)

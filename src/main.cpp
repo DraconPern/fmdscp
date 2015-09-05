@@ -7,6 +7,22 @@
 #include "Poco/DateTimeFormatter.h"
 #include <iostream>
 
+// work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
+#ifdef _UNICODE
+#undef _UNICODE
+#undef UNICODE
+#define _UNDEFINEDUNICODE
+#endif
+
+#include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
+#include "dcmtk/dcmnet/scppool.h"   /* for DcmStorageSCP */
+
+#ifdef _UNDEFINEDUNICODE
+#define _UNICODE 1
+#define UNICODE 1
+#endif
+
+#include "myscp.h"
 
 using Poco::Util::Application;
 using Poco::Util::ServerApplication;
@@ -18,24 +34,80 @@ using Poco::Task;
 using Poco::TaskManager;
 using Poco::DateTimeFormatter;
 
+/* DICOM standard transfer syntaxes */
+static const char* transferSyntaxes[] = {
+      UID_LittleEndianImplicitTransferSyntax, /* default xfer syntax first */
+      UID_LittleEndianExplicitTransferSyntax,
+      UID_JPEGProcess1TransferSyntax,
+      UID_JPEGProcess2_4TransferSyntax,
+      UID_JPEGProcess3_5TransferSyntax,
+      UID_JPEGProcess6_8TransferSyntax,
+      UID_JPEGProcess7_9TransferSyntax,
+      UID_JPEGProcess10_12TransferSyntax,
+      UID_JPEGProcess11_13TransferSyntax,
+      UID_JPEGProcess14TransferSyntax,
+      UID_JPEGProcess15TransferSyntax,
+      UID_JPEGProcess16_18TransferSyntax,
+      UID_JPEGProcess17_19TransferSyntax,
+      UID_JPEGProcess20_22TransferSyntax,
+      UID_JPEGProcess21_23TransferSyntax,
+      UID_JPEGProcess24_26TransferSyntax,
+      UID_JPEGProcess25_27TransferSyntax,
+      UID_JPEGProcess28TransferSyntax,
+      UID_JPEGProcess29TransferSyntax,
+      UID_JPEGProcess14SV1TransferSyntax,
+      UID_RLELosslessTransferSyntax,
+      UID_JPEGLSLosslessTransferSyntax,
+      UID_JPEGLSLossyTransferSyntax,
+      UID_DeflatedExplicitVRLittleEndianTransferSyntax,
+      UID_JPEG2000LosslessOnlyTransferSyntax,
+      UID_JPEG2000TransferSyntax,
+      UID_MPEG2MainProfileAtMainLevelTransferSyntax,
+      UID_MPEG2MainProfileAtHighLevelTransferSyntax,
+      UID_JPEG2000Part2MulticomponentImageCompressionLosslessOnlyTransferSyntax,
+      UID_JPEG2000Part2MulticomponentImageCompressionTransferSyntax,
+      UID_MPEG4HighProfileLevel4_1TransferSyntax,
+      UID_MPEG4BDcompatibleHighProfileLevel4_1TransferSyntax,
+      UID_MPEG4HighProfileLevel4_2_For2DVideoTransferSyntax,
+      UID_MPEG4HighProfileLevel4_2_For3DVideoTransferSyntax,
+      UID_MPEG4StereoHighProfileLevel4_2TransferSyntax
+};
 
 class SampleTask: public Task
 {
 public:
+
 	SampleTask(): Task("SampleTask")
 	{
 	}
 	
 	void runTask()
-	{
+	{	
 		Application& app = Application::instance();
-		while (!sleep(5000))
-		{
-			Application::instance().logger().information("busy doing nothing... " + DateTimeFormatter::format(app.uptime()));
-		}
-	}
-};
 
+		storageSCP.getConfig().setConnectionBlockingMode(DUL_NOBLOCK);
+		storageSCP.getConfig().setConnectionTimeout(1);
+
+		OFList<OFString> syntaxes;
+		for(int i = 0; i < DIM_OF(transferSyntaxes); i++)
+			syntaxes.push_back(transferSyntaxes[i]);		
+
+		storageSCP.getConfig().addPresentationContext(UID_VerificationSOPClass, syntaxes);
+
+		for(int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
+			storageSCP.getConfig().addPresentationContext(dcmAllStorageSOPClassUIDs[i], syntaxes);
+
+
+		storageSCP.listen();
+	}
+
+	void cancel()
+	{
+		storageSCP.stopAfterCurrentAssociations();
+	}
+
+	DcmSCPPool<MySCP> storageSCP;
+};
 
 class SampleServer: public ServerApplication
 {
