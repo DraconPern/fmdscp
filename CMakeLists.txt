@@ -32,6 +32,9 @@ find_package(zlib REQUIRED ${ZLIB_ROOT})
 find_package(openjpeg HINTS ${OPENJPEG})
 add_definitions(-DOPJ_STATIC)
 
+#include mysql
+find_package(MySQL)
+
 #include poco
 #SET(poco_DIR ${POCO}/lib/cmake/Poco)
 find_package(poco REQUIRED HINTS ${POCO})
@@ -43,18 +46,30 @@ LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/l
 
 set(fmdscp_HEADERS
 	sqlite3/sqlite3.h
+	src/myscp.h
+	src/store.h
+	src/config.h
+	src/util.h	
+	src/server.h
+	src/ndcappender.h
 )
 
 set(fmdscp_SRCS
   ${fmdscp_HEADERS}
 	src/main.cpp
 	src/myscp.cpp
+	src/store.cpp
+	src/config.cpp
+	src/util.cpp
+	src/server.cpp
+	src/ndcappender.cpp
 	sqlite3/sqlite3.c
 	sqlite3/sqlite3_exec_stmt.c
 )
 
 if(WIN32)
 #  set(fmdscp_SRCS ${fmdscp_SRCS} src/win/dovo.rc)
+	add_definitions(-D_WIN32_WINNT=0x0501)	
 endif(WIN32)
 
 ADD_EXECUTABLE(fmdscp MACOSX_BUNDLE ${fmdscp_SRCS})
@@ -82,11 +97,14 @@ TARGET_LINK_LIBRARIES(fmdscp
 	debug PocoDatad optimized PocoData
   debug PocoDataODBCd optimized PocoDataODBC
   debug PocoDataSQLited optimized PocoDataSQLite
+  debug PocoDataMySQLd optimized PocoDataMySQL
   debug PocoFoundationd optimized PocoFoundation
   PocoJSONd 
   PocoNetd
   PocoUtild
   PocoXMLd
   PocoZipd
+     ${MYSQL_LIB}
 	${OS_SPECIFIC_LIBS}
 	)
+

@@ -1,5 +1,8 @@
-#include "Poco/Util/WinRegistryConfiguration.h"
+#include <boost/filesystem.hpp>
+#include <codecvt>
 #include "Poco/Path.h"
+
+using namespace Poco;
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -9,7 +12,6 @@
 #endif
 
 #include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
-#include "myscp.h"       /* for base class DcmSCP */
 #include "dcmtk/dcmnet/diutil.h"
 
 #ifdef _UNDEFINEDUNICODE
@@ -17,19 +19,24 @@
 #define UNICODE 1
 #endif
 
-using Poco::Util::WinRegistryConfiguration;
-using Poco::AutoPtr;
-using Poco::Path;
+#include "myscp.h"
+#include "config.h"
+#include "store.h"
 
 MySCP::MySCP()
-	: DcmThreadSCP()    
+	: DcmThreadSCP()
 {
-
+	// do per association initialization
 }
 
 MySCP::~MySCP()
 {
 
+}
+
+void MySCP::setUUID(boost::uuids::uuid uuid)
+{
+	uuid_ = uuid;
 }
 
 OFCondition MySCP::handleIncomingCommand(T_DIMSE_Message *incomingMsg,
@@ -79,27 +86,25 @@ OFCondition MySCP::handleSTORERequest(T_DIMSE_C_StoreRQ &reqMessage,
 	OFCondition status = EC_IllegalParameter;
 	Uint16 rspStatusCode = STATUS_STORE_Error_CannotUnderstand;
 
-	// get storage location or use temp
-	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
+	// get storage location or use temp	
+	boost::filesystem::path filename = Config::getTempPath();
+	filename /= dcmSOPClassUIDToModality(reqMessage.AffectedSOPClassUID) + std::string("-") + reqMessage.AffectedSOPInstanceUID + ".dcm";
 
-	std::string tempPath = pConf->getString("TempPath", "%SystemRoot%\\TEMP");
-	Path filepath = Path::expand(tempPath);
-	filepath.append("fmdscp");
-	filepath.append(dcmSOPClassUIDToModality(reqMessage.AffectedSOPClassUID) + std::string("-") + reqMessage.AffectedSOPInstanceUID + ".dcm");
-
-	OFString filename = filepath.toString().c_str();
 	// generate filename with full path (and create subdirectories if needed)
 	status = EC_Normal;
 	if (status.good())
 	{
-		if (OFStandard::fileExists(filename))
+		if (boost::filesystem::exists(filename))
 			DCMNET_WARN("file already exists, overwriting: " << filename);
+
 		// receive dataset directly to file
-		status = receiveSTORERequest(reqMessage, presID, filename);
+		std::string p = filename.string(std::codecvt_utf8<boost::filesystem::path::value_type>());
+		status = receiveSTORERequest(reqMessage, presID, p.c_str());
 		if (status.good())
 		{
-			// call the notification handler (default implementation outputs to the logger)
-			// notifyInstanceStored(filename, reqMessage.AffectedSOPClassUID, reqMessage.AffectedSOPInstanceUID);
+			// call the notification handler
+			StoreHandler storehandler;
+			status = storehandler.handleSTORERequest(filename);
 			rspStatusCode = STATUS_Success;
 		}
 	}
@@ -117,7 +122,7 @@ OFCondition MySCP::handleSTORERequest(T_DIMSE_C_StoreRQ &reqMessage,
 }
 
 OFCondition MySCP::handleFINDRequest(T_DIMSE_C_FindRQ &reqMessage,
-									  const T_ASC_PresentationContextID presID)
+									 const T_ASC_PresentationContextID presID)
 {
 	OFCondition status = EC_IllegalParameter;
 
@@ -125,7 +130,7 @@ OFCondition MySCP::handleFINDRequest(T_DIMSE_C_FindRQ &reqMessage,
 }
 
 OFCondition MySCP::handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage,
-									  const T_ASC_PresentationContextID presID)
+									 const T_ASC_PresentationContextID presID)
 {
 	OFCondition status = EC_IllegalParameter;
 
