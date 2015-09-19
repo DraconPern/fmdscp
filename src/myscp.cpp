@@ -22,6 +22,7 @@ using namespace Poco;
 #include "myscp.h"
 #include "config.h"
 #include "store.h"
+#include "find.h"
 
 MySCP::MySCP()
 	: DcmThreadSCP()
@@ -37,6 +38,13 @@ MySCP::~MySCP()
 void MySCP::setUUID(boost::uuids::uuid uuid)
 {
 	uuid_ = uuid;
+}
+
+OFCondition MySCP::run(T_ASC_Association* incomingAssoc)
+{
+	// save a copy because SCP's m_assoc is private :(   also note DcmThreadSCP is friend class of SCP, and that's how m_assoc is set
+	assoc_ = incomingAssoc;
+	return DcmThreadSCP::run(incomingAssoc);	
 }
 
 OFCondition MySCP::handleIncomingCommand(T_DIMSE_Message *incomingMsg,
@@ -126,6 +134,12 @@ OFCondition MySCP::handleFINDRequest(T_DIMSE_C_FindRQ &reqMessage,
 {
 	OFCondition status = EC_IllegalParameter;
 
+	FindHandler handler;
+	status = DIMSE_findProvider(assoc_, presID, &reqMessage, FindHandler::FindCallback, &handler, getDIMSEBlockingMode(), getDIMSETimeout());
+
+	if (status.bad()) {
+		// DCMNET_ERROR("Find SCP Failed: " << DimseCondition::dump(temp_str, cond));
+	}
 	return status;
 }
 

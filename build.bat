@@ -39,7 +39,7 @@ cmake .. -G "Visual Studio 11" -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DDCMTK_DIR
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 cd ..\..
 
-// need to copy C:\Program Files (x86)\MySQL\MySQL Connector.C 6.1\lib\vs11\mysqlclient.lib to 
+// need to copy C:\Program Files (x86)\MySQL\MySQL Connector.C 6.1\lib\vs11\mysqlclient.lib to
 // C:\Program Files (x86)\MySQL\MySQL Connector.C 6.1\lib\opt\
 
 cd %DEVSPACE%\poco
@@ -52,7 +52,7 @@ cd ..\..
 cd %DEVSPACE%
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G "Visual Studio 11" -DCMAKE_BUILD_TYPE=%TYPE% -DCMAKE_MODULE_PATH=f:/fmdscp/poco/cmake -DBOOST_ROOT=%DEVSPACE%\boost -DDCMTK_DIR=%DEVSPACE%\dcmtk\build-%TYPE% -DZLIB_ROOT=%DEVSPACE%\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE%
+cmake .. -G "Visual Studio 11" -DCMAKE_BUILD_TYPE=%TYPE% -DBOOST_ROOT=%DEVSPACE%\boost -DDCMTK_DIR=%DEVSPACE%\dcmtk\build-%TYPE% -DZLIB_ROOT=%DEVSPACE%\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE%
 msbuild /P:Configuration=%TYPE% ALL_BUILD.vcxproj
 cd ..
 

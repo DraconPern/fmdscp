@@ -4,6 +4,8 @@ project(fmdscp)
 
 set(VERSION "1.1.0")
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
 SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
 SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
@@ -13,6 +15,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 add_definitions(-DFMDSCP_VERSION="${VERSION}")
 
 #VC++ stuff
+#add_definitions(-D_WIN32_WINNT=0x0502)
 add_definitions(-D_UNICODE)
 add_definitions(-D_BIND_TO_CURRENT_VCLIBS_VERSION=1)
 
@@ -41,6 +44,7 @@ find_package(poco REQUIRED HINTS ${POCO})
 add_definitions(-DPOCO_STATIC)
 add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
 
+
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K}/include ${DCMTK_INCLUDE_DIRS} ${POCO}/include ${ZLIB_INCLUDE_DIRS})
 LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib)
 
@@ -48,8 +52,9 @@ set(fmdscp_HEADERS
 	sqlite3/sqlite3.h
 	src/myscp.h
 	src/store.h
+	src/find.h
 	src/config.h
-	src/util.h	
+	src/util.h
 	src/server.h
 	src/ndcappender.h
 )
@@ -59,6 +64,7 @@ set(fmdscp_SRCS
 	src/main.cpp
 	src/myscp.cpp
 	src/store.cpp
+	src/find.cpp
 	src/config.cpp
 	src/util.cpp
 	src/server.cpp
@@ -69,7 +75,7 @@ set(fmdscp_SRCS
 
 if(WIN32)
 #  set(fmdscp_SRCS ${fmdscp_SRCS} src/win/dovo.rc)
-	add_definitions(-D_WIN32_WINNT=0x0501)	
+	add_definitions(-D_WIN32_WINNT=0x0501)
 endif(WIN32)
 
 ADD_EXECUTABLE(fmdscp MACOSX_BUNDLE ${fmdscp_SRCS})
@@ -99,7 +105,7 @@ TARGET_LINK_LIBRARIES(fmdscp
   debug PocoDataSQLited optimized PocoDataSQLite
   debug PocoDataMySQLd optimized PocoDataMySQL
   debug PocoFoundationd optimized PocoFoundation
-  PocoJSONd 
+  PocoJSONd
   PocoNetd
   PocoUtild
   PocoXMLd
@@ -107,4 +113,3 @@ TARGET_LINK_LIBRARIES(fmdscp
      ${MYSQL_LIB}
 	${OS_SPECIFIC_LIBS}
 	)
-

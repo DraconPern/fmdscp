@@ -4,9 +4,9 @@
 
 using namespace std;
 
-NDCAsFilenameAppender::NDCAsFilenameAppender(const tstring& path)
+NDCAsFilenameAppender::NDCAsFilenameAppender(const tstring& log_dir)
 {
-	path_ = path.c_str();
+	path_ = log_dir.c_str();
 }
 
 NDCAsFilenameAppender::~NDCAsFilenameAppender()

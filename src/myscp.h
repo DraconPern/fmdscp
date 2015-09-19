@@ -38,15 +38,18 @@ public:
 
 	void setUUID(boost::uuids::uuid uuid);
 
+	// override run simply because we need a copy of assoc
+	virtual OFCondition run(T_ASC_Association* incomingAssoc);
 protected:
 	virtual OFCondition handleIncomingCommand(T_DIMSE_Message *incomingMsg,
 		const DcmPresentationContextInfo &presInfo);
 
-	OFCondition handleSTORERequest(T_DIMSE_C_StoreRQ &reqMessage, const T_ASC_PresentationContextID presID);
-	OFCondition handleFINDRequest(T_DIMSE_C_FindRQ &reqMessage, const T_ASC_PresentationContextID presID);
-	OFCondition handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage, const T_ASC_PresentationContextID presID);
+	virtual OFCondition handleSTORERequest(T_DIMSE_C_StoreRQ &reqMessage, const T_ASC_PresentationContextID presID);
+	virtual OFCondition handleFINDRequest(T_DIMSE_C_FindRQ &reqMessage, const T_ASC_PresentationContextID presID);
+	virtual OFCondition handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage, const T_ASC_PresentationContextID presID);
 
 	boost::uuids::uuid uuid_;
+	T_ASC_Association *assoc_;	//copy of the association
 };
 
 /// Provides the glue code to glue the thread pool, thread worker and the SCP together

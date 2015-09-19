@@ -24,7 +24,7 @@ using namespace dcmtk::log4cplus;
 class NDCAsFilenameAppender : public Appender
 {
 public:
-	NDCAsFilenameAppender(const tstring& path);
+	NDCAsFilenameAppender(const tstring& log_dir);
 	virtual ~NDCAsFilenameAppender();
 
 	virtual void close();
