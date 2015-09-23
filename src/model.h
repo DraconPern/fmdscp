@@ -1,6 +1,6 @@
 #ifndef __MODEL_H__
 #define __MODEL_H__
-
+/*
 #include <string>
 #include "poco/Tuple.h"
 
@@ -46,5 +46,5 @@ typedef Poco::Tuple<
 	Poco::DateTime, // created_at
 	Poco::DateTime  // updated_at
 > Instance;
-
+*/
 #endif

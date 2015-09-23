@@ -1,7 +1,7 @@
 ﻿#include <boost/algorithm/string.hpp>
 
 #include "store.h"
-
+/*
 #include "poco/File.h"
 #include "Poco/Data/Session.h"
 #include "poco/Tuple.h"
@@ -9,10 +9,13 @@
 using namespace Poco;
 using namespace Poco::Data;
 using namespace Poco::Data::Keywords;
-
+*/
 #include "model.h"
 #include "config.h"
 #include "util.h"
+
+#include "soci/soci.h"
+#include "soci/mysql/soci-mysql.h"
 
 OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 {
@@ -97,13 +100,13 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	seriesuid = textbuf.c_str();
 	dfile.getDataset()->findAndGetOFString(DCM_StudyInstanceUID, textbuf);
 	studyuid = textbuf.c_str();
-
+	/*
 	try
 	{
 
 		// create a session
 		Session session(Config::getDBPool().get());
-		// Session session("MySQL", Config::getConnectionString());
+		
 
 		//		if(cbdata->last_studyuid != studyuid)
 		{
@@ -309,5 +312,6 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	{
 		std::string what = e.displayText();
 	}
+	*/
 	return true;
 }
