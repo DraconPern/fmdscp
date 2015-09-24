@@ -1,13 +1,10 @@
 #include "config.h"
 
 #include "Poco/Util/WinRegistryConfiguration.h"
-#include "Poco/Data/Session.h"
 #include "poco/Path.h"
-#include "Poco/Data/SessionPool.h"
 
 using namespace Poco;
 using namespace Poco::Util;
-using namespace Poco::Data;
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -43,8 +40,6 @@ using namespace Poco::Data;
 #define _UNICODE 1
 #define UNICODE 1
 #endif
-
-Poco::AutoPtr<SessionPool> Config::_pool;
 
 boost::filesystem::path Config::getTempPath()
 {
@@ -97,14 +92,8 @@ std::string Config::getConnectionString()
 
 void Config::createDBPool()
 {
-	_pool = new SessionPool("MySQL", getConnectionString());
+	//_pool = new SessionPool("MySQL", getConnectionString());
 }
-
-SessionPool &Config::getDBPool()
-{	
-	return (*_pool);
-}
-
 
 bool Config::test(std::string &errormsg)
 {
@@ -113,13 +102,13 @@ bool Config::test(std::string &errormsg)
 	try
 	{		
 		// test database connection	
-		Session session("MySQL", Config::getConnectionString());
+		// Session session("MySQL", Config::getConnectionString());
 	}	
-	catch(Poco::DataException &e)
+	/*catch(Poco::DataException &e)
 	{
 		errormsg = e.displayText();
 		result = false;
-	}
+	}*/
 	catch(std::exception &e)
 	{
 		errormsg = e.what();
@@ -149,9 +138,9 @@ bool Config::test(std::string &errormsg)
 
 		boost::filesystem::remove(storageTest);
 	}
-	catch(Poco::FileException &e)
+	catch(std::exception &e)
 	{
-		errormsg = e.displayText();
+		errormsg = e.what();
 		result = false;
 	}
 

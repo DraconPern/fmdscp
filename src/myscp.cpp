@@ -22,7 +22,7 @@ using namespace Poco;
 #include "myscp.h"
 #include "config.h"
 #include "store.h"
-#include "find.h"
+// #include "find.h"
 
 MySCP::MySCP()
 	: DcmThreadSCP()
@@ -133,10 +133,10 @@ OFCondition MySCP::handleFINDRequest(T_DIMSE_C_FindRQ &reqMessage,
 									 const T_ASC_PresentationContextID presID)
 {
 	OFCondition status = EC_IllegalParameter;
-
+	/*
 	FindHandler handler;
 	status = DIMSE_findProvider(assoc_, presID, &reqMessage, FindHandler::FindCallback, &handler, getDIMSEBlockingMode(), getDIMSETimeout());
-
+	*/
 	if (status.bad()) {
 		// DCMNET_ERROR("Find SCP Failed: " << DimseCondition::dump(temp_str, cond));
 	}

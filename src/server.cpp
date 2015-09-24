@@ -1,7 +1,7 @@
 #include "server.h"
 #include "config.h"
 
-#include "Poco/Data/MySQL/Connector.h"
+#include "soci/mysql/soci-mysql.h"
 #include <boost/asio/io_service.hpp>
 #include "ndcappender.h"
 
@@ -13,7 +13,7 @@ server::server()
 	my_log.addAppender(logfile);
 
 	// do server wide init
-	Poco::Data::MySQL::Connector::registerConnector();
+	soci::register_factory_mysql();
 
 	Config::registerCodecs();
 

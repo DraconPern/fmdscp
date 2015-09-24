@@ -3,12 +3,6 @@
 
 #include <boost/filesystem.hpp>
 
-#include "poco/AutoPtr.h"
-#include "Poco/Data/SessionPool.h"
-
-using Poco::AutoPtr;
-using Poco::Data::SessionPool;
-
 class Config
 {
 
@@ -19,10 +13,10 @@ public:
 	static void deregisterCodecs();
 	static std::string getConnectionString();
 	static void createDBPool();
-	static Poco::Data::SessionPool &getDBPool();
+	// static Poco::Data::SessionPool &getDBPool();
 	static bool test(std::string &errormsg);
 protected:
-	static Poco::AutoPtr<SessionPool> _pool;
+	// static Poco::AutoPtr<SessionPool> _pool;
 };
 
 #endif // CONFIG_H

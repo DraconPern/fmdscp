@@ -1,4 +1,5 @@
 #include <boost/filesystem.hpp>
+#include <winsock2.h>
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -22,5 +23,5 @@ class StoreHandler
 
 public:
 	OFCondition handleSTORERequest(boost::filesystem::path filename);
-	bool AddDICOMFileInfoToDatabase(boost::filesystem::path filename);	
+	bool AddDICOMFileInfoToDatabase(boost::filesystem::path filename);
 };

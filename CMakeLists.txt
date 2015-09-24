@@ -35,24 +35,30 @@ find_package(zlib REQUIRED ${ZLIB_ROOT})
 find_package(openjpeg HINTS ${OPENJPEG})
 add_definitions(-DOPJ_STATIC)
 
+#include fmjpeg2k
+find_package(fmjpeg2k REQUIRED HINTS ${FMJPEG2K})
+
 #include mysql
-find_package(MySQL)
+find_package(MySQL REQUIRED)
 
 #include poco
-#SET(poco_DIR ${POCO}/lib/cmake/Poco)
+SET(poco_DIR ${POCO}/lib/cmake/Poco)
 find_package(poco REQUIRED HINTS ${POCO})
 add_definitions(-DPOCO_STATIC)
 add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
 
+#find_package(Soci REQUIRED HINTS ${SOCI_DIR})
+add_definitions(-DSOCI_USE_BOOST)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K}/include ${DCMTK_INCLUDE_DIRS} ${POCO}/include ${ZLIB_INCLUDE_DIRS})
-LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib)
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${SOCI_DIR}/include)
+LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${SOCI_DIR}/lib ${MYSQL_LIB_DIR})
 
 set(fmdscp_HEADERS
 	sqlite3/sqlite3.h
 	src/myscp.h
 	src/store.h
-	src/find.h
+#	src/find.h
+	src/model.h
 	src/config.h
 	src/util.h
 	src/server.h
@@ -64,7 +70,7 @@ set(fmdscp_SRCS
 	src/main.cpp
 	src/myscp.cpp
 	src/store.cpp
-	src/find.cpp
+#	src/find.cpp
 	src/config.cpp
 	src/util.cpp
 	src/server.cpp
@@ -93,23 +99,23 @@ if(APPLE)
 ENDIF()
 
 TARGET_LINK_LIBRARIES(fmdscp
-	fmjpeg2k
-
+	${FMJPEG2K_LIBRARIES}
+  libsoci_core_4_0
+	libsoci_mysql_4_0
 	${OPENJPEG_LIBRARIES}
 	${ZLIB_LIBRARIES}
 	${DCMTK_LIBRARIES}
 	${Boost_LIBRARIES}
-	${Poco_LIBRARIES}
-	debug PocoDatad optimized PocoData
-  debug PocoDataODBCd optimized PocoDataODBC
-  debug PocoDataSQLited optimized PocoDataSQLite
-  debug PocoDataMySQLd optimized PocoDataMySQL
+#	${Poco_LIBRARIES}
+	#debug PocoDatad optimized PocoData
+  #debug PocoDataODBCd optimized PocoDataODBC
+  #debug PocoDataSQLited optimized PocoDataSQLite
+  #debug PocoDataMySQLd optimized PocoDataMySQL
   debug PocoFoundationd optimized PocoFoundation
   PocoJSONd
   PocoNetd
   PocoUtild
-  PocoXMLd
-  PocoZipd
-     ${MYSQL_LIB}
+	PocoXMLd
+  ${MYSQL_LIBRARIES}
 	${OS_SPECIFIC_LIBS}
 	)

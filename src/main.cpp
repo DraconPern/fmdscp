@@ -10,9 +10,6 @@
 #include "Poco/Task.h"
 #include "Poco/TaskManager.h"
 #include "Poco/DateTimeFormatter.h"
-#include "Poco/Data/SQLite/Connector.h"
-#include "Poco/Data/ODBC/Connector.h"
-#include "Poco/Data/MySQL/Connector.h"
 #include <iostream>
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
@@ -88,7 +85,7 @@ protected:
 	int main(const ArgVec& args)
 	{
 		if (!_helpRequested)
-		{			
+		{
 			server s;
 			s.run_async();
 			waitForTerminationRequest();

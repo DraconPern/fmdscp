@@ -2,7 +2,7 @@ SET TYPE=Release
 SET TYPE=Debug
 
 REM a top level directory for all PACS related code
-SET DEVSPACE="%CD%"
+SET DEVSPACE=%CD%
 
 cd %DEVSPACE%\boost
 call bootstrap
@@ -39,8 +39,13 @@ cmake .. -G "Visual Studio 11" -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DDCMTK_DIR
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 cd ..\..
 
-// need to copy C:\Program Files (x86)\MySQL\MySQL Connector.C 6.1\lib\vs11\mysqlclient.lib to
-// C:\Program Files (x86)\MySQL\MySQL Connector.C 6.1\lib\opt\
+cd %DEVSPACE%\mysql-connector-c-6.1.6-src
+mkdir build-%TYPE%
+cd build-%TYPE%
+cmake .. -G "Visual Studio 11" -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
+msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
+SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
+cd ..\..
 
 cd %DEVSPACE%\poco
 mkdir build-%TYPE%
@@ -49,10 +54,17 @@ cmake .. -G "Visual Studio 11" -DPOCO_STATIC=ON -DCMAKE_CXX_FLAGS_RELEASE="/MT /
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 cd ..\..
 
+cd %DEVSPACE%\soci
+mkdir build-%TYPE%
+cd build-%TYPE%
+cmake .. -G "Visual Studio 11" -DBUILD_SHARED_LIBS=OFF -DSOCI_STATIC=ON -DSOCI_SHARED=OFF -DSOCI_EMPTY=OFF -DSOCI_MYSQL=ON -DSOCI_ODBC=ON -DSOCI_USE_BOOST=ON -DSOCI_TESTS=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DBOOST_ROOT=%DEVSPACE%\boost -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\soci\%TYPE%
+msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
+cd ..\..
+
 cd %DEVSPACE%
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G "Visual Studio 11" -DCMAKE_BUILD_TYPE=%TYPE% -DBOOST_ROOT=%DEVSPACE%\boost -DDCMTK_DIR=%DEVSPACE%\dcmtk\build-%TYPE% -DZLIB_ROOT=%DEVSPACE%\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE%
+cmake .. -G "Visual Studio 11" -DCMAKE_BUILD_TYPE=%TYPE% -DBOOST_ROOT=%DEVSPACE%\boost -DDCMTK_DIR=%DEVSPACE%\dcmtk\build-%TYPE% -DZLIB_ROOT=%DEVSPACE%\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE% -DSOCI_DIR=%DEVSPACE%\soci\%TYPE%
 msbuild /P:Configuration=%TYPE% ALL_BUILD.vcxproj
 cd ..
 

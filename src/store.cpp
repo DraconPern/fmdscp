@@ -1,21 +1,14 @@
 ﻿#include <boost/algorithm/string.hpp>
 
 #include "store.h"
-/*
-#include "poco/File.h"
-#include "Poco/Data/Session.h"
-#include "poco/Tuple.h"
 
-using namespace Poco;
-using namespace Poco::Data;
-using namespace Poco::Data::Keywords;
-*/
+#include "soci/soci.h"
+#include "soci/mysql/soci-mysql.h"
+
 #include "model.h"
 #include "config.h"
 #include "util.h"
 
-#include "soci/soci.h"
-#include "soci/mysql/soci-mysql.h"
 
 OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 {
@@ -106,7 +99,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 
 		// create a session
 		Session session(Config::getDBPool().get());
-		
+
 
 		//		if(cbdata->last_studyuid != studyuid)
 		{
