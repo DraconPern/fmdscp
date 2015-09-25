@@ -102,6 +102,12 @@ private:
 		{
 			// this call is still in the listening thread, make a log before we pass it
 			boost::uuids::uuid uuid = boost::uuids::random_generator()();
+			DCMNET_INFO("Request from hostname " << assoc->params->DULparams.callingPresentationAddress);
+			OFString info;
+			ASC_dumpConnectionParameters(info, assoc);
+			DCMNET_INFO(info);
+			ASC_dumpParameters(info, assoc->params, ASC_ASSOC_RQ);
+			DCMNET_INFO(info);
 			DCMNET_INFO("Passing association to worker thread, setting uuid to " << uuid);
 			setUUID(uuid);
 			return BaseSCPWorker::setAssociation(assoc);
@@ -125,6 +131,12 @@ private:
         {
 			// use uuid as the ndc, the logger is set up to use <ndc>.txt as the filename
 			dcmtk::log4cplus::NDCContextCreator ndc(boost::uuids::to_string(uuid_).c_str());
+			DCMNET_INFO("Request from hostname " << assoc->params->DULparams.callingPresentationAddress);
+			OFString info;
+			ASC_dumpConnectionParameters(info, assoc);
+			DCMNET_INFO(info);
+			ASC_dumpParameters(info, assoc->params, ASC_ASSOC_RQ);
+			DCMNET_INFO(info);
             return SCP::run(assoc);
         }
     };
