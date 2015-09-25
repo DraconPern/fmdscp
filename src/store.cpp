@@ -1,4 +1,7 @@
 ﻿#include <boost/algorithm/string.hpp>
+#include <set>
+#include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "store.h"
 
@@ -9,6 +12,9 @@
 #include "config.h"
 #include "util.h"
 
+using namespace soci;
+using namespace boost::gregorian;
+using namespace boost::posix_time;
 
 OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 {
@@ -93,218 +99,192 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	seriesuid = textbuf.c_str();
 	dfile.getDataset()->findAndGetOFString(DCM_StudyInstanceUID, textbuf);
 	studyuid = textbuf.c_str();
-	/*
+
+	bool isOk = true;
 	try
 	{
 
 		// create a session
-		Session session(Config::getDBPool().get());
+		session dbconnection(Config::getConnectionString());
 
 
 		//		if(cbdata->last_studyuid != studyuid)
 		{
 
-			std::vector<PatientStudy> patientstudies;
-			Statement patientstudiesselect(session);
+			PatientStudy patientstudy;
+			session &patientstudiesselect = dbconnection;
 			patientstudiesselect << "SELECT id,"
-				"DCM_StudyInstanceUID,"
-				"DCM_PatientsName,"
-				"DCM_PatientID,"
-				"DCM_StudyDate,"
-				"DCM_ModalitiesInStudy,"
-				"DCM_StudyDescription,"
-				"DCM_PatientsSex,"
-				"DCM_PatientsBirthDate,"
+				"StudyInstanceUID,"
+				"PatientName,"
+				"PatientID,"
+				"StudyDate,"
+				"ModalitiesInStudy,"
+				"StudyDescription,"
+				"PatientSex,"
+				"PatientBirthDate,"
 				"created_at,updated_at"
-				" FROM patient_studies WHERE DCM_StudyInstanceUID = ?",
-				into(patientstudies),
-				use(studyuid),
-				now;
+				" FROM patient_studies WHERE StudyInstanceUID = :studyuid",
+				into(patientstudy),
+				use(studyuid);
 
-			if(patientstudies.size() == 0)
-			{
-				// insert
-				patientstudies.push_back(PatientStudy());
-			}
-			else if(patientstudies.size() == 1)
-			{
-				// edit
-			}
-
-			patientstudies[0].set<1>(studyuid);
+			patientstudy.StudyInstanceUID = studyuid;
 
 			dfile.getDataset()->findAndGetOFString(DCM_PatientName, textbuf);
-			patientstudies[0].set<2>(textbuf.c_str());
+			patientstudy.PatientName = textbuf.c_str();
 
 			dfile.getDataset()->findAndGetOFString(DCM_PatientID, textbuf);
-			patientstudies[0].set<3>(textbuf.c_str());
+			patientstudy.PatientID = textbuf.c_str();
 
 			datebuf = getDate(dfile.getDataset(), DCM_StudyDate);
-			if(datebuf.isValid()) patientstudies[0].set<4>(Poco::Data::Date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
+			if(datebuf.isValid()) patientstudy.StudyDate = to_tm(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
 
 			// handle modality list...
-			std::string modalitiesinstudy = patientstudies[0].get<5>();
+			std::string modalitiesinstudy = patientstudy.ModalitiesInStudy;
 			std::set<std::string> modalityarray;
 			if(modalitiesinstudy.length() > 0)
 				boost::split(modalityarray, modalitiesinstudy, boost::is_any_of("\\"));
 			dfile.getDataset()->findAndGetOFStringArray(DCM_Modality, textbuf);
 			modalityarray.insert(textbuf.c_str());
-			patientstudies[0].set<5>(boost::join(modalityarray, "\\"));
+			patientstudy.ModalitiesInStudy = boost::join(modalityarray, "\\");
 
 			dfile.getDataset()->findAndGetOFString(DCM_StudyDescription, textbuf);
-			patientstudies[0].set<6>(textbuf.c_str());
+			patientstudy.StudyDescription = textbuf.c_str();
 
 			dfile.getDataset()->findAndGetOFString(DCM_PatientSex, textbuf);
-			patientstudies[0].set<7>(textbuf.c_str());
+			patientstudy.PatientSex = textbuf.c_str();
 
 			datebuf = getDate(dfile.getDataset(), DCM_PatientBirthDate);
-			if(datebuf.isValid()) patientstudies[0].set<8>(Poco::Data::Date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
+			if(datebuf.isValid()) patientstudy.PatientBirthDate = to_tm(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
 
-			if(patientstudies[0].get<0>() == 0)
-			{
-				patientstudies[0].set<9>(Poco::DateTime());
-				patientstudies[0].set<10>(Poco::DateTime());
+			patientstudy.updated_at = to_tm(second_clock::universal_time());
 
-				Statement insert(session);
-				insert << "INSERT INTO patient_studies VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-					use(patientstudies), now;
+			if(patientstudiesselect.got_data())
+			{				
+				soci::session &update = dbconnection;
+				update << "UPDATE patient_studies SET "
+					"StudyInstanceUID = :StudyInstanceUID,"
+					"PatientName = :PatientName,"
+					"PatientID = :PatientID,"
+					"StudyDate = :StudyDate,"
+					"ModalitiesInStudy = :ModalitiesInStudy,"
+					"StudyDescription = :StudyDescription,"
+					"PatientSex = :PatientSex,"
+					"PatientBirthDate = :PatientBirthDate,"
+					"created_at = :created_at, updated_at = :updated_at"
+					" WHERE id = :id",
+					use(patientstudy);
 			}
 			else
 			{
-				patientstudies[0].set<10>(Poco::DateTime());
+				patientstudy.id = 0;
+				patientstudy.created_at = to_tm(second_clock::universal_time());				
 
-				Statement update(session);
-				update << "UPDATE patient_studies SET id = ?,"
-					"DCM_StudyInstanceUID = ?,"
-					"DCM_PatientsName = ?,"
-					"DCM_PatientID = ?,"
-					"DCM_StudyDate = ?,"
-					"DCM_ModalitiesInStudy = ?,"
-					"DCM_StudyDescription = ?,"
-					"DCM_PatientsSex = ?,"
-					"DCM_PatientsBirthDate = ?,"
-					"created_at = ?, updated_at = ?"
-					" WHERE id = ?",
-					use(patientstudies), use(patientstudies[0].get<0>()), now;
+				soci::session &insert = dbconnection;
+				insert << "INSERT INTO patient_studies VALUES(0, :StudyInstanceUID, :PatientName, :PatientID,"
+					":StudyDate, :ModalitiesInStudy, :StudyDescription, :PatientSex, :PatientBirthDate,"
+					":created_at, :updated_at)",
+					use(patientstudy);
 			}
-
 		}
-
+		
 		//if(cbdata->last_seriesuid != seriesuid)
 		{
 			// update the series table
-			std::vector<Series> series;
-			Statement seriesselect(session);
+			Series series;
+			session &seriesselect = dbconnection;
 			seriesselect << "SELECT id,"
-				"DCM_SeriesInstanceUID,"
-				"DCM_StudyInstanceUID,"
-				"DCM_Modality,"
-				"DCM_SeriesDescription,"
+				"SeriesInstanceUID,"
+				"StudyInstanceUID,"
+				"Modality,"
+				"SeriesDescription,"
 				"created_at,updated_at"
-				" FROM series WHERE DCM_SeriesInstanceUID = ?",
+				" FROM series WHERE SeriesInstanceUID = :seriesuid",
 				into(series),
-				use(seriesuid),
-				now;
+				use(seriesuid);
 
-			if(series.size() == 0)
-			{
-				// insert
-				series.push_back(Series());
-			}
-			else if(series.size() == 1)
-			{
-				// edit
-			}
-
-			series[0].set<1>(seriesuid);
+			series.SeriesInstanceUID = seriesuid;
 
 			dfile.getDataset()->findAndGetOFString(DCM_StudyInstanceUID, textbuf);
-			series[0].set<2>(textbuf.c_str());
+			series.StudyInstanceUID = textbuf.c_str();
 
 			dfile.getDataset()->findAndGetOFString(DCM_Modality, textbuf);
-			series[0].set<3>(textbuf.c_str());
+			series.Modality = textbuf.c_str();
 
 			dfile.getDataset()->findAndGetOFString(DCM_SeriesDescription, textbuf);
-			series[0].set<4>(textbuf.c_str());
+			series.SeriesDescription = textbuf.c_str();
 
-			if(series[0].get<0>() == 0)
+			series.updated_at = to_tm(second_clock::universal_time());
+
+			if(seriesselect.got_data())
 			{
-				series[0].set<5>(Poco::DateTime());
-				series[0].set<6>(Poco::DateTime());
-
-				Statement insert(session);
-				insert << "INSERT INTO series VALUES(?,?,?,?,?,?,?)",
-					use(series), now;
+				soci::session &update = dbconnection;
+				update << "UPDATE series SET "
+					"SeriesInstanceUID = :SeriesInstanceUID,"
+					"StudyInstanceUID = :StudyInstanceUID,"
+					"Modality = :Modality,"
+					"SeriesDescription = :SeriesDescription,"
+					"created_at = :created_at, updated_at = :updated_at"
+					" WHERE id = :id",
+					use(series);
 			}
 			else
 			{
-				series[0].set<6>(Poco::DateTime());
+				series.id = 0;
+				series.created_at = to_tm(second_clock::universal_time());				
 
-				Statement update(session);
-				update << "UPDATE series SET id = ?,"
-					"DCM_SeriesInstanceUID = ?,"
-					"DCM_StudyInstanceUID = ?,"
-					"DCM_Modality = ?,"
-					"DCM_SeriesDescription = ?,"
-					"created_at = ?, updated_at = ?"
-					" WHERE id = ?",
-					use(series), use(series[0].get<0>()), now;
+				soci::session &insert = dbconnection;
+				insert << "INSERT INTO series VALUES(0, :SeriesInstanceUID, :StudyInstanceUID, :Modality, :SeriesDescription,"
+					":created_at, :updated_at)",
+					use(series);
 			}
 		}
 
 		// update the images table
-		std::vector<Instance> instance;
-		Statement instanceselect(session);
+
+		Instance instance;		
+		session &instanceselect = dbconnection;
 		instanceselect << "SELECT id,"
 			"SOPInstanceUID,"
-			"DCM_SeriesInstanceUID,"
+			"SeriesInstanceUID,"
 			"created_at,updated_at"
-			" FROM instances WHERE SOPInstanceUID = ?",
+			" FROM instances WHERE SOPInstanceUID = :SOPInstanceUID",
 			into(instance),
-			use(sopuid),
-			now;
+			use(sopuid);
 
-		if(instance.size() == 0)
-		{
-			// insert
-			instance.push_back(Instance());
-		}
-		else if(instance.size() == 1)
-		{
-			// edit
-		}
-
-		instance[0].set<1>(sopuid);
+		instance.SOPInstanceUID = sopuid;
 
 		dfile.getDataset()->findAndGetOFString(DCM_SeriesInstanceUID, textbuf);
-		instance[0].set<2>(textbuf.c_str());
+		instance.SeriesInstanceUID = textbuf.c_str();
 
-		if(instance[0].get<0>() == 0)
+		instance.updated_at = to_tm(second_clock::universal_time());
+
+		if(instanceselect.got_data())
 		{
-			instance[0].set<3>(Poco::DateTime());
-			instance[0].set<4>(Poco::DateTime());
-
-			Statement insert(session);
-			insert << "INSERT INTO instances VALUES(?,?,?,?,?)",
-				use(instance), now;
+			soci::session &update = dbconnection;			
+			update << "UPDATE instances SET "
+				"SOPInstanceUID = :SOPInstanceUID,"
+				"SeriesInstanceUID = :SeriesInstanceUID,"
+				"created_at = :created_at, updated_at = :updated_at"
+				" WHERE id = :id",
+				use(instance);
 		}
 		else
 		{
-			instance[0].set<4>(Poco::DateTime());
-
-			Statement update(session);
-			update << "UPDATE instances SET id = ?,"
-				"SOPInstanceUID = ?,"
-				"DCM_SeriesInstanceUID = ?,"
-				"created_at = ?, updated_at = ?"
-				" WHERE id = ?",
-				use(instance), use(instance[0].get<0>()), now;
+			instance.id = 0;
+			instance.created_at = to_tm(second_clock::universal_time());				
+			
+			soci::session &insert = dbconnection;
+			insert << "INSERT INTO instances VALUES(0, :SOPInstanceUID, :SeriesInstanceUID,"
+				":created_at, :updated_at)",
+				use(instance);
 		}
+		
 	}
-	catch(Poco::DataException &e)
+	catch(std::exception &e)
 	{
-		std::string what = e.displayText();
+		std::string what = e.what();
+		isOk = false;
 	}
-	*/
-	return true;
+
+	return isOk;
 }

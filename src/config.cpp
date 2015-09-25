@@ -6,6 +6,9 @@
 using namespace Poco;
 using namespace Poco::Util;
 
+#include "soci/soci.h"
+using namespace soci;
+
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
 #undef _UNICODE
@@ -21,11 +24,11 @@ using namespace Poco::Util;
 
 #include "dcmtk/dcmdata/dcrledrg.h"	// rle decoder
 #include "dcmtk/dcmjpeg/djdecode.h"	// jpeg decoder
-#include "dcmtk/dcmjpeg/djencode.h" 
+#include "dcmtk/dcmjpeg/djencode.h"
 #include "dcmtk/dcmjpls/djdecode.h"	// jpeg-ls decoder
-#include "dcmtk/dcmjpls/djencode.h" 
-#include "dcmtk/dcmdata/dcrledrg.h" 
-#include "dcmtk/dcmdata/dcrleerg.h" 
+#include "dcmtk/dcmjpls/djencode.h"
+#include "dcmtk/dcmdata/dcrledrg.h"
+#include "dcmtk/dcmdata/dcrleerg.h"
 #include "fmjpeg2k/djencode.h"
 #include "fmjpeg2k/djdecode.h"
 
@@ -46,7 +49,7 @@ boost::filesystem::path Config::getTempPath()
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
 
 	std::string p = pConf->getString("TempPath", boost::filesystem::temp_directory_path().string());
-		
+
 	return Path::expand(p);
 }
 
@@ -54,31 +57,31 @@ boost::filesystem::path Config::getStoragePath()
 {
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
 
-	std::string p = pConf->getString("StoragePath", "C:\\PACS\\Storage");	
+	std::string p = pConf->getString("StoragePath", "C:\\PACS\\Storage");
 	return Path::expand(p);
 }
 
 void Config::registerCodecs()
 {
 	DJDecoderRegistration::registerCodecs();
-	DJEncoderRegistration::registerCodecs();    
-	DJLSEncoderRegistration::registerCodecs();    
-	DJLSEncoderRegistration::registerCodecs();    
-	DcmRLEEncoderRegistration::registerCodecs();    
-	DcmRLEDecoderRegistration::registerCodecs();			
+	DJEncoderRegistration::registerCodecs();
+	DJLSEncoderRegistration::registerCodecs();
+	DJLSEncoderRegistration::registerCodecs();
+	DcmRLEEncoderRegistration::registerCodecs();
+	DcmRLEDecoderRegistration::registerCodecs();
 	FMJP2KEncoderRegistration::registerCodecs();
-	FMJP2KDecoderRegistration::registerCodecs();	
+	FMJP2KDecoderRegistration::registerCodecs();
 }
 
 
 void Config::deregisterCodecs()
 {
 	DJDecoderRegistration::cleanup();
-	DJEncoderRegistration::cleanup();    
+	DJEncoderRegistration::cleanup();
 	DJLSDecoderRegistration::cleanup();
-	DJLSEncoderRegistration::cleanup();   
-	DcmRLEEncoderRegistration::cleanup();    
-	DcmRLEDecoderRegistration::cleanup();		
+	DJLSEncoderRegistration::cleanup();
+	DcmRLEEncoderRegistration::cleanup();
+	DcmRLEDecoderRegistration::cleanup();
 	FMJP2KEncoderRegistration::cleanup();
 	FMJP2KDecoderRegistration::cleanup();
 }
@@ -86,8 +89,8 @@ void Config::deregisterCodecs()
 std::string Config::getConnectionString()
 {
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
-	
-	return pConf->getString("ConnectionString", "Driver={SQL Server};Server=localhost;Database=PACSDB;Trusted_Connection=yes;");
+
+	return pConf->getString("ConnectionString", "");
 }
 
 void Config::createDBPool()
@@ -97,18 +100,13 @@ void Config::createDBPool()
 
 bool Config::test(std::string &errormsg)
 {
-	bool result = true;	
+	bool result = true;
 
 	try
-	{		
-		// test database connection	
-		// Session session("MySQL", Config::getConnectionString());
-	}	
-	/*catch(Poco::DataException &e)
 	{
-		errormsg = e.displayText();
-		result = false;
-	}*/
+		// test database connection
+		session dbconnection(Config::getConnectionString());
+	}	
 	catch(std::exception &e)
 	{
 		errormsg = e.what();
@@ -124,7 +122,7 @@ bool Config::test(std::string &errormsg)
 		boost::filesystem::path tempTest = Config::getTempPath();
 		tempTest /= "_test";
 
-		if(!boost::filesystem::create_directories(tempTest))			
+		if(!boost::filesystem::create_directories(tempTest))
 			return false;
 
 		boost::filesystem::remove(tempTest);
@@ -133,7 +131,7 @@ bool Config::test(std::string &errormsg)
 		boost::filesystem::path storageTest = Config::getTempPath();
 		storageTest /= "_test";
 
-		if(!boost::filesystem::create_directories(storageTest))			
+		if(!boost::filesystem::create_directories(storageTest))
 			return false;
 
 		boost::filesystem::remove(storageTest);
@@ -146,4 +144,3 @@ bool Config::test(std::string &errormsg)
 
 	return result;
 }
-
