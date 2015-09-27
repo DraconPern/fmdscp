@@ -1,18 +1,35 @@
 ﻿#include <boost/algorithm/string.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/gregorian/gregorian.hpp>
 
-#include "find.h"
+#include "soci/soci.h"
+#include "soci/mysql/soci-mysql.h"
 
-#include "poco/File.h"
-#include "Poco/Data/Session.h"
-#include "poco/Tuple.h"
+// work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
+#ifdef _UNICODE
+#undef _UNICODE
+#undef UNICODE
+#define _UNDEFINEDUNICODE
+#endif
 
-using namespace Poco;
-using namespace Poco::Data;
-using namespace Poco::Data::Keywords;
+#include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
+#include "dcmtk/dcmnet/diutil.h"
+#include "dcmtk/dcmdata/dcdeftag.h"
+
+#ifdef _UNDEFINEDUNICODE
+#define _UNICODE 1
+#define UNICODE 1
+#endif
+
 
 #include "model.h"
 #include "config.h"
+#include "find.h"
 #include "util.h"
+
+using namespace soci;
+using namespace boost::gregorian;
+using namespace boost::posix_time;
 
 void FindHandler::FindCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail)
 {
@@ -20,12 +37,57 @@ void FindHandler::FindCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_F
 	handler->FindCallback(cancelled, request, requestIdentifiers, responseCount, response, responseIdentifiers, statusDetail);
 }
 
-FindHandler::FindHandler() :
-	session_(Config::getDBPool().get())
-{
-
+FindHandler::FindHandler()
+{	
 
 }
+
+
+// page 299 (sample only), 1433, 1439, 1691, 1473
+// Study ROOT
+typedef enum {dbstring, dbint, dbdate} dbtype;
+
+struct DICOM_SQLMapping
+{
+	DcmTagKey dicomtag;
+	char *columnName;
+	dbtype dataType;
+	bool useLike;		// only valid for strings
+};
+
+const DICOM_SQLMapping PatientStudyLevelMapping [] = {
+	{ DCM_StudyDate,							 "StudyDate", dbdate, false},
+	{ DCM_AccessionNumber,						 "AccessionNumber", dbstring, false},
+	{ DCM_PatientName,                           "PatientName",  dbstring, true},
+	{ DCM_PatientID,                             "PatientID", dbstring, false},
+	{ DCM_StudyID,							     "StudyID", dbstring, false},
+	{ DCM_StudyInstanceUID,						 "StudyInstanceUID", dbstring, false},
+    { DCM_ModalitiesInStudy,                     "ModalitiesInStudy", dbstring, true},
+	{ DCM_ReferringPhysicianName,			     "ReferringPhysiciansName", dbstring, false},
+	{ DCM_StudyDescription,			             "StudyDescription", dbstring, true},
+	{ DCM_PatientBirthDate,                      "DCM_PatientsBirthDate", dbdate, false},
+	{ DCM_PatientSex,                            "PatientSex", dbstring, false},
+	{ DCM_CommandGroupLength, NULL, dbstring, false}
+};
+
+const DICOM_SQLMapping SeriesLevelMapping [] = {
+	{ DCM_StudyInstanceUID,						 "StudyInstanceUID", dbstring, false},
+	{ DCM_SeriesDate,                            "SeriesDate", dbdate, false},
+	{ DCM_Modality,                              "Modality", dbstring, false},
+	{ DCM_SeriesDescription,                     "SeriesDescription", dbstring, false},
+	{ DCM_SeriesNumber,                          "SeriesNumber", dbint, false},
+	{ DCM_SeriesInstanceUID,                     "SeriesInstanceUID", dbstring, false},
+	{ DCM_CommandGroupLength, NULL, dbstring, false}
+};
+
+const DICOM_SQLMapping InstanceMapping [] = {	
+	{ DCM_SeriesInstanceUID,                     "SeriesInstanceUID", dbstring, false},
+	{ DCM_InstanceNumber,                        "InstanceNumber", dbint, false},
+	{ DCM_SOPInstanceUID,                        "SOPInstanceUID", dbstring, false},
+	{ DCM_CommandGroupLength, NULL, dbstring, false}
+};
+
+void Study_DICOMQueryToSQL(QueryLevel querylevel, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, statement &st);
 
 void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail)
 {
@@ -35,6 +97,9 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 	// If this is the first time this callback function is called, we need to do open the recordset
 	if ( responseCount == 1 )
 	{
+
+		
+
 		// Dump some information if required
 		/*std::stringstream log;
 		log << "Find SCP Request Identifiers:\n";
@@ -42,48 +107,85 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 		DCMNET_INFO(CA2W(text2bin(log.str()).c_str()));
 		log.str("");
 		*/
+		
 		// support only study level model
 		if (strcmp(request->AffectedSOPClassUID, UID_FINDStudyRootQueryRetrieveInformationModel) != 0)
 		{
 			response->DimseStatus = STATUS_FIND_Refused_SOPClassNotSupported;
 			return;
 		}
+
+		session dbconnection(Config::getConnectionString());
+		statement st(dbconnection);
+		OFString retrievelevel;
+		requestIdentifiers->findAndGetOFString(DCM_QueryRetrieveLevel, retrievelevel);
+		if (retrievelevel == "STUDY")
+		{
+			querylevel = patientstudyroot;
+			st.exchange(into(patientstudies));
+			Study_DICOMQueryToSQL(querylevel, PatientStudyLevelMapping, requestIdentifiers, st);			
+			st.execute(true);
+			patientstudiesitr = patientstudies.begin();
+		} 
+		else if (retrievelevel == "SERIES")
+		{
+			querylevel = seriesroot;
+			st.exchange(into(series));
+			Study_DICOMQueryToSQL(querylevel, SeriesLevelMapping, requestIdentifiers, st);			
+			st.execute(true);
+			seriesitr = series.begin();					
+		}
+		else if(retrievelevel == "IMAGE")
+		{
+			querylevel = instanceroot;
+			st.exchange(into(instances));
+			Study_DICOMQueryToSQL(querylevel, InstanceMapping, requestIdentifiers, st);			
+			st.execute(true);
+			instancesitr = instances.begin();	
+		}			
+		else
+			dbstatus = STATUS_FIND_Failed_UnableToProcess;		
 	}
 
 	// If we encountered a C-CANCEL-RQ and if we have pending
 	// responses, the search shall be cancelled
 	if (cancelled && DICOM_PENDING_STATUS(dbstatus))
 	{
-		// normally we close the db
-		//dataSource->cancelFindRequest(&dbStatus);
+		dbstatus = STATUS_FIND_Cancel_MatchingTerminatedDueToCancelRequest;
+
+		// normally we close the db, but we queried in one go.		
 	}
 
 	// If the dbstatus is "pending" try to select another matching record.
 	if (DICOM_PENDING_STATUS(dbstatus))
 	{
-		// which model are we doing?
-		OFString retrievelevel;
-		requestIdentifiers->findAndGetOFString(DCM_QueryRetrieveLevel, retrievelevel);
-		if(retrievelevel == "IMAGE")
+		if(querylevel == patientstudyroot)
 		{
-			dbstatus = FindImageLevel(requestIdentifiers, responseIdentifiers);
+			if(patientstudiesitr != patientstudies.end())
+			{
+
+			}
+			else
+			{
+
+			}
+
 		}
-		else if (retrievelevel == "SERIES")
+		else if(querylevel == seriesroot)
 		{
-			dbstatus = FindSeriesLevel(requestIdentifiers, responseIdentifiers);
+
 		}
-		else if (retrievelevel == "STUDY")
+		else if(querylevel == instanceroot)		
 		{
-			dbstatus = FindStudyLevel(requestIdentifiers, responseIdentifiers);
+
 		}
-		else
-			dbstatus = STATUS_FIND_Failed_UnableToProcess;
 	}
 
 	// DEBUGLOG(sessionguid, DB_INFO, "Worklist Find SCP Response %d [status: %s]\r\n", responseCount, CA2W(DU_cfindStatusString( (Uint16)dbstatus )));
 
 	if( *responseIdentifiers != NULL && (*responseIdentifiers)->card() > 0 )
 	{
+		// log it
 		/*
 		std::stringstream log;
 		log << "Response Identifiers #" << responseCount;
@@ -105,115 +207,30 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 }
 
 
-// page 299 (sample only), 1433, 1439, 1691, 1473
-// Study ROOT
-typedef enum {dbstring, dbint, dbdate, dbtime} dbtype;
-
-struct DICOM_SQLMapping
+/// Reads the DcmDataset and set up the statement with sql and bindings
+void Study_DICOMQueryToSQL(QueryLevel querylevel, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, statement &st)
 {
-	DcmTagKey dicomtag;
-	char *columnName;
-	dbtype dataType;
-	bool useLike;		// only valid for strings
-};
 
-const DICOM_SQLMapping PatientStudyLevelMapping [] = {
-	{ DCM_StudyDate,							 "DCM_StudyDate", dbdate, false},
-	{ DCM_StudyTime,							 "DCM_StudyTime", dbtime, false},
-	{ DCM_AccessionNumber,						 "DCM_AccessionNumber", dbstring, false},
-	{ DCM_PatientName,                          "DCM_PatientsName",  dbstring, true},
-	{ DCM_PatientID,                             "DCM_PatientID", dbstring, false},
-	{ DCM_StudyID,							     "DCM_StudyID", dbstring, false},
-	{ DCM_StudyInstanceUID,						 "DCM_StudyInstanceUID", dbstring, false},
-	{ DCM_ModalitiesInStudy,					 "DCM_ModalitiesInStudy", dbstring, true},
-	{ DCM_SOPClassesInStudy,					 "DCM_SOPClassesInStudy", dbstring, true},
-	{ DCM_ReferringPhysicianName,			     "DCM_ReferringPhysiciansName", dbstring, false},
-	{ DCM_StudyDescription,						 "DCM_StudyDescription", dbstring, true},
-	/*{ DCM_ProcedureCodeSequence
-	>DCM_CodeValue
-	>DCM_CodingSchemeDesignator
-	>DCM_CodingSchemeVersion
-	>DCM_CodeMeaning*/
-	{ DCM_NameOfPhysiciansReadingStudy,			 "DCM_NameOfPhysiciansReadingStudy", dbstring, false},
-	{ DCM_AdmittingDiagnosesDescription,		 "DCM_AdmittingDiagnosesDescription", dbstring, false},
-	/*DCM_ReferencedStudySequence
-	>DCM_ReferencedSOPClassUID
-	>DCM_ReferencedSOPInstanceUID
-	DCM_ReferencedPatientSequence
-	>DCM_ReferencedSOPClassUID
-	>DCM_ReferencedSOPInstanceUID*/
-	{ DCM_IssuerOfPatientID,					 "DCM_IssuerOfPatientID", dbstring, false},
-	{ DCM_PatientBirthDate,                     "DCM_PatientsBirthDate", dbdate, false},
-	{ DCM_PatientBirthTime,                     "DCM_PatientsBirthTime", dbtime, false},
-	{ DCM_PatientSex,                           "DCM_PatientsSex", dbstring, false},
-	{ DCM_OtherPatientIDs,                       "DCM_OtherPatientIDs", dbstring, true},
-	{ DCM_OtherPatientNames,                     "DCM_OtherPatientNames", dbstring, false},
-	{ DCM_PatientAge,							 "DCM_PatientsAge", dbstring, false},
-	{ DCM_PatientSize,							 "DCM_PatientsSize", dbstring, false},
-	{ DCM_PatientWeight,                        "DCM_PatientsWeight", dbstring, false},
-	{ DCM_EthnicGroup,                           "DCM_EthnicGroup", dbstring, false},
-	{ DCM_Occupation,                            "DCM_Occupation", dbstring, false},
-	{ DCM_AdditionalPatientHistory,              "DCM_AdditionalPatientHistory", dbstring, false},
-	{ DCM_PatientComments,                       "DCM_PatientComments", dbstring, false},
-	{ DCM_RETIRED_OtherStudyNumbers,                     "DCM_OtherStudyNumbers", dbstring, false},
-	{ DCM_NumberOfPatientRelatedStudies,         "DCM_NumberOfPatientRelatedStudies", dbint, false},
-	{ DCM_NumberOfPatientRelatedSeries,          "DCM_NumberOfPatientRelatedSeries", dbint, false},
-	{ DCM_NumberOfPatientRelatedInstances,       "DCM_NumberOfPatientRelatedInstances", dbint, false},
-	{ DCM_NumberOfStudyRelatedSeries,            "DCM_NumberOfStudyRelatedSeries", dbint, false},
-	{ DCM_NumberOfStudyRelatedInstances,         "DCM_NumberOfStudyRelatedInstances", dbint, false},
-	{ DCM_RETIRED_InterpretationAuthor,                  "DCM_InterpretationAuthor", dbstring, false},
-	{ DCM_CommandGroupLength, NULL, dbstring, false}
-};
-
-const DICOM_SQLMapping SeriesLevelMapping [] = {
-	{ DCM_StudyInstanceUID,						 "DCM_StudyInstanceUID", dbstring, false},
-	{ DCM_SeriesDate,                            "DCM_SeriesDate", dbdate, false},
-	{ DCM_SeriesTime,						     "DCM_SeriesTime", dbtime, false},
-	{ DCM_Modality,                              "DCM_Modality", dbstring, false},
-	{ DCM_SeriesDescription,                     "DCM_SeriesDescription", dbstring, false},
-	{ DCM_SeriesNumber,                          "DCM_SeriesNumber", dbint, false},
-	{ DCM_SeriesInstanceUID,                     "DCM_SeriesInstanceUID", dbstring, false},
-	{ DCM_NumberOfSeriesRelatedInstances,        "DCM_NumberOfSeriesRelatedInstances", dbint, false},
-	{ DCM_CommandGroupLength, NULL, dbstring, false}
-};
-
-const DICOM_SQLMapping ImageLevelMapping [] = {
-	{ DCM_StudyInstanceUID,						 "DCM_StudyInstanceUID", dbstring, false},
-	{ DCM_SeriesInstanceUID,                     "DCM_SeriesInstanceUID", dbstring, false},
-	{ DCM_InstanceNumber,                        "DCM_InstanceNumber", dbint, false},
-	{ DCM_SOPInstanceUID,                        "DCM_SOPInstanceUID", dbstring, false},
-	{ DCM_SOPClassUID,                           "DCM_SOPClassUID", dbstring, false},
-	/*DCM_AlternateRepresentationSequence
-	>DCM_SeriesInstanceUID
-	>DCM_ReferencedSOPClassUID
-	>DCM_ReferencedSOPInstanceUID
-	>DCM_PurposeOfReferenceCodeSequence
-	>>DCM_CodeValue
-	>>DCM_CodingSchemeDesignator
-	>>DCM_CodingSchemeVersion
-	>>DCM_CodeMeaning*/
-	{ DCM_RelatedGeneralSOPClassUID,             "DCM_RelatedGeneralSOPClassUID", dbstring, false},
-	/*DCM_ConceptNameCodeSequence
-	>DCM_CodeValue
-	>DCM_CodingSchemeDesignator
-	>DCM_CodingSchemeVersion
-	>DCM_CodeMeaning
-	DCM_ContentTemplateSequence
-	>DCM_TemplateIdentifier
-	>DCM_MappingResource*/
-	{ DCM_CommandGroupLength, NULL, dbstring, false}
-};
-
-
-void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, CADOCommand &command)
-{
 	int parameters = 0;
 	OFString somestring;
 
 	std::string sqlcommand;
 
 	sqlcommand = "SELECT * FROM ";
-	sqlcommand += tablename;
+	switch(querylevel)
+		{
+			case patientstudyroot:
+				sqlcommand += "patientstudies";
+				break;
+			case seriesroot:
+				sqlcommand += "series";
+				break;
+			case instanceroot:
+				sqlcommand += "instances";
+				break;
+		}
+	
+	sqlcommand += " LIMIT 1000 ";
 
 	int i = 0;
 
@@ -233,29 +250,34 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 
 					if(sqlmapping[i].useLike)
 					{
-						sqlcommand += " LIKE ('%' + ? + '%')";
+						sqlcommand += " LIKE ('%' + :";
+						sqlcommand += sqlmapping[i].columnName;
+						sqlcommand += " + '%')";
 					}
 					else
-						sqlcommand += " = ?";
+					{
+						sqlcommand += " = :";
+						sqlcommand += sqlmapping[i].columnName;
+					}
 
 					if(somestring[somestring.length() - 1] == '*')
 						somestring.erase(somestring.length() - 1, 1);
 
-					command.AddParameter(_T(""), dbstring, ADODB::adParamInput, somestring.length(), CString(somestring.c_str()));
+					st.exchange(use(std::string(somestring.c_str())));
 					parameters++;
 				}
 			}
 			else if(sqlmapping[i].dataType == dbint)
 			{
 				(parameters == 0)?(sqlcommand += " WHERE "):(sqlcommand += " AND ");
+				sqlcommand += sqlmapping[i].columnName;				
+				sqlcommand += " = :";
 				sqlcommand += sqlmapping[i].columnName;
 
 				Sint32 someint = 0;
 				requestIdentifiers->findAndGetSint32(sqlmapping[i].dicomtag, someint);
 
-				sqlcommand += " = ?";
-
-				command.AddParameter(_T(""), dbint, ADODB::adParamInput, sizeof(Sint32), someint);
+				st.exchange(use(someint));				
 				parameters++;
 			}
 			else if(sqlmapping[i].dataType == dbdate)
@@ -263,43 +285,25 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 				OFDate datebuf;
 				datebuf = getDate(requestIdentifiers, sqlmapping[i].dicomtag);
 				if(datebuf.isValid())
-				{
-					COleDateTime a(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay(), 0, 0, 0);
-
+				{				
 					(parameters == 0)?(sqlcommand += " WHERE "):(sqlcommand += " AND ");
 					sqlcommand += sqlmapping[i].columnName;
 
 					// todo range
-					sqlcommand += " = ?";
-
-					command.AddParameter(_T(""), dbdate, ADODB::adParamInput, sizeof(a), a);
-					parameters++;
-				}
-			}
-			else if(sqlmapping[i].dataType == dbtime)
-			{
-				OFTime timebuf;
-				timebuf = getTime(requestIdentifiers, sqlmapping[i].dicomtag);
-				if(timebuf.isValid())
-				{
-					COleDateTime a(1900, 1, 1, timebuf.getHour(), timebuf.getMinute(), timebuf.getIntSecond());
-
-					(parameters == 0)?(sqlcommand += " WHERE "):(sqlcommand += " AND ");
-					sqlcommand += sqlmapping[i].columnName;
-
-					// todo range
-					sqlcommand += " = ?";
-
-					command.AddParameter(_T(""), dbtime, ADODB::adParamInput, sizeof(a), a);
+					sqlcommand += " = :";
+					sqlcommand += sqlmapping[i].columnName;				
+					st.exchange(use(to_tm(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()))));					
 					parameters++;
 				}
 			}
 		}
 
 		i++;
-	}
+	}	
 
-	command.SetText(sqlcommand);
+	st.alloc();
+	st.prepare(sqlcommand);
+	st.define_and_bind();
 }
 
 DcmEVR GetEVR(const DcmTagKey &tagkey)
@@ -308,10 +312,8 @@ DcmEVR GetEVR(const DcmTagKey &tagkey)
 	return a.getEVR();
 }
 
-/*
-Create a response using the requested identifiers with data from the result
-*/
-void Study_SQLToDICOMResponse(const DICOM_SQLMapping *sqlmapping, CADORecordset &result, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
+/// Create a response using the requested identifiers with data from the result
+void Study_SQLToDICOMResponse(QueryLevel querylevel, const DICOM_SQLMapping *sqlmapping, session &result, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
 {
 	std::string somestring;
 
@@ -323,9 +325,9 @@ void Study_SQLToDICOMResponse(const DICOM_SQLMapping *sqlmapping, CADORecordset 
 		{
 			if(sqlmapping[i].dataType == dbstring)
 			{
-				CString textbuf;
+				 textbuf;
 				result.GetFieldValue(sqlmapping[i].columnName, textbuf);
-				responseIdentifiers->putAndInsertString(sqlmapping[i].dicomtag, CW2A(textbuf));
+				responseIdentifiers->putAndInsertString(sqlmapping[i].dicomtag, result.(textbuf));
 			}
 			else if(sqlmapping[i].dataType == dbint)
 			{
@@ -385,11 +387,11 @@ void Study_SQLToDICOMResponse(const DICOM_SQLMapping *sqlmapping, CADORecordset 
 // find the next record and create the response
 DIC_US FindHandler::FindStudyLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
 {
-    const wchar_t *sessionguid = context->sessionguid;
+    
 
 	try
     {
-		if(!context->m_pDb.IsOpen())
+		if(!session_. ->m_pDb.IsOpen())
 		{					
 			OFString patientid, patientname;
 			

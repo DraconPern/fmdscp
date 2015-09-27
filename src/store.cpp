@@ -91,6 +91,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	OFDate datebuf;
 	OFTime timebuf;
 	OFString textbuf;
+	long numberbuf;
 
 	std::string sopuid, seriesuid, studyuid;
 	dfile.getDataset()->findAndGetOFString(DCM_SOPInstanceUID, textbuf);
@@ -115,6 +116,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			session &patientstudiesselect = dbconnection;
 			patientstudiesselect << "SELECT id,"
 				"StudyInstanceUID,"
+				"StudyID,"
+				"AccessionNumber,"
 				"PatientName,"
 				"PatientID,"
 				"StudyDate,"
@@ -122,6 +125,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"StudyDescription,"
 				"PatientSex,"
 				"PatientBirthDate,"
+				"ReferringPhysicianName,"
 				"created_at,updated_at"
 				" FROM patient_studies WHERE StudyInstanceUID = :studyuid",
 				into(patientstudy),
@@ -131,6 +135,12 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 
 			dfile.getDataset()->findAndGetOFString(DCM_PatientName, textbuf);
 			patientstudy.PatientName = textbuf.c_str();
+			
+			dfile.getDataset()->findAndGetOFString(DCM_StudyID, textbuf);
+			patientstudy.StudyID = textbuf.c_str();
+
+			dfile.getDataset()->findAndGetOFString(DCM_AccessionNumber, textbuf);
+			patientstudy.AccessionNumber = textbuf.c_str();
 
 			dfile.getDataset()->findAndGetOFString(DCM_PatientID, textbuf);
 			patientstudy.PatientID = textbuf.c_str();
@@ -156,6 +166,9 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			datebuf = getDate(dfile.getDataset(), DCM_PatientBirthDate);
 			if(datebuf.isValid()) patientstudy.PatientBirthDate = to_tm(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
 
+			dfile.getDataset()->findAndGetOFString(DCM_ReferringPhysicianName, textbuf);
+			patientstudy.ReferringPhysicianName = textbuf.c_str();
+
 			patientstudy.updated_at = to_tm(second_clock::universal_time());
 
 			if(patientstudiesselect.got_data())
@@ -163,6 +176,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				soci::session &update = dbconnection;
 				update << "UPDATE patient_studies SET "
 					"StudyInstanceUID = :StudyInstanceUID,"
+					"StudyID = :StudyID,"
+					"AccessionNumber = :AccessionNumber,"
 					"PatientName = :PatientName,"
 					"PatientID = :PatientID,"
 					"StudyDate = :StudyDate,"
@@ -170,6 +185,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"StudyDescription = :StudyDescription,"
 					"PatientSex = :PatientSex,"
 					"PatientBirthDate = :PatientBirthDate,"
+					"ReferringPhysiciansName = :ReferringPhysicianName,"
 					"created_at = :created_at, updated_at = :updated_at"
 					" WHERE id = :id",
 					use(patientstudy);
@@ -180,8 +196,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				patientstudy.created_at = to_tm(second_clock::universal_time());				
 
 				soci::session &insert = dbconnection;
-				insert << "INSERT INTO patient_studies VALUES(0, :StudyInstanceUID, :PatientName, :PatientID,"
-					":StudyDate, :ModalitiesInStudy, :StudyDescription, :PatientSex, :PatientBirthDate,"
+				insert << "INSERT INTO patient_studies VALUES(0, :StudyInstanceUID, :AccessionNumber, :StudyID,:PatientName, :PatientID,"
+					":StudyDate, :ModalitiesInStudy, :StudyDescription, :PatientSex, :PatientBirthDate,:ReferringPhysicianName,"
 					":created_at, :updated_at)",
 					use(patientstudy);
 			}
@@ -197,6 +213,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"StudyInstanceUID,"
 				"Modality,"
 				"SeriesDescription,"
+				"SeriesNumber,"
+				"SeriesDate,"
 				"created_at,updated_at"
 				" FROM series WHERE SeriesInstanceUID = :seriesuid",
 				into(series),
@@ -213,6 +231,12 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			dfile.getDataset()->findAndGetOFString(DCM_SeriesDescription, textbuf);
 			series.SeriesDescription = textbuf.c_str();
 
+			dfile.getDataset()->findAndGetSint32(DCM_SeriesNumber, numberbuf);
+			series.SeriesNumber = numberbuf;
+
+			datebuf = getDate(dfile.getDataset(), DCM_SeriesDate);
+			if(datebuf.isValid()) series.SeriesDate = to_tm(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
+
 			series.updated_at = to_tm(second_clock::universal_time());
 
 			if(seriesselect.got_data())
@@ -223,6 +247,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"StudyInstanceUID = :StudyInstanceUID,"
 					"Modality = :Modality,"
 					"SeriesDescription = :SeriesDescription,"
+					"SeriesNumber = :SeriesNumber,"
+					"SeriesDate = :SeriesDate,"
 					"created_at = :created_at, updated_at = :updated_at"
 					" WHERE id = :id",
 					use(series);
@@ -233,7 +259,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				series.created_at = to_tm(second_clock::universal_time());				
 
 				soci::session &insert = dbconnection;
-				insert << "INSERT INTO series VALUES(0, :SeriesInstanceUID, :StudyInstanceUID, :Modality, :SeriesDescription,"
+				insert << "INSERT INTO series VALUES(0, :SeriesInstanceUID, :StudyInstanceUID, :Modality,"
+					":SeriesDescription, :SeriesNumber,:SeriesDate,"
 					":created_at, :updated_at)",
 					use(series);
 			}
@@ -246,6 +273,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		instanceselect << "SELECT id,"
 			"SOPInstanceUID,"
 			"SeriesInstanceUID,"
+			"InstanceNumber,"
 			"created_at,updated_at"
 			" FROM instances WHERE SOPInstanceUID = :SOPInstanceUID",
 			into(instance),
@@ -256,6 +284,9 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		dfile.getDataset()->findAndGetOFString(DCM_SeriesInstanceUID, textbuf);
 		instance.SeriesInstanceUID = textbuf.c_str();
 
+		dfile.getDataset()->findAndGetSint32(DCM_InstanceNumber, numberbuf);
+		instance.InstanceNumber = numberbuf;
+
 		instance.updated_at = to_tm(second_clock::universal_time());
 
 		if(instanceselect.got_data())
@@ -264,6 +295,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			update << "UPDATE instances SET "
 				"SOPInstanceUID = :SOPInstanceUID,"
 				"SeriesInstanceUID = :SeriesInstanceUID,"
+				"InstanceNumber = :InstanceNumber,"
 				"created_at = :created_at, updated_at = :updated_at"
 				" WHERE id = :id",
 				use(instance);
@@ -274,7 +306,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			instance.created_at = to_tm(second_clock::universal_time());				
 			
 			soci::session &insert = dbconnection;
-			insert << "INSERT INTO instances VALUES(0, :SOPInstanceUID, :SeriesInstanceUID,"
+			insert << "INSERT INTO instances VALUES(0, :SOPInstanceUID, :SeriesInstanceUID, :InstanceNumber,"
 				":created_at, :updated_at)",
 				use(instance);
 		}

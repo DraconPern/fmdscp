@@ -12,6 +12,8 @@ typedef struct SPatientStudy
 {
 	int id;
 	std::string StudyInstanceUID;
+	std::string StudyID;
+	std::string AccessionNumber;
 	std::string PatientName;
 	std::string PatientID;
 	std::tm StudyDate;
@@ -19,6 +21,7 @@ typedef struct SPatientStudy
 	std::string StudyDescription;
 	std::string PatientSex;
 	std::tm PatientBirthDate;
+	std::string ReferringPhysicianName;
 	std::tm created_at;
 	std::tm updated_at;
 } PatientStudy;
@@ -33,6 +36,8 @@ typedef struct SSeries
 	std::string StudyInstanceUID;
 	std::string Modality;
 	std::string SeriesDescription;
+	int SeriesNumber;
+	std::tm SeriesDate;
 	std::tm created_at;
 	std::tm updated_at;
 } Series;
@@ -45,6 +50,7 @@ typedef struct SInstance
 	int id;
 	std::string SOPInstanceUID;
 	std::string SeriesInstanceUID;
+	int InstanceNumber;
 	std::tm created_at;
 	std::tm updated_at;
 } Instance;
@@ -60,6 +66,8 @@ namespace soci
         {
             p.id = v.get<int>("id");
             p.StudyInstanceUID = v.get<std::string>("StudyInstanceUID");
+			p.StudyID = v.get<std::string>("StudyID");
+			p.AccessionNumber = v.get<std::string>("AccessionNumber");
             p.PatientName = v.get<std::string>("PatientName");
             p.PatientID = v.get<std::string>("PatientID");
           	p.StudyDate = v.get<std::tm>("StudyDate");
@@ -67,6 +75,7 @@ namespace soci
           	p.StudyDescription = v.get<std::string>("StudyDescription");
           	p.PatientSex = v.get<std::string>("PatientSex");
           	p.PatientBirthDate = v.get<std::tm>("PatientBirthDate");
+			p.ReferringPhysicianName = v.get<std::string>("ReferringPhysicianName");
           	p.created_at = v.get<std::tm>("created_at");
           	p.updated_at = v.get<std::tm>("updated_at");
         }
@@ -75,6 +84,8 @@ namespace soci
         {
             v.set("id", p.id);
             v.set("StudyInstanceUID", p.StudyInstanceUID);
+			v.set("StudyID", p.StudyID);
+            v.set("AccessionNumber", p.AccessionNumber);
             v.set("PatientName", p.PatientName);
             v.set("PatientID", p.PatientID);
             v.set("StudyDate", p.StudyDate);
@@ -82,6 +93,7 @@ namespace soci
             v.set("StudyDescription", p.StudyDescription);
             v.set("PatientSex", p.PatientSex);
             v.set("PatientBirthDate", p.PatientBirthDate);
+			v.set("ReferringPhysicianName", p.ReferringPhysicianName);
             v.set("created_at", p.created_at);
             v.set("updated_at", p.updated_at);
             ind = i_ok;
@@ -100,6 +112,8 @@ namespace soci
             p.StudyInstanceUID = v.get<std::string>("StudyInstanceUID");
             p.Modality = v.get<std::string>("Modality");
           	p.SeriesDescription = v.get<std::string>("SeriesDescription");
+			p.SeriesNumber = v.get<int>("SeriesNumber");	
+			p.SeriesDate = v.get<std::tm>("SeriesDate");
           	p.created_at = v.get<std::tm>("created_at");
           	p.updated_at = v.get<std::tm>("updated_at");
         }
@@ -111,6 +125,8 @@ namespace soci
             v.set("StudyInstanceUID", p.StudyInstanceUID);
             v.set("Modality", p.Modality);
             v.set("SeriesDescription", p.SeriesDescription);
+			v.set("SeriesNumber", p.SeriesNumber);
+			v.set("SeriesDate", p.SeriesDate);			
             v.set("created_at", p.created_at);
             v.set("updated_at", p.updated_at);
             ind = i_ok;
@@ -127,6 +143,7 @@ namespace soci
             p.id = v.get<int>("id");
             p.SOPInstanceUID = v.get<std::string>("SOPInstanceUID");
             p.SeriesInstanceUID = v.get<std::string>("SeriesInstanceUID");
+			p.InstanceNumber = v.get<int>("InstanceNumber");
           	p.created_at = v.get<std::tm>("created_at");
           	p.updated_at = v.get<std::tm>("updated_at");
         }
@@ -136,6 +153,7 @@ namespace soci
             v.set("id", p.id);
             v.set("SOPInstanceUID", p.SOPInstanceUID);
             v.set("SeriesInstanceUID", p.SeriesInstanceUID);
+			v.set("InstanceNumber", p.InstanceNumber);
             v.set("created_at", p.created_at);
             v.set("updated_at", p.updated_at);
             ind = i_ok;
@@ -144,3 +162,4 @@ namespace soci
 }
 
 #endif
+

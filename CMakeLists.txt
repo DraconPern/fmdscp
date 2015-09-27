@@ -57,7 +57,7 @@ set(fmdscp_HEADERS
 	sqlite3/sqlite3.h
 	src/myscp.h
 	src/store.h
-#	src/find.h
+	src/find.h
 	src/model.h
 	src/config.h
 	src/util.h
@@ -70,7 +70,7 @@ set(fmdscp_SRCS
 	src/main.cpp
 	src/myscp.cpp
 	src/store.cpp
-#	src/find.cpp
+	src/find.cpp
 	src/config.cpp
 	src/util.cpp
 	src/server.cpp
