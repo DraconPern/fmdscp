@@ -37,9 +37,9 @@ void FindHandler::FindCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_F
 	handler->FindCallback(cancelled, request, requestIdentifiers, responseCount, response, responseIdentifiers, statusDetail);
 }
 
-FindHandler::FindHandler()
+FindHandler::FindHandler(std::string aetitle)
 {	
-
+	this->aetitle = aetitle;
 }
 
 
@@ -65,7 +65,7 @@ const DICOM_SQLMapping PatientStudyLevelMapping [] = {
     { DCM_ModalitiesInStudy,                     "ModalitiesInStudy", dbstring, true},
 	{ DCM_ReferringPhysicianName,			     "ReferringPhysiciansName", dbstring, false},
 	{ DCM_StudyDescription,			             "StudyDescription", dbstring, true},
-	{ DCM_PatientBirthDate,                      "DCM_PatientsBirthDate", dbdate, false},
+	{ DCM_PatientBirthDate,                      "PatientsBirthDate", dbdate, false},
 	{ DCM_PatientSex,                            "PatientSex", dbstring, false},
 	{ DCM_CommandGroupLength, NULL, dbstring, false}
 };
@@ -80,14 +80,14 @@ const DICOM_SQLMapping SeriesLevelMapping [] = {
 	{ DCM_CommandGroupLength, NULL, dbstring, false}
 };
 
-const DICOM_SQLMapping InstanceMapping [] = {	
+const DICOM_SQLMapping InstanceLevelMapping [] = {	
 	{ DCM_SeriesInstanceUID,                     "SeriesInstanceUID", dbstring, false},
 	{ DCM_InstanceNumber,                        "InstanceNumber", dbint, false},
 	{ DCM_SOPInstanceUID,                        "SOPInstanceUID", dbstring, false},
 	{ DCM_CommandGroupLength, NULL, dbstring, false}
 };
 
-void Study_DICOMQueryToSQL(QueryLevel querylevel, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, statement &st);
+void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, statement &st);
 
 void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail)
 {
@@ -96,10 +96,7 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 
 	// If this is the first time this callback function is called, we need to do open the recordset
 	if ( responseCount == 1 )
-	{
-
-		
-
+	{	
 		// Dump some information if required
 		/*std::stringstream log;
 		log << "Find SCP Request Identifiers:\n";
@@ -115,33 +112,34 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 			return;
 		}
 
-		session dbconnection(Config::getConnectionString());
+		// open the db
+		session dbconnection(Config::getConnectionString());		
 		statement st(dbconnection);
 		OFString retrievelevel;
 		requestIdentifiers->findAndGetOFString(DCM_QueryRetrieveLevel, retrievelevel);
 		if (retrievelevel == "STUDY")
 		{
 			querylevel = patientstudyroot;
-			st.exchange(into(patientstudies));
-			Study_DICOMQueryToSQL(querylevel, PatientStudyLevelMapping, requestIdentifiers, st);			
-			st.execute(true);
-			patientstudiesitr = patientstudies.begin();
+			st.exchange_for_rowset(soci::into(row_));
+			Study_DICOMQueryToSQL("patientstudies", PatientStudyLevelMapping, requestIdentifiers, st);	
+			st.execute();
+			itr = soci::rowset_iterator<soci::row>(st, row_);			
 		} 
 		else if (retrievelevel == "SERIES")
 		{
 			querylevel = seriesroot;
-			st.exchange(into(series));
-			Study_DICOMQueryToSQL(querylevel, SeriesLevelMapping, requestIdentifiers, st);			
-			st.execute(true);
-			seriesitr = series.begin();					
+			st.exchange_for_rowset(soci::into(row_));
+			Study_DICOMQueryToSQL("series", SeriesLevelMapping, requestIdentifiers, st);			
+			st.execute();
+			itr = soci::rowset_iterator<soci::row>(st, row_);
 		}
 		else if(retrievelevel == "IMAGE")
 		{
 			querylevel = instanceroot;
-			st.exchange(into(instances));
-			Study_DICOMQueryToSQL(querylevel, InstanceMapping, requestIdentifiers, st);			
-			st.execute(true);
-			instancesitr = instances.begin();	
+			st.exchange_for_rowset(soci::into(row_));
+			Study_DICOMQueryToSQL("instances", InstanceLevelMapping, requestIdentifiers, st);						
+			st.execute();
+			itr = soci::rowset_iterator<soci::row>(st, row_);
 		}			
 		else
 			dbstatus = STATUS_FIND_Failed_UnableToProcess;		
@@ -160,24 +158,16 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 	if (DICOM_PENDING_STATUS(dbstatus))
 	{
 		if(querylevel == patientstudyroot)
-		{
-			if(patientstudiesitr != patientstudies.end())
-			{
-
-			}
-			else
-			{
-
-			}
-
+		{			
+			dbstatus = FindStudyLevel(itr, requestIdentifiers, responseIdentifiers);
 		}
 		else if(querylevel == seriesroot)
 		{
-
+			dbstatus = FindSeriesLevel(itr, requestIdentifiers, responseIdentifiers);
 		}
 		else if(querylevel == instanceroot)		
 		{
-
+			dbstatus = FindInstanceLevel(itr, requestIdentifiers, responseIdentifiers);
 		}
 	}
 
@@ -208,7 +198,7 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 
 
 /// Reads the DcmDataset and set up the statement with sql and bindings
-void Study_DICOMQueryToSQL(QueryLevel querylevel, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, statement &st)
+void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, statement &st)
 {
 
 	int parameters = 0;
@@ -217,19 +207,7 @@ void Study_DICOMQueryToSQL(QueryLevel querylevel, const DICOM_SQLMapping *sqlmap
 	std::string sqlcommand;
 
 	sqlcommand = "SELECT * FROM ";
-	switch(querylevel)
-		{
-			case patientstudyroot:
-				sqlcommand += "patientstudies";
-				break;
-			case seriesroot:
-				sqlcommand += "series";
-				break;
-			case instanceroot:
-				sqlcommand += "instances";
-				break;
-		}
-	
+	sqlcommand += tablename;
 	sqlcommand += " LIMIT 1000 ";
 
 	int i = 0;
@@ -313,7 +291,7 @@ DcmEVR GetEVR(const DcmTagKey &tagkey)
 }
 
 /// Create a response using the requested identifiers with data from the result
-void Study_SQLToDICOMResponse(QueryLevel querylevel, const DICOM_SQLMapping *sqlmapping, session &result, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
+void Study_SQLToDICOMResponse(const DICOM_SQLMapping *sqlmapping, row &result, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
 {
 	std::string somestring;
 
@@ -324,15 +302,12 @@ void Study_SQLToDICOMResponse(QueryLevel querylevel, const DICOM_SQLMapping *sql
 		if(requestIdentifiers->findAndGetElement(sqlmapping[i].dicomtag, element).good())
 		{
 			if(sqlmapping[i].dataType == dbstring)
-			{
-				 textbuf;
-				result.GetFieldValue(sqlmapping[i].columnName, textbuf);
-				responseIdentifiers->putAndInsertString(sqlmapping[i].dicomtag, result.(textbuf));
+			{			
+				responseIdentifiers->putAndInsertString(sqlmapping[i].dicomtag, result.get<std::string>(sqlmapping[i].columnName).c_str());
 			}
 			else if(sqlmapping[i].dataType == dbint)
 			{
-				long numberbuf;
-				result.GetFieldValue(sqlmapping[i].columnName, numberbuf);
+				int numberbuf = result.get<int>(sqlmapping[i].columnName);
 				DcmElement *e = newDicomElement(sqlmapping[i].dicomtag);
 				if(e->getVR() == EVR_IS)
 				{
@@ -353,30 +328,15 @@ void Study_SQLToDICOMResponse(QueryLevel querylevel, const DICOM_SQLMapping *sql
 			}
 			else if(sqlmapping[i].dataType == dbdate)
 			{
-				COleDateTime datetimebuf;
-				result.GetFieldValue(sqlmapping[i].columnName, datetimebuf);
-				if (datetimebuf.GetStatus() == COleDateTime::valid)
-				{
-					OFDate datebuf;
-					datebuf.setDate(datetimebuf.GetYear(), datetimebuf.GetMonth(), datetimebuf.GetDay());
-					DcmDate *dcmdate = new DcmDate(sqlmapping[i].dicomtag);
-					dcmdate->setOFDate(datebuf);
-					responseIdentifiers->insert(dcmdate);
-				}
-			}
-			else if(sqlmapping[i].dataType == dbtime)
-			{
-				COleDateTime datetimebuf;
-				result.GetFieldValue(sqlmapping[i].columnName, datetimebuf);
-				if (datetimebuf.GetStatus() == COleDateTime::valid)
-				{
-					OFTime timebuf;
-					timebuf.setTime(datetimebuf.GetHour(), datetimebuf.GetMinute(), datetimebuf.GetSecond());
-					DcmTime *dcmtime = new DcmTime(sqlmapping[i].dicomtag);
-					dcmtime->setOFTime(timebuf);
-					responseIdentifiers->insert(dcmtime);
-				}
-			}
+				std::tm datetimebuf = result.get<std::tm>(sqlmapping[i].columnName);
+				
+				OFDate datebuf;
+				datebuf.setDate(datetimebuf.tm_year + 1900, datetimebuf.tm_mon + 1, datetimebuf.tm_mday);
+				DcmDate *dcmdate = new DcmDate(sqlmapping[i].dicomtag);
+				dcmdate->setOFDate(datebuf);
+				responseIdentifiers->insert(dcmdate);
+				
+			}			
 		}
 
 		i++;
@@ -385,79 +345,21 @@ void Study_SQLToDICOMResponse(QueryLevel querylevel, const DICOM_SQLMapping *sql
 
 
 // find the next record and create the response
-DIC_US FindHandler::FindStudyLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
-{
-    
-
+DIC_US FindHandler::FindStudyLevel(rowset_iterator<row> &itr, DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
+{    
 	try
-    {
-		if(!session_. ->m_pDb.IsOpen())
-		{					
-			OFString patientid, patientname;
-			
-			requestIdentifiers->findAndGetOFString(DCM_PatientName, patientname);	
-			
-			context->m_pDb.Open(getConnectionString());
-
-			CADOCommand command(&context->m_pDb, _T(""), CADOCommand::typeCmdText);			
-			Study_DICOMQueryToSQL(L"patientstudies", PatientStudyLevelMapping, requestIdentifiers, command);
-
-			DEBUGLOG(sessionguid, DB_INFO, L"SQL %s\r\n", command.GetText());
-			/*
-			// build the command
-			CADOCommand command(&context->m_pDb, _T(""), CADOCommand::typeCmdText);			
-	        CString sqlcommand = _T("SELECT [DCM_StudyInstanceUID],[DCM_PatientsName],[DCM_PatientID],[DCM_ModalitiesInStudy],[DCM_StudyDate],[DCM_StudyTime],[DCM_StudyDescription],[DCM_PatientsSex],[DCM_PatientsBirthDate],[DCM_NumberOfStudyRelatedInstances] FROM patientstudies");
-
-			int parameters = 0;
-
-			// find if there's a name
-			if (patientname.length() > 0 && patientname[patientname.length() - 1] == '*')
-					patientname.erase(patientname.length() - 1, 1);
-
-            if (patientname.length() > 0)
-            {
-                if(parameters == 0)
-                    sqlcommand += L" WHERE ";
-                else
-                    sqlcommand += L" AND ";
-                sqlcommand += L"[DCM_PatientsName] LIKE ('%' + ? + '%')";
-				
-				if(patientname[patientname.length() - 1] == '*')
-					patientname.erase(patientname.length() - 1, 1);
-
-                command.AddParameter(_T(""), ADODB::adVarWChar, ADODB::adParamInput, patientname.length(), CString(patientname.c_str()));
-                parameters++;
-            }
-
-			requestIdentifiers->findAndGetOFString(DCM_PatientID, patientid);
-            if (patientid.length())
-            {
-                if(parameters == 0)
-                    sqlcommand += L" WHERE ";
-                else
-                    sqlcommand += L" AND ";
-				sqlcommand += L"[DCM_PatientID] = ?";
-				//command.SetText(sqlcommand);
-                command.AddParameter(_T(""), ADODB::adVarWChar, ADODB::adParamInput, patientid.length(), CString(patientid.c_str()));
-                parameters++;
-			}
-
-			DEBUGLOG(sessionguid, DB_INFO, L"%s\r\n", sqlcommand);
-			command.SetText(sqlcommand);*/
-			context->m_pRs = CADORecordset(&context->m_pDb);
-			context->m_pRs.Open(&command);
-		}
-
-        if(!context->m_pRs.IsEOF())
-        {			
-
+    {		
+		soci::rowset_iterator<soci::row> end;
+        if(itr != end)
+        {
 			*responseIdentifiers = new DcmDataset;
 			
 			(*responseIdentifiers)->putAndInsertString(DCM_QueryRetrieveLevel, "STUDY");
-			(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, context->ourAETitle);
-			Study_SQLToDICOMResponse(PatientStudyLevelMapping, context->m_pRs, requestIdentifiers, *responseIdentifiers);
+			(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, aetitle.c_str());
+			Study_SQLToDICOMResponse(PatientStudyLevelMapping, *itr, requestIdentifiers, *responseIdentifiers);
 						
 			// add non conforming field for PACSSCAN
+			/*
 			int pos = -1;
 			CString modalityname;			
 			context->m_pRs.GetFieldValue(_T("DCM_ModalitiesInStudy"), modalityname);
@@ -467,225 +369,78 @@ DIC_US FindHandler::FindStudyLevel(DcmDataset *requestIdentifiers, DcmDataset **
 			}
 
 			(*responseIdentifiers)->putAndInsertString(DCM_Modality, CW2A(modalityname));
-
-			/*
-            CString studyuid, name, patientid, modalityname;			
-
-			CString textbuf;			
-			OFDate datebuf;
-			OFTime timebuf;
-			COleDateTime datetimebuf;
-			DcmDate *dcmdate;
-			DcmTime *dcmtime;
-
-			
-			context->m_pRs.GetFieldValue(_T("DCM_StudyInstanceUID"), studyuid);
-			context->m_pRs.GetFieldValue(_T("DCM_PatientsName"), name);
-			context->m_pRs.GetFieldValue(_T("DCM_PatientID"), patientid);
-			context->m_pRs.GetFieldValue(_T("DCM_ModalitiesInStudy"), modalityname);									
-
-	        (*responseIdentifiers)->putAndInsertString(DCM_StudyInstanceUID, CW2A(studyuid));		    
-	        (*responseIdentifiers)->putAndInsertString(DCM_PatientsName, CW2A(name));
-			(*responseIdentifiers)->putAndInsertString(DCM_PatientID, CW2A(patientid));
-			(*responseIdentifiers)->putAndInsertString(DCM_ModalitiesInStudy, CW2A(modalityname));			
-
-			//(*responseIdentifiers)->putAndInsertString(DCM_StudyID, "");			
-			
-			context->m_pRs.GetFieldValue(_T("DCM_StudyDate"), datetimebuf);	
-			datebuf.setDate(datetimebuf.GetYear(), datetimebuf.GetMonth(), datetimebuf.GetDay());
-			dcmdate = new DcmDate(DCM_StudyDate);
-			dcmdate->setOFDate(datebuf);
-			(*responseIdentifiers)->insert(dcmdate);
-			
-			context->m_pRs.GetFieldValue(_T("DCM_StudyTime"), datetimebuf);	
-			timebuf.setTime(datetimebuf.GetHour(), datetimebuf.GetMinute(), datetimebuf.GetSecond());
-			dcmtime = new DcmTime(DCM_StudyTime);
-			dcmtime->setOFTime(timebuf);
-			(*responseIdentifiers)->insert(dcmtime);
-									
-			context->m_pRs.GetFieldValue(_T("DCM_StudyDescription"), textbuf);
-			(*responseIdentifiers)->putAndInsertString(DCM_StudyDescription, CW2A(textbuf));
-			context->m_pRs.GetFieldValue(_T("DCM_PatientsSex"), textbuf);
-			(*responseIdentifiers)->putAndInsertString(DCM_PatientsSex, CW2A(textbuf));
-
-			context->m_pRs.GetFieldValue(_T("DCM_PatientsBirthDate"), datetimebuf);	
-			if (datetimebuf.GetStatus() == COleDateTime::valid)	// some dicom files don't have birthday
-			{
-				datebuf.setDate(datetimebuf.GetYear(), datetimebuf.GetMonth(), datetimebuf.GetDay());
-				dcmdate = new DcmDate(DCM_PatientsBirthDate);
-				dcmdate->setOFDate(datebuf);
-				(*responseIdentifiers)->insert(dcmdate);
-			}
-			else
-			{
-				(*responseIdentifiers)->insert(dcmdate);
-			}
-
-			long mycount = 0;
-			context->m_pRs.GetFieldValue(_T("DCM_NumberOfStudyRelatedInstances"), mycount);
-			std::stringstream mycountstr;
-			mycountstr << mycount;
-			(*responseIdentifiers)->putAndInsertString(DCM_NumberOfStudyRelatedInstances, mycountstr.str().c_str());
 			*/
-			/*
-			std::stringstream log;
-			(*responseIdentifiers)->print(log);
-			log << "\n";
-			DEBUGLOG(sessionguid, DB_INFO, CA2W(text2bin(log.str()).c_str()));
-			*/
-            context->m_pRs.MoveNext();
+            ++itr;
 			return STATUS_Pending;
         }
 		else
-		{
-			context->m_pRs.Close();
-			context->m_pDb.Close();
+		{			
 			return STATUS_Success;
 		}
 
     }
     catch (...)
     {
-		DEBUGLOG(sessionguid, DB_INFO, L"Exception in FindStudyLevel.\r\n" );
+		// DEBUGLOG(sessionguid, DB_INFO, L"Exception in FindStudyLevel.\r\n" );
     }
 
-	DEBUGLOG(sessionguid, DB_INFO, L"error\r\n");
+	// DEBUGLOG(sessionguid, DB_INFO, L"error\r\n");
     return STATUS_FIND_Failed_UnableToProcess;
 }
 
-DIC_US FindHandler::FindSeriesLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
-{
-    const wchar_t *sessionguid = context->sessionguid;
-
+DIC_US FindHandler::FindSeriesLevel(rowset_iterator<row> &itr, DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
+{   
     try
     {
-		if(!context->m_pDb.IsOpen())
-		{		
-			OFString studyuid;
-			requestIdentifiers->findAndGetOFString(DCM_StudyInstanceUID, studyuid);						
-
-			if(studyuid.length() == 0)
-				return STATUS_MOVE_Failed_IdentifierDoesNotMatchSOPClass;
-			
-			context->m_pDb.Open(getConnectionString());
-
-			CADOCommand command(&context->m_pDb, _T(""), CADOCommand::typeCmdText);
-			Study_DICOMQueryToSQL(L"series", SeriesLevelMapping, requestIdentifiers, command);
-
-			/*
-	        command.SetText(_T("SELECT [DCM_SeriesInstanceUID], [DCM_Modality], [DCM_SeriesDescription], [DCM_SeriesDate] FROM series WHERE [DCM_StudyInstanceUID] = ?"));
-		    command.AddParameter(_T(""), ADODB::adVarWChar, ADODB::adParamInput, studyuid.length(), CString(studyuid.c_str()));
-			*/
-			context->m_pRs = CADORecordset(&context->m_pDb);
-			context->m_pRs.Open(&command);
-		}
-
-        if(!context->m_pRs.IsEOF())
+		soci::rowset_iterator<soci::row> end;
+        if(itr != end)
         {
 			*responseIdentifiers = new DcmDataset;
 
 			(*responseIdentifiers)->putAndInsertString(DCM_QueryRetrieveLevel, "SERIES");
-			(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, context->ourAETitle);
-			Study_SQLToDICOMResponse(SeriesLevelMapping, context->m_pRs, requestIdentifiers, *responseIdentifiers);
-			/*
-            CString seriesuid, modalityname, seriesdesc;
-			COleDateTime seriesdate;
-            context->m_pRs.GetFieldValue(_T("DCM_SeriesInstanceUID"), seriesuid);
-			context->m_pRs.GetFieldValue(_T("DCM_Modality"), modalityname);
-			context->m_pRs.GetFieldValue(_T("DCM_SeriesDescription"), seriesdesc);	
-			context->m_pRs.GetFieldValue(_T("DCM_SeriesDate"), seriesdate);
-			(*responseIdentifiers)->putAndInsertString(DCM_SeriesInstanceUID, CW2A(seriesuid));
-            (*responseIdentifiers)->putAndInsertString(DCM_Modality, CW2A(modalityname));
-            (*responseIdentifiers)->putAndInsertString(DCM_SeriesDescription, CW2A(seriesdesc));
-			//(*responseIdentifiers)->put(DCM_SeriesDate, seriesdate);
-			*/
-
-			/*
-			std::stringstream log;
-			(*responseIdentifiers)->print(log);
-			log << "\n";
-			DEBUGLOG(sessionguid, DB_INFO, CA2W(text2bin(log.str()).c_str()));
-			*/
-
-            context->m_pRs.MoveNext();
+			(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, aetitle.c_str());
+			Study_SQLToDICOMResponse(SeriesLevelMapping, *itr, requestIdentifiers, *responseIdentifiers);
+			++itr;            
 			return STATUS_Pending;
         }
 		else
 		{
-			context->m_pRs.Close();
-			context->m_pDb.Close();
 			return STATUS_Success;
 		}
 
     }
     catch (...)
     {
-		DEBUGLOG(sessionguid, DB_INFO, L"Exception in FindSeriesLevel.\r\n" );
+		// DEBUGLOG(sessionguid, DB_INFO, L"Exception in FindSeriesLevel.\r\n" );
     }
     
     return STATUS_FIND_Failed_UnableToProcess;
 }
 
-DIC_US FindHandler::FindImageLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
+DIC_US  FindHandler::FindInstanceLevel(rowset_iterator<row> &itr, DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
 {    
     try
-    {
-		if(!context->m_pDb.IsOpen())
-		{					
-			OFString seriesuid, studyuid;
-			requestIdentifiers->findAndGetOFString(DCM_SeriesInstanceUID, seriesuid);
-			requestIdentifiers->findAndGetOFString(DCM_StudyInstanceUID, studyuid);
-
-			if(seriesuid.length() == 0)
-				return STATUS_MOVE_Failed_IdentifierDoesNotMatchSOPClass;
-
-			context->m_pDb.Open(getConnectionString());
-			CADOCommand command(&context->m_pDb, _T(""), CADOCommand::typeCmdText);
-			Study_DICOMQueryToSQL(L"imagesflat", ImageLevelMapping, requestIdentifiers, command);
-
-	        /*command.SetText(_T("SELECT [DCM_SOPInstanceUID], [DCM_SeriesInstanceUID] FROM images WHERE [DCM_SeriesInstanceUID] = ?"));
-		    command.AddParameter(_T(""), ADODB::adVarWChar, ADODB::adParamInput, seriesuid.length(), CString(seriesuid.c_str()));
-			//command.AddParameter(_T(""), ADODB::adVarWChar, ADODB::adParamInput, studyuid.length(), CString(studyuid.c_str()));
-			*/
-			context->m_pRs = CADORecordset(&context->m_pDb);
-			context->m_pRs.Open(&command);			
-		}
-
-        if(!context->m_pRs.IsEOF())
+    {		
+		soci::rowset_iterator<soci::row> end;
+        if(itr != end)
         {
 			*responseIdentifiers = new DcmDataset;
 
 			(*responseIdentifiers)->putAndInsertString(DCM_QueryRetrieveLevel, "IMAGE");
-			(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, context->ourAETitle);
-			Study_SQLToDICOMResponse(ImageLevelMapping, context->m_pRs, requestIdentifiers, *responseIdentifiers);
-			/*
-            CString sopuid, seriesuid;
-			COleDateTime seriesdate;
-            context->m_pRs.GetFieldValue(_T("DCM_SOPInstanceUID"), sopuid);			
-            context->m_pRs.GetFieldValue(_T("DCM_SeriesInstanceUID"), seriesuid);			
-			(*responseIdentifiers)->putAndInsertString(DCM_SOPInstanceUID, CW2A(sopuid));
-			(*responseIdentifiers)->putAndInsertString(DCM_SeriesInstanceUID, CW2A(seriesuid));            
-			*/
-			/*
-			std::stringstream log;
-			(*responseIdentifiers)->print(log);
-			log << "\n";
-			DEBUGLOG(sessionguid, DB_INFO, CA2W(text2bin(log.str()).c_str()));
-			*/
-            context->m_pRs.MoveNext();			
+			(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, aetitle.c_str());
+			Study_SQLToDICOMResponse(InstanceLevelMapping, *itr, requestIdentifiers, *responseIdentifiers);
+			++itr;
 			return STATUS_Pending;
         }
 		else
-		{			
-			context->m_pRs.Close();
-			context->m_pDb.Close();
+		{						
 			return STATUS_Success;
 		}
 
     }
     catch (...)
     {
-		DEBUGLOG(sessionguid, DB_INFO, L"Exception in FindImageLevel.\r\n" );
+		// DEBUGLOG(sessionguid, DB_INFO, L"Exception in FindImageLevel.\r\n" );
     }
     	
     return STATUS_FIND_Failed_UnableToProcess;

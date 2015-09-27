@@ -54,6 +54,7 @@ void server::init_scp()
 	storageSCP.getConfig().setACSETimeout(1);
 	
 	storageSCP.getConfig().setHostLookupEnabled(true);
+	storageSCP.getConfig().setAETitle("FMDSCP");	
 
 	// DICOM standard transfer syntaxes
 	const char* transferSyntaxes[] = {

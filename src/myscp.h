@@ -61,9 +61,9 @@ public:
     /** Default construct a DcmSCPPool object.
      */
     MyDcmSCPPool() : BaseSCPPool()
-    {
+	{
 		setMaxThreads(50);
-    }
+	}
 
 	virtual OFCondition listen()
 	{
