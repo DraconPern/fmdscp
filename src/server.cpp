@@ -31,7 +31,7 @@ server::server()
 
 	// add scp
 	init_scp();
-	io_service_.post(boost::bind(&DcmSCPPool<MySCP>::listen, &storageSCP));	
+	io_service_.post(boost::bind(&MyDcmSCPPool::listen, &storageSCP));	
 
 	// add sender
 
@@ -46,66 +46,7 @@ server::~server()
 
 void server::init_scp()
 {
-	// set listening socket option
-	storageSCP.getConfig().setConnectionBlockingMode(DUL_NOBLOCK);
-	storageSCP.getConfig().setConnectionTimeout(1);
-	storageSCP.getConfig().setDIMSEBlockingMode(DIMSE_NONBLOCKING);
-	storageSCP.getConfig().setDIMSETimeout(1);
-	storageSCP.getConfig().setACSETimeout(1);
-	
-	storageSCP.getConfig().setHostLookupEnabled(true);
-	storageSCP.getConfig().setAETitle("FMDSCP");	
 
-	// DICOM standard transfer syntaxes
-	const char* transferSyntaxes[] = {
-		UID_LittleEndianImplicitTransferSyntax, /* default xfer syntax first */
-		UID_LittleEndianExplicitTransferSyntax,
-		UID_JPEGProcess1TransferSyntax,
-		UID_JPEGProcess2_4TransferSyntax,
-		UID_JPEGProcess3_5TransferSyntax,
-		UID_JPEGProcess6_8TransferSyntax,
-		UID_JPEGProcess7_9TransferSyntax,
-		UID_JPEGProcess10_12TransferSyntax,
-		UID_JPEGProcess11_13TransferSyntax,
-		UID_JPEGProcess14TransferSyntax,
-		UID_JPEGProcess15TransferSyntax,
-		UID_JPEGProcess16_18TransferSyntax,
-		UID_JPEGProcess17_19TransferSyntax,
-		UID_JPEGProcess20_22TransferSyntax,
-		UID_JPEGProcess21_23TransferSyntax,
-		UID_JPEGProcess24_26TransferSyntax,
-		UID_JPEGProcess25_27TransferSyntax,
-		UID_JPEGProcess28TransferSyntax,
-		UID_JPEGProcess29TransferSyntax,
-		UID_JPEGProcess14SV1TransferSyntax,
-		UID_RLELosslessTransferSyntax,
-		UID_JPEGLSLosslessTransferSyntax,
-		UID_JPEGLSLossyTransferSyntax,
-		UID_DeflatedExplicitVRLittleEndianTransferSyntax,
-		UID_JPEG2000LosslessOnlyTransferSyntax,
-		UID_JPEG2000TransferSyntax,
-		UID_MPEG2MainProfileAtMainLevelTransferSyntax,
-		UID_MPEG2MainProfileAtHighLevelTransferSyntax,
-		UID_JPEG2000Part2MulticomponentImageCompressionLosslessOnlyTransferSyntax,
-		UID_JPEG2000Part2MulticomponentImageCompressionTransferSyntax,
-		UID_MPEG4HighProfileLevel4_1TransferSyntax,
-		UID_MPEG4BDcompatibleHighProfileLevel4_1TransferSyntax,
-		UID_MPEG4HighProfileLevel4_2_For2DVideoTransferSyntax,
-		UID_MPEG4HighProfileLevel4_2_For3DVideoTransferSyntax,
-		UID_MPEG4StereoHighProfileLevel4_2TransferSyntax
-	};
-
-	OFList<OFString> syntaxes;
-	for(int i = 0; i < DIM_OF(transferSyntaxes); i++)
-		syntaxes.push_back(transferSyntaxes[i]);		
-
-	storageSCP.getConfig().addPresentationContext(UID_VerificationSOPClass, syntaxes);
-
-	for(int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
-		storageSCP.getConfig().addPresentationContext(dcmAllStorageSOPClassUIDs[i], syntaxes);
-
-	
-	
 	
 	/*
 	std::string errormsg;

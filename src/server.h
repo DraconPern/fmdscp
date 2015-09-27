@@ -47,7 +47,7 @@ protected:
 	/// The io_service used to perform asynchronous operations.
 	boost::asio::io_service io_service_;
 			
-	MyDcmSCPPool<> storageSCP;
+	MyDcmSCPPool storageSCP;
 };
 
 #endif // __SERVER_H__

@@ -152,3 +152,102 @@ OFCondition MySCP::handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage,
 
 	return status;
 }
+
+OFCondition MyDcmSCPPool::MySCPWorker::setAssociation(T_ASC_Association* assoc)
+{
+	// this call is still in the listening thread, make a log before we pass it
+	boost::uuids::uuid uuid = boost::uuids::random_generator()();
+	DCMNET_INFO("Request from hostname " << assoc->params->DULparams.callingPresentationAddress);
+	OFString info;
+	ASC_dumpConnectionParameters(info, assoc);
+	DCMNET_INFO(info);
+	ASC_dumpParameters(info, assoc->params, ASC_ASSOC_RQ);
+	DCMNET_INFO(info);
+	DCMNET_INFO("Passing association to worker thread, setting uuid to " << uuid);
+	setUUID(uuid);
+	return DcmBaseSCPPool::DcmBaseSCPWorker::setAssociation(assoc);
+}
+
+OFCondition MyDcmSCPPool::MySCPWorker::workerListen(T_ASC_Association* const assoc)
+{
+	// use uuid as the ndc, the logger is set up to use <ndc>.txt as the filename
+	dcmtk::log4cplus::NDCContextCreator ndc(boost::uuids::to_string(uuid_).c_str());
+	DCMNET_INFO("Request from hostname " << assoc->params->DULparams.callingPresentationAddress);
+	OFString info;
+	ASC_dumpConnectionParameters(info, assoc);
+	DCMNET_INFO(info);
+	ASC_dumpParameters(info, assoc->params, ASC_ASSOC_RQ);
+	DCMNET_INFO(info);
+    return MySCP::run(assoc);
+}
+
+MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
+{
+	setMaxThreads(50);
+	getConfig().setConnectionBlockingMode(DUL_NOBLOCK);
+	getConfig().setConnectionTimeout(1);
+	getConfig().setDIMSEBlockingMode(DIMSE_NONBLOCKING);
+	getConfig().setDIMSETimeout(1);
+	getConfig().setACSETimeout(1);
+	
+	getConfig().setHostLookupEnabled(true);
+	getConfig().setAETitle("FMDSCP");	
+
+	// DICOM standard transfer syntaxes
+	const char* transferSyntaxes[] = {
+		UID_LittleEndianImplicitTransferSyntax, /* default xfer syntax first */
+		UID_LittleEndianExplicitTransferSyntax,
+		UID_JPEGProcess1TransferSyntax,
+		UID_JPEGProcess2_4TransferSyntax,
+		UID_JPEGProcess3_5TransferSyntax,
+		UID_JPEGProcess6_8TransferSyntax,
+		UID_JPEGProcess7_9TransferSyntax,
+		UID_JPEGProcess10_12TransferSyntax,
+		UID_JPEGProcess11_13TransferSyntax,
+		UID_JPEGProcess14TransferSyntax,
+		UID_JPEGProcess15TransferSyntax,
+		UID_JPEGProcess16_18TransferSyntax,
+		UID_JPEGProcess17_19TransferSyntax,
+		UID_JPEGProcess20_22TransferSyntax,
+		UID_JPEGProcess21_23TransferSyntax,
+		UID_JPEGProcess24_26TransferSyntax,
+		UID_JPEGProcess25_27TransferSyntax,
+		UID_JPEGProcess28TransferSyntax,
+		UID_JPEGProcess29TransferSyntax,
+		UID_JPEGProcess14SV1TransferSyntax,
+		UID_RLELosslessTransferSyntax,
+		UID_JPEGLSLosslessTransferSyntax,
+		UID_JPEGLSLossyTransferSyntax,
+		UID_DeflatedExplicitVRLittleEndianTransferSyntax,
+		UID_JPEG2000LosslessOnlyTransferSyntax,
+		UID_JPEG2000TransferSyntax,
+		UID_MPEG2MainProfileAtMainLevelTransferSyntax,
+		UID_MPEG2MainProfileAtHighLevelTransferSyntax,
+		UID_JPEG2000Part2MulticomponentImageCompressionLosslessOnlyTransferSyntax,
+		UID_JPEG2000Part2MulticomponentImageCompressionTransferSyntax,
+		UID_MPEG4HighProfileLevel4_1TransferSyntax,
+		UID_MPEG4BDcompatibleHighProfileLevel4_1TransferSyntax,
+		UID_MPEG4HighProfileLevel4_2_For2DVideoTransferSyntax,
+		UID_MPEG4HighProfileLevel4_2_For3DVideoTransferSyntax,
+		UID_MPEG4StereoHighProfileLevel4_2TransferSyntax
+	};
+
+	OFList<OFString> syntaxes;
+	for(int i = 0; i < DIM_OF(transferSyntaxes); i++)
+		syntaxes.push_back(transferSyntaxes[i]);		
+
+	getConfig().addPresentationContext(UID_VerificationSOPClass, syntaxes);
+
+	for(int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
+		getConfig().addPresentationContext(dcmAllStorageSOPClassUIDs[i], syntaxes);
+
+	
+}
+
+OFCondition MyDcmSCPPool::listen()
+{
+	DCMNET_INFO("Listening.");
+	OFCondition result = DcmBaseSCPPool::listen();
+	DCMNET_INFO("Stopped listening.");
+	return result;
+}
