@@ -23,6 +23,7 @@ using namespace Poco;
 #include "config.h"
 #include "store.h"
 #include "find.h"
+#include "move.h"
 
 MySCP::MySCP()
 	: DcmThreadSCP()
@@ -133,15 +134,10 @@ OFCondition MySCP::handleFINDRequest(T_DIMSE_C_FindRQ &reqMessage,
 									 const T_ASC_PresentationContextID presID)
 {
 	OFCondition status = EC_IllegalParameter;
-	
-	/// ASC_getAPTitles( assoc->params, NULL, context.ourAETitle, NULL );
-
+		
 	FindHandler handler(getAETitle().c_str());
 	status = DIMSE_findProvider(assoc_, presID, &reqMessage, FindHandler::FindCallback, &handler, getDIMSEBlockingMode(), getDIMSETimeout());
-	
-	if (status.bad()) {
-		// DCMNET_ERROR("Find SCP Failed: " << DimseCondition::dump(temp_str, cond));
-	}
+		
 	return status;
 }
 
@@ -149,7 +145,10 @@ OFCondition MySCP::handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage,
 									 const T_ASC_PresentationContextID presID)
 {
 	OFCondition status = EC_IllegalParameter;
-
+	
+	MoveHandler handler(getAETitle().c_str());
+	status = DIMSE_moveProvider(assoc_, presID, &reqMessage, MoveHandler::MoveCallback, &handler, getDIMSEBlockingMode(), getDIMSETimeout());
+	
 	return status;
 }
 

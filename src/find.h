@@ -1,3 +1,6 @@
+#ifndef __FIND_H__
+#define __FIND_H__
+
 #include <boost/filesystem.hpp>
 #include <vector>
 
@@ -47,3 +50,5 @@ protected:
 	row row_;
 	soci::rowset_iterator<soci::row> itr;
 };
+
+#endif

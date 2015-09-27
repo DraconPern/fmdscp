@@ -58,6 +58,7 @@ set(fmdscp_HEADERS
 	src/myscp.h
 	src/store.h
 	src/find.h
+	src/move.h
 	src/model.h
 	src/config.h
 	src/util.h
@@ -71,6 +72,7 @@ set(fmdscp_SRCS
 	src/myscp.cpp
 	src/store.cpp
 	src/find.cpp
+	src/move.cpp
 	src/config.cpp
 	src/util.cpp
 	src/server.cpp

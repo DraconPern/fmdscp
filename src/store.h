@@ -1,3 +1,6 @@
+#ifndef __STORE_H__
+#define __STORE_H__
+
 #include <boost/filesystem.hpp>
 #include <winsock2.h>
 
@@ -25,3 +28,5 @@ public:
 	OFCondition handleSTORERequest(boost::filesystem::path filename);
 	bool AddDICOMFileInfoToDatabase(boost::filesystem::path filename);
 };
+
+#endif
