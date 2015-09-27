@@ -96,15 +96,13 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 
 	// If this is the first time this callback function is called, we need to do open the recordset
 	if ( responseCount == 1 )
-	{	
-		// Dump some information if required
-		/*std::stringstream log;
+	{			
+		std::stringstream log;
 		log << "Find SCP Request Identifiers:\n";
 		requestIdentifiers->print(log);
-		DCMNET_INFO(CA2W(text2bin(log.str()).c_str()));
-		log.str("");
-		*/
-		
+		log << "-------";
+		DCMNET_INFO(log);
+				
 		// support only study level model
 		if (strcmp(request->AffectedSOPClassUID, UID_FINDStudyRootQueryRetrieveInformationModel) != 0)
 		{
@@ -112,37 +110,44 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 			return;
 		}
 
-		// open the db
-		session dbconnection(Config::getConnectionString());		
-		statement st(dbconnection);
-		OFString retrievelevel;
-		requestIdentifiers->findAndGetOFString(DCM_QueryRetrieveLevel, retrievelevel);
-		if (retrievelevel == "STUDY")
+		try
 		{
-			querylevel = patientstudyroot;
-			st.exchange_for_rowset(soci::into(row_));
-			Study_DICOMQueryToSQL("patientstudies", PatientStudyLevelMapping, requestIdentifiers, st);	
-			st.execute();
-			itr = soci::rowset_iterator<soci::row>(st, row_);			
-		} 
-		else if (retrievelevel == "SERIES")
-		{
-			querylevel = seriesroot;
-			st.exchange_for_rowset(soci::into(row_));
-			Study_DICOMQueryToSQL("series", SeriesLevelMapping, requestIdentifiers, st);			
-			st.execute();
-			itr = soci::rowset_iterator<soci::row>(st, row_);
+			// open the db
+			session dbconnection(Config::getConnectionString());		
+			statement st(dbconnection);
+			OFString retrievelevel;
+			requestIdentifiers->findAndGetOFString(DCM_QueryRetrieveLevel, retrievelevel);
+			if (retrievelevel == "STUDY")
+			{
+				querylevel = patientstudyroot;
+				st.exchange_for_rowset(soci::into(row_));
+				Study_DICOMQueryToSQL("patientstudies", PatientStudyLevelMapping, requestIdentifiers, st);	
+				st.execute();
+				itr = soci::rowset_iterator<soci::row>(st, row_);			
+			} 
+			else if (retrievelevel == "SERIES")
+			{
+				querylevel = seriesroot;
+				st.exchange_for_rowset(soci::into(row_));
+				Study_DICOMQueryToSQL("series", SeriesLevelMapping, requestIdentifiers, st);			
+				st.execute();
+				itr = soci::rowset_iterator<soci::row>(st, row_);
+			}
+			else if(retrievelevel == "IMAGE")
+			{
+				querylevel = instanceroot;
+				st.exchange_for_rowset(soci::into(row_));
+				Study_DICOMQueryToSQL("instances", InstanceLevelMapping, requestIdentifiers, st);						
+				st.execute();
+				itr = soci::rowset_iterator<soci::row>(st, row_);
+			}			
+			else
+				dbstatus = STATUS_FIND_Failed_UnableToProcess;		
 		}
-		else if(retrievelevel == "IMAGE")
+		catch(std::exception &e)
 		{
-			querylevel = instanceroot;
-			st.exchange_for_rowset(soci::into(row_));
-			Study_DICOMQueryToSQL("instances", InstanceLevelMapping, requestIdentifiers, st);						
-			st.execute();
-			itr = soci::rowset_iterator<soci::row>(st, row_);
-		}			
-		else
-			dbstatus = STATUS_FIND_Failed_UnableToProcess;		
+			DCMNET_ERROR(e.what());
+		}
 	}
 
 	// If we encountered a C-CANCEL-RQ and if we have pending
@@ -171,18 +176,17 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 		}
 	}
 
-	// DEBUGLOG(sessionguid, DB_INFO, "Worklist Find SCP Response %d [status: %s]\r\n", responseCount, CA2W(DU_cfindStatusString( (Uint16)dbstatus )));
+	DCMNET_INFO("Find SCP Response " << responseCount << " [status: " << DU_cfindStatusString( (Uint16)dbstatus ) << "]");
 
 	if( *responseIdentifiers != NULL && (*responseIdentifiers)->card() > 0 )
 	{
-		// log it
-		/*
+		// log it		
 		std::stringstream log;
 		log << "Response Identifiers #" << responseCount;
 		(*responseIdentifiers)->print(log);
-		log << "-------" << endl;
-		DEBUGLOG(sessionguid, DB_INFO, CA2W(text2bin(log.str()).c_str()));
-		log.str("");*/
+		log << "-------";
+		DCMNET_INFO(log);
+		log.str("");
 	}
 
 	// Set response status
@@ -200,7 +204,6 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 /// Reads the DcmDataset and set up the statement with sql and bindings
 void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, statement &st)
 {
-
 	int parameters = 0;
 	OFString somestring;
 
@@ -278,6 +281,8 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 
 		i++;
 	}	
+
+	DCMNET_INFO("SQL " << sqlcommand);
 
 	st.alloc();
 	st.prepare(sqlcommand);
@@ -379,12 +384,11 @@ DIC_US FindHandler::FindStudyLevel(rowset_iterator<row> &itr, DcmDataset *reques
 		}
 
     }
-    catch (...)
+    catch (std::exception &e)
     {
-		// DEBUGLOG(sessionguid, DB_INFO, L"Exception in FindStudyLevel.\r\n" );
+		DCMNET_ERROR("Exception in FindStudyLevel." << e.what());
     }
-
-	// DEBUGLOG(sessionguid, DB_INFO, L"error\r\n");
+	
     return STATUS_FIND_Failed_UnableToProcess;
 }
 
@@ -409,9 +413,9 @@ DIC_US FindHandler::FindSeriesLevel(rowset_iterator<row> &itr, DcmDataset *reque
 		}
 
     }
-    catch (...)
+    catch (std::exception &e)
     {
-		// DEBUGLOG(sessionguid, DB_INFO, L"Exception in FindSeriesLevel.\r\n" );
+		DCMNET_ERROR("Exception in FindSeriesLevel. " << e.what());
     }
     
     return STATUS_FIND_Failed_UnableToProcess;
@@ -438,9 +442,9 @@ DIC_US  FindHandler::FindInstanceLevel(rowset_iterator<row> &itr, DcmDataset *re
 		}
 
     }
-    catch (...)
+    catch (std::exception &e)
     {
-		// DEBUGLOG(sessionguid, DB_INFO, L"Exception in FindImageLevel.\r\n" );
+		DCMNET_ERROR("Exception in FindInstanceLevel. " << e.what());
     }
     	
     return STATUS_FIND_Failed_UnableToProcess;
