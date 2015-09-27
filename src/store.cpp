@@ -185,7 +185,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"StudyDescription = :StudyDescription,"
 					"PatientSex = :PatientSex,"
 					"PatientBirthDate = :PatientBirthDate,"
-					"ReferringPhysiciansName = :ReferringPhysicianName,"
+					"ReferringPhysicianName = :ReferringPhysicianName,"
 					"created_at = :created_at, updated_at = :updated_at"
 					" WHERE id = :id",
 					use(patientstudy);
