@@ -62,7 +62,7 @@ namespace soci
     {
         typedef values base_type;
 
-        static void from_base(values const & v, indicator /* ind */, PatientStudy & p)
+        static void from_base(values const & v, indicator ind, PatientStudy & p)
         {
             p.id = v.get<int>("id");
             p.StudyInstanceUID = v.get<std::string>("StudyInstanceUID");
@@ -105,7 +105,7 @@ namespace soci
     {
         typedef values base_type;
 
-        static void from_base(values const & v, indicator /* ind */, Series & p)
+        static void from_base(values const & v, indicator ind, Series & p)
         {
             p.id = v.get<int>("id");
             p.SeriesInstanceUID = v.get<std::string>("SeriesInstanceUID");
@@ -138,7 +138,7 @@ namespace soci
     {
         typedef values base_type;
 
-        static void from_base(values const & v, indicator /* ind */, Instance & p)
+        static void from_base(values const & v, indicator ind, Instance & p)
         {
             p.id = v.get<int>("id");
             p.SOPInstanceUID = v.get<std::string>("SOPInstanceUID");

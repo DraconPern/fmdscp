@@ -39,16 +39,18 @@ protected:
 	bool QuerySeriesLevel(DcmDataset *requestIdentifiers);
 	bool QueryInstanceLevel(DcmDataset *requestIdentifiers);
 
-	DIC_US FindStudyLevel(rowset_iterator<row> &itr, DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
-	DIC_US FindSeriesLevel(rowset_iterator<row> &itr, DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
-	DIC_US FindInstanceLevel(rowset_iterator<row> &itr, DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
+	DIC_US FindStudyLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
+	DIC_US FindSeriesLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
+	DIC_US FindInstanceLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
 		
 	std::string aetitle;
 	QueryLevel querylevel;
-
-	session dbconnection;
-	row row_;
-	soci::rowset_iterator<soci::row> itr;
+	std::vector<PatientStudy > patientstudies;
+	std::vector<PatientStudy >::iterator patientstudies_itr;
+	std::vector<Series > series;
+	std::vector<Series >::iterator series_itr;
+	std::vector<Instance > instances;	
+	std::vector<Instance >::iterator instances_itr;
 };
 
 #endif

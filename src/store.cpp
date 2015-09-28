@@ -2,6 +2,7 @@
 #include <set>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include "boost/date_time/local_time/local_time.hpp"
 
 #include "store.h"
 
@@ -15,6 +16,7 @@
 using namespace soci;
 using namespace boost::gregorian;
 using namespace boost::posix_time;
+using namespace boost::local_time;
 
 OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 {
@@ -146,7 +148,13 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			patientstudy.PatientID = textbuf.c_str();
 
 			datebuf = getDate(dfile.getDataset(), DCM_StudyDate);
-			if(datebuf.isValid()) patientstudy.StudyDate = to_tm(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
+			timebuf = getTime(dfile.getDataset(), DCM_StudyTime);
+			// use DCM_TimezoneOffsetFromUTC ?
+			if(datebuf.isValid() && timebuf.isValid()) 
+			{
+				ptime t1(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()), hours(timebuf.getHour())+minutes(timebuf.getMinute())+seconds(timebuf.getSecond()));
+				patientstudy.StudyDate = to_tm(t1);
+			}
 
 			// handle modality list...
 			std::string modalitiesinstudy = patientstudy.ModalitiesInStudy;
@@ -235,8 +243,14 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			series.SeriesNumber = numberbuf;
 
 			datebuf = getDate(dfile.getDataset(), DCM_SeriesDate);
-			if(datebuf.isValid()) series.SeriesDate = to_tm(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
-
+			timebuf = getTime(dfile.getDataset(), DCM_SeriesTime);
+			// use DCM_TimezoneOffsetFromUTC ?
+			if(datebuf.isValid() && timebuf.isValid()) 
+			{
+				ptime t1(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()), hours(timebuf.getHour())+minutes(timebuf.getMinute())+seconds(timebuf.getSecond()));
+				series.SeriesDate = to_tm(t1);
+			}
+			
 			series.updated_at = to_tm(second_clock::universal_time());
 
 			if(seriesselect.got_data())
