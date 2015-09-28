@@ -357,12 +357,22 @@ void blah(std::tm &member, const DcmTag &tag, DcmDataset *requestIdentifiers, Dc
 {
 	DcmElement *element;		
 	if(requestIdentifiers->findAndGetElement(tag, element).good())
-	{					
-		OFDate datebuf;
-		datebuf.setDate(member.tm_year + 1900, member.tm_mon + 1, member.tm_mday);
-		DcmDate *dcmdate = new DcmDate(tag);
-		dcmdate->setOFDate(datebuf);
-		responseIdentifiers->insert(dcmdate);		
+	{
+		DcmElement *e = newDicomElement(tag);
+		if(e->getVR() == EVR_DA)
+		{
+			OFDate datebuf(member.tm_year + 1900, member.tm_mon + 1, member.tm_mday);
+			DcmDate *dcmdate = new DcmDate(tag);
+			dcmdate->setOFDate(datebuf);
+			responseIdentifiers->insert(dcmdate);		
+		}
+		else if(e->getVR() == EVR_TM)
+		{
+			OFTime timebuf(member.tm_hour, member.tm_min, member.tm_sec);
+			DcmTime *dcmtime = new DcmTime(tag);
+			dcmtime->setOFTime(timebuf);
+			responseIdentifiers->insert(dcmtime);		
+		}
 	}
 }
 
@@ -383,6 +393,7 @@ DIC_US FindHandler::FindStudyLevel(DcmDataset *requestIdentifiers, DcmDataset **
 		blah(patientstudy.PatientID, DCM_PatientID, requestIdentifiers, *responseIdentifiers);
 		blah(patientstudy.StudyID, DCM_StudyID, requestIdentifiers, *responseIdentifiers);
 		blah(patientstudy.StudyDate, DCM_StudyDate, requestIdentifiers, *responseIdentifiers);
+		blah(patientstudy.StudyDate, DCM_StudyTime, requestIdentifiers, *responseIdentifiers);
 		blah(patientstudy.ModalitiesInStudy, DCM_ModalitiesInStudy, requestIdentifiers, *responseIdentifiers);
 		blah(patientstudy.StudyDescription, DCM_StudyDescription, requestIdentifiers, *responseIdentifiers);
 		blah(patientstudy.PatientSex, DCM_PatientSex, requestIdentifiers, *responseIdentifiers);
@@ -428,6 +439,7 @@ DIC_US FindHandler::FindSeriesLevel(DcmDataset *requestIdentifiers, DcmDataset *
 		blah(series.SeriesDescription, DCM_SeriesDescription,  requestIdentifiers, *responseIdentifiers);
 		blah(series.SeriesNumber, DCM_SeriesNumber,  requestIdentifiers, *responseIdentifiers);
 		blah(series.SeriesDate, DCM_SeriesDate,  requestIdentifiers, *responseIdentifiers);
+		blah(series.SeriesDate, DCM_SeriesTime,  requestIdentifiers, *responseIdentifiers);
 
 		++series_itr;            
 		return STATUS_Pending;

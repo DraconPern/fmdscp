@@ -3,19 +3,23 @@
 OFDate getDate(DcmDataset *dataset, const DcmTagKey& tagKey)
 {
 	OFDate result;	
-	OFString strdate;	
-	if(dataset && dataset->findAndGetOFString(tagKey, strdate).good())
-		result.setISOFormattedDate(strdate);
-
+	DcmElement *element;
+	if(dataset && dataset->findAndGetElement(tagKey, element).good())
+	{
+		DcmDate *d = (DcmDate *) element;
+		d->getOFDate(result);		
+	}
 	return result;
 }
 
 OFTime getTime(DcmDataset *dataset, const DcmTagKey& tagKey)
 {
 	OFTime result;
-	OFString strtime;	
-	if(dataset && dataset->findAndGetOFString(tagKey, strtime).good())
-		result.setISOFormattedTime(strtime);
-
+	DcmElement *element; 	
+	if(dataset && dataset->findAndGetElement(tagKey, element).good())
+	{		
+		DcmTime *t = (DcmTime *) element;
+		t->getOFTime(result);
+	}
 	return result;
 }
