@@ -23,18 +23,39 @@
 
 #include "soci/soci.h"
 #include "soci/mysql/soci-mysql.h"
-
-using namespace soci;
+#include "dicomsender.h"
 
 class MoveHandler
 {
 public:
-	MoveHandler(std::string aetitle);	
+	MoveHandler(std::string aetitle, std::string peeraetitle);	
 	static void MoveCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_MoveRSP *response, DcmDataset **statusDetail, DcmDataset **responseIdentifiers);
 protected:
 	void MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_MoveRSP *response, DcmDataset **statusDetail, DcmDataset **responseIdentifiers);
-	
-	std::string aetitle;
+	bool GetFilesToSend(std::string studyinstanceuid, naturalset &result);
+	bool mapMoveDestination(std::string destinationAE, Destination &destination);
+	void addFailedUIDInstance(const char *sopInstance);
+	OFCondition buildSubAssociation(T_DIMSE_C_MoveRQ *request, Destination &destination);
+	OFCondition closeSubAssociation();
+	DIC_US moveNextImage();
+	void scanFiles();
+	bool scanFile(boost::filesystem::path currentFilename);
+	OFCondition addStoragePresentationContexts(T_ASC_Parameters *params, OFList<OFString>& sopClasses);
+	static void moveSubOpProgressCallback(void *callbackData, T_DIMSE_StoreProgress *progress, T_DIMSE_C_StoreRQ * req);
+	void moveSubOpProgressCallback(T_DIMSE_StoreProgress *progress, T_DIMSE_C_StoreRQ * req);
+
+
+	std::string aetitle, peeraetitle;
+
+	naturalset filestosend;
+	OFList<OFString> sopClassUIDList;    // the list of sop classes
+
+	// info of the subassociation
+	T_ASC_Network *net;	
+	T_ASC_Association *assoc;
+
+	std::string failedUIDs;
+	int nCompleted, nFailed, nWarning;
 };
 
 #endif

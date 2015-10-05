@@ -7,7 +7,6 @@ using namespace Poco;
 using namespace Poco::Util;
 
 #include "soci/soci.h"
-using namespace soci;
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -66,7 +65,7 @@ void Config::registerCodecs()
 	DJDecoderRegistration::registerCodecs();
 	DJEncoderRegistration::registerCodecs();
 	DJLSEncoderRegistration::registerCodecs();
-	DJLSEncoderRegistration::registerCodecs();
+	DJLSDecoderRegistration::registerCodecs();
 	DcmRLEEncoderRegistration::registerCodecs();
 	DcmRLEDecoderRegistration::registerCodecs();
 	FMJP2KEncoderRegistration::registerCodecs();
@@ -105,7 +104,7 @@ bool Config::test(std::string &errormsg)
 	try
 	{
 		// test database connection
-		session dbconnection(Config::getConnectionString());
+		soci::session dbconnection(Config::getConnectionString());
 	}	
 	catch(std::exception &e)
 	{

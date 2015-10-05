@@ -27,7 +27,6 @@
 #include "find.h"
 #include "util.h"
 
-using namespace soci;
 using namespace boost::gregorian;
 using namespace boost::posix_time;
 
@@ -205,8 +204,7 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 		log << "Response Identifiers #" << responseCount;
 		(*responseIdentifiers)->print(log);
 		log << "-------";
-		DCMNET_INFO(log.str());
-		log.str("");
+		DCMNET_INFO(log.str());		
 	}
 
 	// Set response status

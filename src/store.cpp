@@ -4,6 +4,25 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "boost/date_time/local_time/local_time.hpp"
 
+
+// work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
+#ifdef _UNICODE
+#undef _UNICODE
+#undef UNICODE
+#define _UNDEFINEDUNICODE
+#endif
+
+#include <winsock2.h>	// include winsock2 before network includes
+#include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
+#include "dcmtk/dcmdata/dctk.h"
+#include "dcmtk/dcmnet/diutil.h"
+#include "dcmtk/oflog/ndc.h"
+
+#ifdef _UNDEFINEDUNICODE
+#define _UNICODE 1
+#define UNICODE 1
+#endif
+
 #include "store.h"
 
 #include "soci/soci.h"
@@ -13,7 +32,6 @@
 #include "config.h"
 #include "util.h"
 
-using namespace soci;
 using namespace boost::gregorian;
 using namespace boost::posix_time;
 using namespace boost::local_time;
@@ -50,7 +68,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	newpath /= studyuid.c_str();
 	newpath /= seriesuid.c_str();
 	boost::filesystem::create_directories(newpath);
-	newpath /= (sopuid + OFString(".dcm")).c_str();
+	newpath /= std::string(sopuid.c_str()) + ".dcm";
 
 	dfile.getDataset()->chooseRepresentation(EXS_JPEGLSLossless, NULL);
 	if(dfile.getDataset()->canWriteXfer(EXS_JPEGLSLossless))
@@ -59,8 +77,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 		dfile.saveFile(newpath.string().c_str(), EXS_JPEGLSLossless);
 
-
-		//DEBUGLOG(sessionguid, DB_INFO, L"Changed to JPEG LS Lossless: %s\r\n", newpath);
+		// DCMNET_INFO("Changed to JPEG LS Lossless: %s\r\n", newpath);
 	}
 	else
 	{
@@ -108,14 +125,14 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	{
 
 		// create a session
-		session dbconnection(Config::getConnectionString());
+		soci::session dbconnection(Config::getConnectionString());
 
 
 		//		if(cbdata->last_studyuid != studyuid)
 		{
 
 			PatientStudy patientstudy;
-			session &patientstudiesselect = dbconnection;
+			soci::session &patientstudiesselect = dbconnection;
 			patientstudiesselect << "SELECT id,"
 				"StudyInstanceUID,"
 				"StudyID,"
@@ -130,8 +147,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"ReferringPhysicianName,"
 				"created_at,updated_at"
 				" FROM patient_studies WHERE StudyInstanceUID = :studyuid",
-				into(patientstudy),
-				use(studyuid);
+				soci::into(patientstudy),
+				soci::use(studyuid);
 
 			patientstudy.StudyInstanceUID = studyuid;
 
@@ -196,7 +213,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"ReferringPhysicianName = :ReferringPhysicianName,"
 					"created_at = :created_at, updated_at = :updated_at"
 					" WHERE id = :id",
-					use(patientstudy);
+					soci::use(patientstudy);
 			}
 			else
 			{
@@ -207,7 +224,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				insert << "INSERT INTO patient_studies VALUES(0, :StudyInstanceUID, :AccessionNumber, :StudyID,:PatientName, :PatientID,"
 					":StudyDate, :ModalitiesInStudy, :StudyDescription, :PatientSex, :PatientBirthDate,:ReferringPhysicianName,"
 					":created_at, :updated_at)",
-					use(patientstudy);
+					soci::use(patientstudy);
 			}
 		}
 		
@@ -215,7 +232,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		{
 			// update the series table
 			Series series;
-			session &seriesselect = dbconnection;
+			soci::session &seriesselect = dbconnection;
 			seriesselect << "SELECT id,"
 				"SeriesInstanceUID,"
 				"StudyInstanceUID,"
@@ -225,8 +242,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"SeriesDate,"
 				"created_at,updated_at"
 				" FROM series WHERE SeriesInstanceUID = :seriesuid",
-				into(series),
-				use(seriesuid);
+				soci::into(series),
+				soci::use(seriesuid);
 
 			series.SeriesInstanceUID = seriesuid;
 
@@ -265,7 +282,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"SeriesDate = :SeriesDate,"
 					"created_at = :created_at, updated_at = :updated_at"
 					" WHERE id = :id",
-					use(series);
+					soci::use(series);
 			}
 			else
 			{
@@ -276,22 +293,22 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				insert << "INSERT INTO series VALUES(0, :SeriesInstanceUID, :StudyInstanceUID, :Modality,"
 					":SeriesDescription, :SeriesNumber,:SeriesDate,"
 					":created_at, :updated_at)",
-					use(series);
+					soci::use(series);
 			}
 		}
 
 		// update the images table
 
 		Instance instance;		
-		session &instanceselect = dbconnection;
+		soci::session &instanceselect = dbconnection;
 		instanceselect << "SELECT id,"
 			"SOPInstanceUID,"
 			"SeriesInstanceUID,"
 			"InstanceNumber,"
 			"created_at,updated_at"
 			" FROM instances WHERE SOPInstanceUID = :SOPInstanceUID",
-			into(instance),
-			use(sopuid);
+			soci::into(instance),
+			soci::use(sopuid);
 
 		instance.SOPInstanceUID = sopuid;
 
@@ -312,7 +329,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"InstanceNumber = :InstanceNumber,"
 				"created_at = :created_at, updated_at = :updated_at"
 				" WHERE id = :id",
-				use(instance);
+				soci::use(instance);
 		}
 		else
 		{
@@ -322,7 +339,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			soci::session &insert = dbconnection;
 			insert << "INSERT INTO instances VALUES(0, :SOPInstanceUID, :SeriesInstanceUID, :InstanceNumber,"
 				":created_at, :updated_at)",
-				use(instance);
+				soci::use(instance);
 		}
 		
 	}
@@ -330,6 +347,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	{
 		std::string what = e.what();
 		isOk = false;
+		DCMNET_ERROR(what);
 	}
 
 	return isOk;

@@ -1,8 +1,8 @@
 #include <boost/filesystem.hpp>
 #include <codecvt>
-#include "Poco/Path.h"
+#include <boost/uuid/uuid_generators.hpp> // generators
+#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
 
-using namespace Poco;
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -11,8 +11,10 @@ using namespace Poco;
 #define _UNDEFINEDUNICODE
 #endif
 
+#include <winsock2.h>	// include winsock2 before soci
 #include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
 #include "dcmtk/dcmnet/diutil.h"
+#include "dcmtk/oflog/ndc.h"
 
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
@@ -238,7 +240,7 @@ OFCondition MySCP::handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage,
 {
 	OFCondition status = EC_IllegalParameter;
 
-	MoveHandler handler(getAETitle().c_str());
+	MoveHandler handler(getAETitle().c_str(), getPeerAETitle().c_str());
 	status = DIMSE_moveProvider(assoc_, presID, &reqMessage, MoveHandler::MoveCallback, &handler, getDIMSEBlockingMode(), getDIMSETimeout());
 
 	return status;

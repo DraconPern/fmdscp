@@ -8,11 +8,12 @@
 #define _UNDEFINEDUNICODE
 #endif
 
+#include <winsock2.h>	// include winsock2 before network includes
 #include "dcmtk/config/osconfig.h"  /* make sure OS specific configuration is included first */
 #include "dcmtk/dcmnet/scpthrd.h"
 #include "dcmtk/dcmnet/scppool.h"
 #include "dcmtk/dcmnet/diutil.h"
-#include "dcmtk/oflog/ndc.h"
+
 
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
@@ -20,8 +21,6 @@
 #endif
 
 #include <boost/uuid/uuid.hpp>            // uuid class
-#include <boost/uuid/uuid_generators.hpp> // generators
-#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
 
 /// The class that provides the 
 class MySCP : public DcmThreadSCP

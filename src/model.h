@@ -55,6 +55,18 @@ typedef struct SInstance
 	std::tm updated_at;
 } Instance;
 
+typedef struct SDestination
+{
+	int id;
+	std::string name;
+	std::string destinationhost;
+	int destinationport;
+	std::string destinationAE;
+	std::string sourceAE;
+	std::tm created_at;
+	std::tm updated_at;
+} Destination;
+
 namespace soci
 {
     template<>
@@ -154,6 +166,38 @@ namespace soci
             v.set("SOPInstanceUID", p.SOPInstanceUID);
             v.set("SeriesInstanceUID", p.SeriesInstanceUID);
 			v.set("InstanceNumber", p.InstanceNumber);
+            v.set("created_at", p.created_at);
+            v.set("updated_at", p.updated_at);
+            ind = i_ok;
+        }
+    };
+
+	
+    template<>
+    struct type_conversion<Destination>
+    {
+        typedef values base_type;
+
+        static void from_base(values const & v, indicator ind, Destination & p)
+        {
+            p.id = v.get<int>("id");
+            p.name = v.get<std::string>("name");
+            p.destinationhost = v.get<std::string>("destinationhost");
+			p.destinationport = v.get<int>("destinationport");
+			p.destinationAE = v.get<std::string>("destinationAE");
+            p.sourceAE = v.get<std::string>("sourceAE");
+          	p.created_at = v.get<std::tm>("created_at");
+          	p.updated_at = v.get<std::tm>("updated_at");
+        }
+
+        static void to_base(const Destination & p, values & v, indicator & ind)
+        {
+            v.set("id", p.id);
+            v.set("name", p.name);
+            v.set("destinationhost", p.destinationhost);
+			v.set("destinationport", p.destinationport);
+			v.set("destinationhost", p.destinationAE);
+			v.set("destinationport", p.sourceAE);
             v.set("created_at", p.created_at);
             v.set("updated_at", p.updated_at);
             ind = i_ok;
