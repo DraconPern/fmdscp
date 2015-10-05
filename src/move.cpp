@@ -281,7 +281,7 @@ OFCondition MoveHandler::buildSubAssociation(T_DIMSE_C_MoveRQ *request, Destinat
 		peerHost << destination.destinationhost << ":" << destination.destinationport;
 		ASC_setPresentationAddresses(params, localHost, peerHost.str().c_str());
 
-		// add presentation contexts		
+		// add presentation contexts				
 		cond = addStoragePresentationContexts(params, sopClassUIDList);
 		if (cond.bad())
 		{
@@ -367,6 +367,11 @@ OFCondition MoveHandler::closeSubAssociation()
         
 		assoc = NULL;
     }
+
+	if(net != NULL)
+		ASC_dropNetwork(&net);
+
+	net = NULL;
 
     return cond;
 }
@@ -563,70 +568,17 @@ static OFCondition
 }
 
 OFCondition MoveHandler::addStoragePresentationContexts(T_ASC_Parameters *params, OFList<OFString>& sopClasses)
-{
-	/*
-	* Each SOP Class will be proposed in two presentation contexts (unless
-	* the opt_combineProposedTransferSyntaxes global variable is true).
-	* The command line specified a preferred transfer syntax to use.
-	* This prefered transfer syntax will be proposed in one
-	* presentation context and a set of alternative (fallback) transfer
-	* syntaxes will be proposed in a different presentation context.
-	*
-	* Generally, we prefer to use Explicitly encoded transfer syntaxes
-	* and if running on a Little Endian machine we prefer
-	* LittleEndianExplicitTransferSyntax to BigEndianTransferSyntax.
-	* Some SCP implementations will just select the first transfer
-	* syntax they support (this is not part of the standard) so
-	* organise the proposed transfer syntaxes to take advantage
-	* of such behaviour.
-	*/
-
-	// Which transfer syntax was preferred on the command line
-	OFString preferredTransferSyntax;
-	//if (opt_networkTransferSyntax == EXS_Unknown)
-	if (true)
-	{
-		/* gLocalByteOrder is defined in dcxfer.h */
-		if (gLocalByteOrder == EBO_LittleEndian)
-		{
-			/* we are on a little endian machine */
-			preferredTransferSyntax = UID_LittleEndianExplicitTransferSyntax;
-		}
-		else
-		{
-			/* we are on a big endian machine */
-			preferredTransferSyntax = UID_BigEndianExplicitTransferSyntax;
-		}
-	}
-	else
-	{
-		// DcmXfer xfer(opt_networkTransferSyntax);
-		// preferredTransferSyntax = xfer.getXferID();
-	}
+{		
+	OFList<OFString> preferredTransferSyntaxes;
+	preferredTransferSyntaxes.push_back(UID_JPEGLSLosslessTransferSyntax);	
+	preferredTransferSyntaxes.push_back(UID_JPEG2000LosslessOnlyTransferSyntax);
+	preferredTransferSyntaxes.push_back(UID_JPEGProcess14SV1TransferSyntax);
 		
-	OFListIterator(OFString) s_cur;
-	OFListIterator(OFString) s_end;
-
-
 	OFList<OFString> fallbackSyntaxes;	
-	fallbackSyntaxes.push_back(UID_LittleEndianExplicitTransferSyntax);
-	fallbackSyntaxes.push_back(UID_BigEndianExplicitTransferSyntax);
-	fallbackSyntaxes.push_back(UID_LittleEndianImplicitTransferSyntax);	
-
-	// Remove the preferred syntax from the fallback list
-	fallbackSyntaxes.remove(preferredTransferSyntax);
+	fallbackSyntaxes.push_back(UID_LittleEndianExplicitTransferSyntax);	
+	fallbackSyntaxes.push_back(UID_LittleEndianImplicitTransferSyntax);		
 	
-	// created a list of transfer syntaxes combined from the preferred and fallback syntaxes
-	OFList<OFString> combinedSyntaxes;
-	s_cur = fallbackSyntaxes.begin();
-	s_end = fallbackSyntaxes.end();
-	combinedSyntaxes.push_back(preferredTransferSyntax);
-	while (s_cur != s_end)
-	{
-		if (!isaListMember(combinedSyntaxes, *s_cur)) 
-			combinedSyntaxes.push_back(*s_cur);
-		++s_cur;
-	}
+	OFListIterator(OFString) s_cur, s_end;
 
 	// thin out the sop classes to remove any duplicates.
 	OFList<OFString> sops;
@@ -640,47 +592,33 @@ OFCondition MoveHandler::addStoragePresentationContexts(T_ASC_Parameters *params
 		}
 		++s_cur;
 	}
-
-	// add a presentations context for each sop class / transfer syntax pair
+		
+	// add a presentations context for each sop class x transfer syntax pair
 	OFCondition cond = EC_Normal;
 	int pid = 1; // presentation context id
 	s_cur = sops.begin();
 	s_end = sops.end();
 	while (s_cur != s_end && cond.good())
 	{
-
 		if (pid > 255)
 		{
 			DCMNET_ERROR("Too many presentation contexts");
 			return ASC_BADPRESENTATIONCONTEXTID;
 		}
 
-		//if (opt_combineProposedTransferSyntaxes)
-		if(true)
+		// created a list of transfer syntaxes combined from the preferred and fallback syntaxes
+		OFList<OFString> combinedSyntaxes(fallbackSyntaxes);
+		OFListIterator(OFString) s_cur2 = preferredTransferSyntaxes.begin();
+		OFListIterator(OFString) s_end2 = preferredTransferSyntaxes.end();		
+		while (s_cur2 != s_end2)
 		{
-			cond = addPresentationContext(params, pid, *s_cur, combinedSyntaxes);
-			pid += 2;   /* only odd presentation context id's */
+			combinedSyntaxes.push_front(*s_cur2);			
+			++s_cur2;
 		}
-		else
-		{
 
-			// sop class with preferred transfer syntax
-			cond = addPresentationContext(params, pid, *s_cur, preferredTransferSyntax);
-			pid += 2;   /* only odd presentation context id's */
-
-			if (fallbackSyntaxes.size() > 0)
-			{
-				if (pid > 255)
-				{
-					DCMNET_ERROR("Too many presentation contexts");
-					return ASC_BADPRESENTATIONCONTEXTID;
-				}
-
-				// sop class with fallback transfer syntax
-				cond = addPresentationContext(params, pid, *s_cur, fallbackSyntaxes);
-				pid += 2;       /* only odd presentation context id's */
-			}
-		}
+		cond = addPresentationContext(params, pid, *s_cur, combinedSyntaxes);
+		pid += 2;   /* only odd presentation context id's */
+		
 		++s_cur;
 	}
 
