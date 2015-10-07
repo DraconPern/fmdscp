@@ -193,7 +193,15 @@ OFCondition MySCP::handleSTORERequest(T_DIMSE_C_StoreRQ &reqMessage,
 	boost::filesystem::path filename = Config::getTempPath();
 	filename /= dcmSOPClassUIDToModality(reqMessage.AffectedSOPClassUID) + std::string("-") + reqMessage.AffectedSOPInstanceUID + ".dcm";
 
-	// generate filename with full path (and create subdirectories if needed)
+	std::stringstream msg;
+#ifdef _WIN32
+	// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
+	msg << "Receiving file: " << filename.string(std::codecvt_utf8<boost::filesystem::path::value_type>());
+#else
+	msg << "Receiving file: " << filename.string();
+#endif
+	DCMNET_INFO(msg.str());
+	
 	status = EC_Normal;
 	if (status.good())
 	{

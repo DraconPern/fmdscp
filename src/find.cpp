@@ -98,7 +98,7 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 	if ( responseCount == 1 )
 	{			
 		std::stringstream log;
-		log << "Find SCP Request Identifiers:\n";
+		log << "Find SCP Request Identifiers:";
 		requestIdentifiers->print(log);
 		log << "-------";
 		DCMNET_INFO(log.str());

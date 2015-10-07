@@ -3,7 +3,7 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "boost/date_time/local_time/local_time.hpp"
-
+#include <codecvt>
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -70,6 +70,17 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	boost::filesystem::create_directories(newpath);
 	newpath /= std::string(sopuid.c_str()) + ".dcm";
 
+	
+	std::stringstream msg;
+#ifdef _WIN32
+	// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
+	msg << "Saving file: " << newpath.string(std::codecvt_utf8<boost::filesystem::path::value_type>());
+#else
+	msg << "Saving file: " << newpath.string();
+#endif
+	DCMNET_INFO(msg.str());
+
+
 	dfile.getDataset()->chooseRepresentation(EXS_JPEGLSLossless, NULL);
 	if(dfile.getDataset()->canWriteXfer(EXS_JPEGLSLossless))
 	{
@@ -77,13 +88,13 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 		dfile.saveFile(newpath.string().c_str(), EXS_JPEGLSLossless);
 
-		// DCMNET_INFO("Changed to JPEG LS Lossless: %s\r\n", newpath);
+		DCMNET_INFO("Changed to JPEG LS lossless");
 	}
 	else
 	{
 		boost::filesystem::copy(filename, newpath);
 
-		// DEBUGLOG(sessionguid, DB_INFO, L"Moved to: %s\r\n", newpath);
+		DCMNET_INFO("Copied");
 	}
 
 	// now try to add the file into the database

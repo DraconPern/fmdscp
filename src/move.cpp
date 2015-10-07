@@ -3,6 +3,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
+#include <codecvt>
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -55,17 +56,27 @@ void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmD
 	// If this is the first time this callback function is called, we need to get the list of files to send.
 	if ( responseCount == 1 )
 	{	
-		
+		std::stringstream log;
+		log << "Move SCP Request Identifiers:";
+		requestIdentifiers->print(log);
+		log << "-------";
+		DCMNET_INFO(log.str());
+
 		OFString studyuid;
 		requestIdentifiers->findAndGetOFString(DCM_StudyInstanceUID, studyuid);		
 		if(studyuid.size() > 0)
-		{
+		{			
 			if(GetFilesToSend(studyuid.c_str(), filestosend))
-			{
+			{								
+				DCMNET_INFO("Number of files to send: " << filestosend.size());				
+
 				if(filestosend.size() == 0)
 					dimseStatus = STATUS_Success;					
 				else
+				{
+					
 					dimseStatus = STATUS_Pending;
+				}
 			}
 			else
 				dimseStatus = STATUS_MOVE_Failed_UnableToProcess;
@@ -79,7 +90,10 @@ void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmD
 			Destination destination;
 			destination.destinationAE = request->MoveDestination;
 			if(mapMoveDestination(destination.destinationAE, destination))
-			{			
+			{							
+				DCMNET_INFO("Destination: " << destination.destinationhost << ":" << destination.destinationport
+				 << " Destination AE: " << destination.destinationAE << " Source AE: " << destination.sourceAE);
+				
 				// start the sending association
 				if(buildSubAssociation(request, destination).good())
 				{
@@ -388,6 +402,15 @@ DIC_US MoveHandler::moveNextImage()
     
 	boost::filesystem::path filename = *filestosend.begin();
 	filestosend.erase(filestosend.begin());
+	
+	std::stringstream msg;
+#ifdef _WIN32
+	// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
+	msg << "Sending file: " << filename.string(std::codecvt_utf8<boost::filesystem::path::value_type>());
+#else
+	msg << "Sending file: " << filename.string();
+#endif
+	DCMNET_INFO(msg.str());
 
 	DcmFileFormat dfile;
 	cond = dfile.loadFile(filename.c_str());
@@ -433,7 +456,7 @@ DIC_US MoveHandler::moveNextImage()
     req.opts = (O_STORE_MOVEORIGINATORAETITLE | O_STORE_MOVEORIGINATORID);
     strcpy(req.MoveOriginatorApplicationEntityTitle, peeraetitle.c_str());
     req.MoveOriginatorID = 0;	
-
+	
 	DcmDataset *stDetail = NULL;
 	cond = DIMSE_storeUser(assoc, presId, &req,
                            NULL, dfile.getDataset(), moveSubOpProgressCallback, this,

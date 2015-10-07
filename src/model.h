@@ -67,6 +67,22 @@ typedef struct SDestination
 	std::tm updated_at;
 } Destination;
 
+
+typedef struct SOutgoingSession
+{
+	int id;
+	std::string uuid;
+	int queued;
+	std::string StudyInstanceUID;
+	std::string PatientName;
+	std::string PatientID;
+	int destination;	
+	std::string status;
+	std::tm created_at;
+	std::tm updated_at;
+} OutgoingSession;
+
+
 namespace soci
 {
     template<>
@@ -203,7 +219,43 @@ namespace soci
             ind = i_ok;
         }
     };
-}
 
+	
+    template<>
+    struct type_conversion<OutgoingSession>
+    {
+        typedef values base_type;
+
+        static void from_base(values const & v, indicator ind, OutgoingSession & p)
+        {	
+            p.id = v.get<int>("id");
+            p.uuid = v.get<std::string>("uuid");
+            p.queued = v.get<int>("queued");
+			p.StudyInstanceUID = v.get<int>("StudyInstanceUID");
+			p.PatientName = v.get<std::string>("PatientName");
+            p.PatientID = v.get<std::string>("PatientID");
+			p.destination = v.get<int>("destination");
+			p.status = v.get<std::string>("status");
+          	p.created_at = v.get<std::tm>("created_at");
+          	p.updated_at = v.get<std::tm>("updated_at");
+        }
+
+        static void to_base(const OutgoingSession & p, values & v, indicator & ind)
+        {			
+            v.set("id", p.id);
+            v.set("uuid", p.uuid);
+            v.set("queued", p.queued);
+			v.set("StudyInstanceUID", p.StudyInstanceUID);
+			v.set("PatientName", p.PatientName);
+			v.set("PatientID", p.PatientID);
+			v.set("destination", p.destination);
+			v.set("status", p.status);
+            v.set("created_at", p.created_at);
+            v.set("updated_at", p.updated_at);
+            ind = i_ok;
+        }
+    };
+}
+	
 #endif
 
