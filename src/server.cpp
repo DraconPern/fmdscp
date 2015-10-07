@@ -31,10 +31,10 @@ server::server()
 
 	// add scp
 	init_scp();
-	io_service_.post(boost::bind(&MyDcmSCPPool::listen, &storageSCP));	
+	io_service_.post(boost::bind(&MyDcmSCPPool::listen, &storageSCP));
 
 	// add sender
-
+	io_service_.post(boost::bind(&SenderService::run, &senderService));
 
 	
 }
@@ -90,6 +90,9 @@ void server::stop()
 
 	// also tell scp to stop
 	storageSCP.stopAfterCurrentAssociations();
+
+	// tell senderservice to stop
+	senderService.stop();
 }
 
 void server::stop(bool flag)

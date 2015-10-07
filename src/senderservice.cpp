@@ -1,16 +1,16 @@
 
-#include "sender.h"
+#include "senderservice.h"
 #include "dicomsender.h"
 
-Sender::Sender()
+SenderService::SenderService()
 {
 	shutdownEvent = false;
 
 
 }
 
-void Sender::run()
-{	
+void SenderService::run()
+{
 	 while(!shouldShutdown())
 	 {
 
@@ -25,13 +25,13 @@ void Sender::join()
 }
 */
 
-void Sender::stop()
+void SenderService::stop()
 {
 	boost::mutex::scoped_lock lk(mutex);
 	shutdownEvent = true;
 }
 
-bool Sender::shouldShutdown()
+bool SenderService::shouldShutdown()
 {
 	boost::mutex::scoped_lock lk(mutex);
 	return shutdownEvent;

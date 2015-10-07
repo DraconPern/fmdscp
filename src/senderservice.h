@@ -3,10 +3,10 @@
 
 #include <boost/thread/mutex.hpp>
 
-class Sender
+class SenderService
 {
 public:
-	Sender();
+	SenderService();
 	void run();
 	void stop();
 	bool shouldShutdown();

@@ -76,7 +76,7 @@ typedef struct SOutgoingSession
 	std::string StudyInstanceUID;
 	std::string PatientName;
 	std::string PatientID;
-	int destination;	
+	int destination_id;	
 	std::string status;
 	std::tm created_at;
 	std::tm updated_at;
@@ -234,7 +234,7 @@ namespace soci
 			p.StudyInstanceUID = v.get<int>("StudyInstanceUID");
 			p.PatientName = v.get<std::string>("PatientName");
             p.PatientID = v.get<std::string>("PatientID");
-			p.destination = v.get<int>("destination");
+			p.destination_id = v.get<int>("destination_id");
 			p.status = v.get<std::string>("status");
           	p.created_at = v.get<std::tm>("created_at");
           	p.updated_at = v.get<std::tm>("updated_at");
@@ -248,7 +248,7 @@ namespace soci
 			v.set("StudyInstanceUID", p.StudyInstanceUID);
 			v.set("PatientName", p.PatientName);
 			v.set("PatientID", p.PatientID);
-			v.set("destination", p.destination);
+			v.set("destination_id", p.destination_id);
 			v.set("status", p.status);
             v.set("created_at", p.created_at);
             v.set("updated_at", p.updated_at);

@@ -66,7 +66,7 @@ set(fmdscp_HEADERS
 	src/ndcappender.h
 	src/dicomsender.h
 	src/alphanum.hpp
-	src/sender.h
+	src/senderservice.h
 )
 
 set(fmdscp_SRCS
@@ -83,7 +83,7 @@ set(fmdscp_SRCS
 	sqlite3/sqlite3.c
 	sqlite3/sqlite3_exec_stmt.c
 	src/dicomsender.cpp
-	src/sender.cpp
+	src/senderservice.cpp
 )
 
 if(WIN32)

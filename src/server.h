@@ -5,7 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/thread/mutex.hpp>
 
-
+#include "senderservice.h"
 #include "myscp.h"
 
 class server
@@ -33,6 +33,7 @@ protected:
 	boost::asio::io_service io_service_;
 			
 	MyDcmSCPPool storageSCP;
+	SenderService senderService;
 };
 
 #endif // __SERVER_H__
