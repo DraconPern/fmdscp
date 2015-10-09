@@ -2,6 +2,7 @@
 #define __SENDER_H__
 
 #include <boost/thread/mutex.hpp>
+#include "model.h"
 
 class SenderService
 {
@@ -11,6 +12,7 @@ public:
 	void stop();
 	bool shouldShutdown();
 
+	bool getQueued(OutgoingSession &outgoingsession);
 protected:
 
 	boost::mutex mutex;

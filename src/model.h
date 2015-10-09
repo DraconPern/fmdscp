@@ -231,7 +231,7 @@ namespace soci
             p.id = v.get<int>("id");
             p.uuid = v.get<std::string>("uuid");
             p.queued = v.get<int>("queued");
-			p.StudyInstanceUID = v.get<int>("StudyInstanceUID");
+			p.StudyInstanceUID = v.get<std::string>("StudyInstanceUID");
 			p.PatientName = v.get<std::string>("PatientName");
             p.PatientID = v.get<std::string>("PatientID");
 			p.destination_id = v.get<int>("destination_id");
