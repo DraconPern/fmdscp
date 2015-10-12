@@ -73,8 +73,8 @@ void SenderService::run()
 	{
 		OutgoingSession outgoingsession;
 		if(getQueued(outgoingsession))
-		{			
-			DCMNET_INFO("Sending study " << outgoingsession.StudyInstanceUID);
+		{						
+			DCMNET_INFO("Session " << outgoingsession.uuid << " Sending study " << outgoingsession.StudyInstanceUID);
 
 			Destination destination;
 			if(findDestination(outgoingsession.destination_id, destination))
