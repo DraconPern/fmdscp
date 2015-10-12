@@ -4,7 +4,6 @@
 #include "alphanum.hpp"
 #include <set>
 #include <boost/filesystem.hpp>
-#include "sqlite3.h"
 
 typedef std::set<boost::filesystem::path, doj::alphanum_less<boost::filesystem::path> > naturalset;
 
@@ -15,11 +14,9 @@ public:
 	DICOMSender();
 	~DICOMSender();	
 
-	void Initialize(const std::string PatientName, std::string PatientID ,std::string BirthDay,
-		std::string NewPatientName, std::string NewPatientID ,std::string NewBirthDay,
+	void Initialize(int outgoingsessionid,
 		std::string destinationHost, unsigned int destinationPort, std::string destinationAETitle, std::string ourAETitle);
 
-	void SetFileList(sqlite3 *db);
 	void SetFileList(const naturalset &files);
 
 	static void DoSendThread(void *obj);

@@ -70,13 +70,15 @@ void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmD
 			{								
 				DCMNET_INFO("Number of files to send: " << filestosend.size());				
 
-				if(filestosend.size() == 0)
-					dimseStatus = STATUS_Success;					
-				else
+				if(filestosend.size() > 0)					
 				{
-					
+					// scan the files for sop class
+					scanFiles();
+
 					dimseStatus = STATUS_Pending;
 				}
+				else
+					dimseStatus = STATUS_Success;									
 			}
 			else
 				dimseStatus = STATUS_MOVE_Failed_UnableToProcess;
@@ -230,9 +232,7 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalset &resul
 	{
 		return false;
 	}
-
-	scanFiles();
-
+	
 	return true;
 }
 

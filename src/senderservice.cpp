@@ -3,10 +3,9 @@
 #include "config.h"
 #include "model.h"
 #include "senderservice.h"
-#include "dicomsender.h"
 #include "soci/soci.h"
 #include "soci/mysql/soci-mysql.h"
-
+#include <boost/thread.hpp>
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -75,20 +74,38 @@ void SenderService::run()
 		OutgoingSession outgoingsession;
 		if(getQueued(outgoingsession))
 		{
+			Destination destination;
+			if(findDestination(outgoingsession.destination_id, destination))
+			{
+				boost::shared_ptr<DICOMSender> sender(new DICOMSender());
+				sender->Initialize(outgoingsession.id,
+					destination.destinationhost, destination.destinationport, destination.destinationAE, destination.sourceAE);
 
-		}		
-		Sleep(200);
+				naturalset files;
+				if(GetFilesToSend(outgoingsession.StudyInstanceUID, files))
+				{
+					sender->SetFileList(files);					
+
+					// start the thread
+					boost::thread t(SenderService::RunDICOMSender, sender, outgoingsession.uuid);
+					t.detach(); 
+				}				
+			}
+		}
+		else
+		{
+			Sleep(200);
+		}
 
 	}
 }
 
-/*
-void Sender::join()
+void SenderService::RunDICOMSender(boost::shared_ptr<DICOMSender> sender, std::string uuid)
 {
-
-
+	dcmtk::log4cplus::NDCContextCreator ndc(uuid.c_str());
+	DICOMSender::DoSendThread(sender.get());
 }
-*/
+
 
 void SenderService::stop()
 {
@@ -102,3 +119,92 @@ bool SenderService::shouldShutdown()
 	return shutdownEvent;
 }
 
+
+bool SenderService::findDestination(int id, Destination &destination)
+{
+	try
+	{
+		soci::session dbconnection(Config::getConnectionString());
+		
+		soci::session &destinationsselect = dbconnection;
+		destinationsselect << "SELECT id,"
+			"name, destinationhost, destinationport, destinationAE, sourceAE,"
+			"created_at,updated_at"
+			" FROM destinations WHERE id = :id LIMIT 1",
+			soci::into(destination),
+			soci::use(id);
+
+		if(destinationsselect.got_data())
+		{
+			return true;
+		}
+	}
+	catch(...)
+	{
+
+	}
+	return false;
+}
+
+bool SenderService::GetFilesToSend(std::string studyinstanceuid, naturalset &result)
+{
+	try
+	{				
+		// open the db
+		soci::session dbconnection(Config::getConnectionString());
+		PatientStudy study;
+		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = :StudyInstanceUID LIMIT 1", soci::into(study),
+			soci::use(studyinstanceuid);
+		if(!dbconnection.got_data())
+		{			
+			throw std::exception();
+		}
+
+		soci::statement seriesselect(dbconnection);
+		Series series;
+		seriesselect.exchange(soci::into(series));
+		
+		seriesselect.exchange(soci::use(studyinstanceuid));
+		seriesselect.alloc();
+		seriesselect.prepare("SELECT * FROM series WHERE StudyInstanceUID = :StudyInstanceUID");
+		seriesselect.define_and_bind();
+		seriesselect.execute();
+
+		std::vector<Series> series_list;		
+		std::copy(soci::rowset_iterator<Series >(seriesselect, series), soci::rowset_iterator<Series >(), std::back_inserter(series_list));
+				
+		for(std::vector<Series>::iterator itr = series_list.begin(); itr != series_list.end(); itr++)
+		{
+			soci::statement instanceselect(dbconnection);
+			Instance instance;
+			instanceselect.exchange(soci::into(instance));
+			std::string seriesinstanceuid = (*itr).SeriesInstanceUID;
+			instanceselect.exchange(soci::use(seriesinstanceuid));
+			instanceselect.alloc();
+			instanceselect.prepare("SELECT * FROM instances WHERE SeriesInstanceUID = :SeriesInstanceUID");
+			instanceselect.define_and_bind();
+			instanceselect.execute();
+					
+			boost::filesystem::path serieslocation;
+			serieslocation = Config::getStoragePath();
+			serieslocation /= studyinstanceuid;
+			serieslocation /= seriesinstanceuid;
+
+			soci::rowset_iterator<Instance > itr2(instanceselect, instance);
+			soci::rowset_iterator<Instance > end2;
+			while(itr2 != end2)
+			{
+				boost::filesystem::path filename = serieslocation;
+				filename /= (*itr2).SOPInstanceUID + ".dcm";
+				result.insert(filename);
+				itr2++;
+			}
+		}
+	}
+	catch (std::exception& e)
+	{
+		return false;
+	}
+
+	return true;
+}
