@@ -73,10 +73,15 @@ void SenderService::run()
 	{
 		OutgoingSession outgoingsession;
 		if(getQueued(outgoingsession))
-		{
+		{			
+			DCMNET_INFO("Sending study " << outgoingsession.StudyInstanceUID);
+
 			Destination destination;
 			if(findDestination(outgoingsession.destination_id, destination))
 			{
+				DCMNET_INFO(" to " << destination.destinationhost << ":" << destination.destinationport <<
+				" destinationAE = " << destination.destinationAE << " sourceAE = " << destination.sourceAE);
+
 				boost::shared_ptr<DICOMSender> sender(new DICOMSender());
 				sender->Initialize(outgoingsession.id,
 					destination.destinationhost, destination.destinationport, destination.destinationAE, destination.sourceAE);
@@ -102,7 +107,7 @@ void SenderService::run()
 
 void SenderService::RunDICOMSender(boost::shared_ptr<DICOMSender> sender, std::string uuid)
 {
-	dcmtk::log4cplus::NDCContextCreator ndc(uuid.c_str());
+	dcmtk::log4cplus::NDCContextCreator ndc(uuid.c_str());	
 	DICOMSender::DoSendThread(sender.get());
 }
 

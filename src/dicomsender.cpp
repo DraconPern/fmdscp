@@ -195,16 +195,17 @@ void DICOMSenderImpl::GUILog::SetStatus(std::string msg)
 }
 
 void DICOMSenderImpl::DoSend()
-{
-	OFLog::configure(OFLogger::OFF_LOG_LEVEL);
-
+{	
+	std::stringstream msg;
+	msg << "Sending to " << m_destinationHost << ":" << m_destinationPort <<
+				" destinationAE = " << m_destinationAETitle << " sourceAE = " << m_ourAETitle;
+	log.Write(msg);
+	
 	log.SetStatus("Starting...");
-	log.Write("Loading files...\n");
+	log.Write("Loading files...");
 
 	// Scan the files for info to used later	
 	scanFiles();
-
-
 
 	int retry = 0;
 	int unsentcountbefore = 0;
@@ -224,7 +225,7 @@ void DICOMSenderImpl::DoSend()
 		if (unsentcountafter > 0 && unsentcountbefore == unsentcountafter && retry < 10000)
 		{
 			retry++;			
-			log.Write("Waiting 5 mins before retry\n");
+			log.Write("Waiting 5 mins before retry");
 
 			// sleep loop with cancel check, 5 minutes
 			int sleeploop = 5 * 60 * 5;
@@ -289,7 +290,7 @@ int DICOMSenderImpl::SendABatch()
 			throw std::runtime_error("addStoragePresentationContexts");
 		}
 
-		log.Write("Requesting Association\n");
+		log.Write("Requesting Association");
 
 		cond = ASC_requestAssociation(net, params, &assoc);
 		if (cond.bad())
@@ -306,7 +307,7 @@ int DICOMSenderImpl::SendABatch()
 			}
 			else
 			{
-				log.Write("Association Request Failed:\n");			
+				log.Write("Association Request Failed:");			
 				log.Write(cond);
 				throw std::runtime_error("ASC_requestAssociation");
 			}
@@ -322,7 +323,7 @@ int DICOMSenderImpl::SendABatch()
 		/* If there are none, finish the execution */
 		if (ASC_countAcceptedPresentationContexts(params) == 0)
 		{
-			log.Write("No Acceptable Presentation Contexts\n");
+			log.Write("No Acceptable Presentation Contexts");
 			throw new std::runtime_error("ASC_countAcceptedPresentationContexts");
 		}
 
@@ -332,7 +333,7 @@ int DICOMSenderImpl::SendABatch()
 
 		naturalset::iterator itr = filestosend.begin();
 		while(itr != filestosend.end())
-		{
+		{			
 			if (IsCanceled())
 				break;
 			cond = storeSCU(assoc, *itr);
@@ -363,11 +364,11 @@ int DICOMSenderImpl::SendABatch()
 				// delete and go to next
 				filestosend.erase(itr++);
 			}
-		}
-		
-		std::stringstream status;
-		status << (filestosend.size() - totalfiles) << " of " << totalfiles << " completed";
-		log.SetStatus(status.str());
+
+			std::stringstream status;
+			status << (totalfiles - filestosend.size()) << " of " << totalfiles << " completed";
+			log.SetStatus(status.str());
+		}			
 
 		// tear down association, i.e. terminate network connection to SCP 
 		if (cond == EC_Normal)
@@ -466,74 +467,16 @@ static OFCondition
 
 OFCondition DICOMSenderImpl::addStoragePresentationContexts(T_ASC_Parameters *params, OFList<OFString>& sopClasses)
 {
-	/*
-	* Each SOP Class will be proposed in two presentation contexts (unless
-	* the opt_combineProposedTransferSyntaxes global variable is true).
-	* The command line specified a preferred transfer syntax to use.
-	* This prefered transfer syntax will be proposed in one
-	* presentation context and a set of alternative (fallback) transfer
-	* syntaxes will be proposed in a different presentation context.
-	*
-	* Generally, we prefer to use Explicitly encoded transfer syntaxes
-	* and if running on a Little Endian machine we prefer
-	* LittleEndianExplicitTransferSyntax to BigEndianTransferSyntax.
-	* Some SCP implementations will just select the first transfer
-	* syntax they support (this is not part of the standard) so
-	* organise the proposed transfer syntaxes to take advantage
-	* of such behaviour.
-	*/
-
-	// Which transfer syntax was preferred on the command line
-	OFString preferredTransferSyntax;
-	if (opt_networkTransferSyntax == EXS_Unknown)
-	{
-		/* gLocalByteOrder is defined in dcxfer.h */
-		if (gLocalByteOrder == EBO_LittleEndian)
-		{
-			/* we are on a little endian machine */
-			preferredTransferSyntax = UID_LittleEndianExplicitTransferSyntax;
-		}
-		else
-		{
-			/* we are on a big endian machine */
-			preferredTransferSyntax = UID_BigEndianExplicitTransferSyntax;
-		}
-	}
-	else
-	{
-		DcmXfer xfer(opt_networkTransferSyntax);
-		preferredTransferSyntax = xfer.getXferID();
-	}
-
-	OFListIterator(OFString) s_cur;
-	OFListIterator(OFString) s_end;
-
-
+	OFList<OFString> preferredTransferSyntaxes;
+	preferredTransferSyntaxes.push_back(UID_JPEGLSLosslessTransferSyntax);	
+	preferredTransferSyntaxes.push_back(UID_JPEG2000LosslessOnlyTransferSyntax);
+	preferredTransferSyntaxes.push_back(UID_JPEGProcess14SV1TransferSyntax);
+		
 	OFList<OFString> fallbackSyntaxes;	
-	fallbackSyntaxes.push_back(UID_LittleEndianExplicitTransferSyntax);
-	fallbackSyntaxes.push_back(UID_BigEndianExplicitTransferSyntax);
-	fallbackSyntaxes.push_back(UID_LittleEndianImplicitTransferSyntax);	
-
-	// Remove the preferred syntax from the fallback list
-	fallbackSyntaxes.remove(preferredTransferSyntax);
-	// If little endian implicit is preferred then we don't need any fallback syntaxes
-	// because it is the default transfer syntax and all applications must support it.
-	if (opt_networkTransferSyntax == EXS_LittleEndianImplicit)
-	{
-		fallbackSyntaxes.clear();
-	}
-
-	// created a list of transfer syntaxes combined from the preferred and fallback syntaxes
-	OFList<OFString> combinedSyntaxes;
-	s_cur = fallbackSyntaxes.begin();
-	s_end = fallbackSyntaxes.end();
-	combinedSyntaxes.push_back(preferredTransferSyntax);
-	while (s_cur != s_end)
-	{
-		if (!isaListMember(combinedSyntaxes, *s_cur)) 
-			combinedSyntaxes.push_back(*s_cur);
-		++s_cur;
-	}
+	fallbackSyntaxes.push_back(UID_LittleEndianExplicitTransferSyntax);	
+	fallbackSyntaxes.push_back(UID_LittleEndianImplicitTransferSyntax);		
+	
+	OFListIterator(OFString) s_cur, s_end;
 
 	// thin out the sop classes to remove any duplicates.
 	OFList<OFString> sops;
@@ -547,46 +490,33 @@ OFCondition DICOMSenderImpl::addStoragePresentationContexts(T_ASC_Parameters *pa
 		}
 		++s_cur;
 	}
-
-	// add a presentations context for each sop class / transfer syntax pair
+		
+	// add a presentations context for each sop class x transfer syntax pair
 	OFCondition cond = EC_Normal;
 	int pid = 1; // presentation context id
 	s_cur = sops.begin();
 	s_end = sops.end();
 	while (s_cur != s_end && cond.good())
 	{
-
 		if (pid > 255)
 		{
-			log.Write("Too many presentation contexts\n");
+			DCMNET_ERROR("Too many presentation contexts");
 			return ASC_BADPRESENTATIONCONTEXTID;
 		}
 
-		if (opt_combineProposedTransferSyntaxes)
+		// created a list of transfer syntaxes combined from the preferred and fallback syntaxes
+		OFList<OFString> combinedSyntaxes(fallbackSyntaxes);
+		OFListIterator(OFString) s_cur2 = preferredTransferSyntaxes.begin();
+		OFListIterator(OFString) s_end2 = preferredTransferSyntaxes.end();		
+		while (s_cur2 != s_end2)
 		{
-			cond = addPresentationContext(params, pid, *s_cur, combinedSyntaxes);
-			pid += 2;   /* only odd presentation context id's */
+			combinedSyntaxes.push_front(*s_cur2);			
+			++s_cur2;
 		}
-		else
-		{
 
-			// sop class with preferred transfer syntax
-			cond = addPresentationContext(params, pid, *s_cur, preferredTransferSyntax);
-			pid += 2;   /* only odd presentation context id's */
-
-			if (fallbackSyntaxes.size() > 0)
-			{
-				if (pid > 255)
-				{
-					log.Write("Too many presentation contexts\n");
-					return ASC_BADPRESENTATIONCONTEXTID;
-				}
-
-				// sop class with fallback transfer syntax
-				cond = addPresentationContext(params, pid, *s_cur, fallbackSyntaxes);
-				pid += 2;       /* only odd presentation context id's */
-			}
-		}
+		cond = addPresentationContext(params, pid, *s_cur, combinedSyntaxes);
+		pid += 2;   /* only odd presentation context id's */
+		
 		++s_cur;
 	}
 
@@ -637,7 +567,7 @@ bool DICOMSenderImpl::updateStringAttributeValue(DcmItem* dataset, const DcmTagK
 void DICOMSenderImpl::progressCallback(void * callbackData, T_DIMSE_StoreProgress *progress, T_DIMSE_C_StoreRQ * req)
 {
 	DICOMSenderImpl *sender = (DICOMSenderImpl *)callbackData;
-
+	/*
 	switch (progress->state)
 	{
 	case DIMSE_StoreBegin:
@@ -649,7 +579,7 @@ void DICOMSenderImpl::progressCallback(void * callbackData, T_DIMSE_StoreProgres
 	default:
 		sender->log.Write(".");
 		break;
-	}
+	}*/
 }
 
 OFCondition DICOMSenderImpl::storeSCU(T_ASC_Association * assoc, const boost::filesystem::path &fname)
@@ -664,9 +594,9 @@ OFCondition DICOMSenderImpl::storeSCU(T_ASC_Association * assoc, const boost::fi
 	std::stringstream msg;
 #ifdef _WIN32
 	// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
-	msg << "Sending file: " << fname.string(std::codecvt_utf8<boost::filesystem::path::value_type>()) << "\n";
+	msg << "Sending file: " << fname.string(std::codecvt_utf8<boost::filesystem::path::value_type>());
 #else
-	msg << "Sending file: " << fname.string() << "\n";
+	msg << "Sending file: " << fname.string();
 #endif
 	log.Write(msg);
 
@@ -722,7 +652,7 @@ OFCondition DICOMSenderImpl::storeSCU(T_ASC_Association * assoc, const boost::fi
 	ASC_findAcceptedPresentationContext(assoc->params, presId, &pc);
 	DcmXfer netTransfer(pc.acceptedTransferSyntax);
 
-	msg << "Transfer: " << dcmFindNameOfUID(fileTransfer.getXferID()) << " -> " << dcmFindNameOfUID(netTransfer.getXferID()) << "\n";
+	msg << "Transfer: " << dcmFindNameOfUID(fileTransfer.getXferID()) << " -> " << dcmFindNameOfUID(netTransfer.getXferID());
 	log.Write(msg);
 
 	if(fileTransfer.getXferID() != netTransfer.getXferID())
