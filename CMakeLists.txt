@@ -50,7 +50,7 @@ add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
 #find_package(Soci REQUIRED HINTS ${SOCI_DIR})
 add_definitions(-DSOCI_USE_BOOST)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${SOCI_DIR}/include)
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/Simple-Web-Server ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${SOCI_DIR}/include)
 LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${SOCI_DIR}/lib ${MYSQL_LIB_DIR})
 
 set(fmdscp_HEADERS
@@ -67,6 +67,8 @@ set(fmdscp_HEADERS
 	src/dicomsender.h
 	src/alphanum.hpp
 	src/senderservice.h
+	Simple-Web-Server/server_http.hpp
+	src/httpserver.h
 )
 
 set(fmdscp_SRCS
@@ -83,7 +85,8 @@ set(fmdscp_SRCS
 	sqlite3/sqlite3.c
 	sqlite3/sqlite3_exec_stmt.c
 	src/dicomsender.cpp
-	src/senderservice.cpp
+	src/senderservice.cpp	
+	src/httpserver.cpp
 )
 
 if(WIN32)

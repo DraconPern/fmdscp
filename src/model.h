@@ -8,8 +8,13 @@
 
 // rails generate model PatientStudy DCM_StudyInstanceUID:string DCM_PatientsName:string DCM_PatientID:string DCM_StudyDate:date DCM_ModalitiesInStudy:string DCM_StudyDescription:string DCM_PatientsSex:string DCM_PatientsBirthDate:date
 // index on DCM_StudyInstanceUID
-typedef struct SPatientStudy
+class PatientStudy
 {
+public:
+	PatientStudy() { id = 0; memset(&created_at, 0, sizeof(std::tm)); memset(&updated_at, 0, sizeof(std::tm)); 
+		memset(&StudyDate, 0, sizeof(std::tm));
+		memset(&PatientBirthDate, 0, sizeof(std::tm));		
+	}
 	int id;
 	std::string StudyInstanceUID;
 	std::string StudyID;
@@ -24,13 +29,18 @@ typedef struct SPatientStudy
 	std::string ReferringPhysicianName;
 	std::tm created_at;
 	std::tm updated_at;
-} PatientStudy;
+};
 
 // rails generate model Series DCM_SeriesInstanceUID:string DCM_StudyInstanceUID:string DCM_Modality:string DCM_SeriesDescription:string
 // index on DCM_SeriesInstanceUID
 
-typedef struct SSeries
+class Series
 {
+public:
+	Series() { id = 0; memset(&created_at, 0, sizeof(std::tm)); memset(&updated_at, 0, sizeof(std::tm)); 
+		SeriesNumber = 0;
+		memset(&SeriesDate, 0, sizeof(std::tm));		
+	}
 	int id;
 	std::string SeriesInstanceUID;
 	std::string StudyInstanceUID;
@@ -40,23 +50,31 @@ typedef struct SSeries
 	std::tm SeriesDate;
 	std::tm created_at;
 	std::tm updated_at;
-} Series;
+};
 
 // rails generate model Instance SOPInstanceUID:string DCM_SeriesInstanceUID:string
 // index on SOPInstanceUID
 
-typedef struct SInstance
+class Instance
 {
+public:
+	Instance() { id = 0; memset(&created_at, 0, sizeof(std::tm)); memset(&updated_at, 0, sizeof(std::tm)); 
+		InstanceNumber = 0;		
+	}
 	int id;
 	std::string SOPInstanceUID;
 	std::string SeriesInstanceUID;
 	int InstanceNumber;
 	std::tm created_at;
 	std::tm updated_at;
-} Instance;
+};
 
-typedef struct SDestination
+class Destination
 {
+public:
+	Destination() { id = 0; memset(&created_at, 0, sizeof(std::tm)); memset(&updated_at, 0, sizeof(std::tm)); 
+		destinationport = 0;		
+	}
 	int id;
 	std::string name;
 	std::string destinationhost;
@@ -65,11 +83,15 @@ typedef struct SDestination
 	std::string sourceAE;
 	std::tm created_at;
 	std::tm updated_at;
-} Destination;
+};
 
 
-typedef struct SOutgoingSession
+class OutgoingSession
 {
+public:
+	OutgoingSession() { id = 0; memset(&created_at, 0, sizeof(std::tm)); memset(&updated_at, 0, sizeof(std::tm)); 
+		queued = destination_id = 0;		
+	}
 	int id;
 	std::string uuid;
 	int queued;
@@ -80,7 +102,7 @@ typedef struct SOutgoingSession
 	std::string status;
 	std::tm created_at;
 	std::tm updated_at;
-} OutgoingSession;
+};
 
 
 namespace soci

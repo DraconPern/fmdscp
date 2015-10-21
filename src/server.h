@@ -8,6 +8,9 @@
 #include "senderservice.h"
 #include "myscp.h"
 
+#include "httpserver.h"
+typedef SimpleWeb::Server<SimpleWeb::HTTP> HttpServer2;
+
 class server
 {
 public:
@@ -34,6 +37,7 @@ protected:
 			
 	MyDcmSCPPool storageSCP;
 	SenderService senderService;
+	HttpServer httpserver;
 };
 
 #endif // __SERVER_H__

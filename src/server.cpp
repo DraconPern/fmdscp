@@ -5,7 +5,7 @@
 #include <boost/asio/io_service.hpp>
 #include "ndcappender.h"
 
-server::server()
+server::server()// : httpserver(8080, 10)
 {
 	// configure logging
 	dcmtk::log4cplus::SharedAppenderPtr logfile(new NDCAsFilenameAppender("C:\\PACS\\Log"));
@@ -34,9 +34,10 @@ server::server()
 	io_service_.post(boost::bind(&MyDcmSCPPool::listen, &storageSCP));
 
 	// add sender
-	io_service_.post(boost::bind(&SenderService::run, &senderService));
+	io_service_.post(boost::bind(&SenderService::run, &senderService));	
 
-	
+	// add REST API
+	io_service_.post(boost::bind(&HttpServer::start, &httpserver));
 }
 
 server::~server()
@@ -93,6 +94,8 @@ void server::stop()
 
 	// tell senderservice to stop
 	senderService.stop();
+
+	httpserver.stop();
 }
 
 void server::stop(bool flag)

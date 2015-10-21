@@ -26,7 +26,6 @@
 #include "store.h"
 
 #include "soci/soci.h"
-#include "soci/mysql/soci-mysql.h"
 
 #include "model.h"
 #include "config.h"
