@@ -6,6 +6,25 @@
 #include <boost/algorithm/string.hpp>
 #include "model.h"
 
+
+// work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
+#ifdef _UNICODE
+#undef _UNICODE
+#undef UNICODE
+#define _UNDEFINEDUNICODE
+#endif
+
+#include <winsock2.h>	// include winsock2 before network includes
+#include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
+#include "dcmtk/dcmdata/dctk.h"
+#include "dcmtk/dcmnet/diutil.h"
+#include "dcmtk/oflog/ndc.h"
+
+#ifdef _UNDEFINEDUNICODE
+#define _UNICODE 1
+#define UNICODE 1
+#endif
+
 HttpServer::HttpServer() : SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10)
 {	
 	resource["^/studies\\?(.+)$"]["GET"] = SearchForStudies;
@@ -89,31 +108,79 @@ void HttpServer::WADO(HttpServer::Response& response, std::shared_ptr<HttpServer
 		return;
 	}
 
-	boost::filesystem::path newpath = Config::getStoragePath();
-	newpath /= patientstudy.StudyInstanceUID;
-	newpath /= series.SeriesInstanceUID;	
-	newpath /= instance.SOPInstanceUID + ".dcm";
+	boost::filesystem::path sourcepath = Config::getStoragePath();
+	sourcepath /= patientstudy.StudyInstanceUID;
+	sourcepath /= series.SeriesInstanceUID;	
+	sourcepath /= instance.SOPInstanceUID + ".dcm";
 
-	try
+	
+	DcmFileFormat dfile;
+	OFCondition cond = dfile.loadFile(sourcepath.string().c_str());
+
+	// now let's see what we need to output
+	if(queries["contentType"] == "application/dicom")
 	{
-		if(boost::filesystem::file_size(newpath) > 0)
+		// decompress
+		dfile.getDataset()->chooseRepresentation(EXS_LittleEndianExplicit, NULL);
+
+		boost::filesystem::path newpath = boost::filesystem::unique_path();
+		if(dfile.getDataset()->canWriteXfer(EXS_LittleEndianExplicit))
 		{
-			std::ifstream source(newpath.string(), std::ios::binary);
-			response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << boost::filesystem::file_size(newpath) << "\r\n" 
-				<< "Content-Type: application/dicom\r\n"
-				<< "Content-disposition: attachment; filename=\"" << instance.SOPInstanceUID + ".dcm" << "\"\r\n"
-				<< "\r\n";
+			dfile.getDataset()->loadAllDataIntoMemory();
+
+			dfile.saveFile(newpath.string().c_str(), EXS_LittleEndianExplicit);
+		}
+		else
+			boost::filesystem::copy(sourcepath, newpath);
+
+		try
+		{
+			if(boost::filesystem::file_size(newpath) > 0)
+			{
+				std::ifstream source(newpath.string(), std::ios::binary);
+				response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << boost::filesystem::file_size(newpath) << "\r\n" 
+					<< "Content-Type: application/dicom\r\n"
+					<< "Content-disposition: attachment; filename=\"" << instance.SOPInstanceUID + ".dcm" << "\"\r\n"
+					<< "\r\n";
 				
-			std::istreambuf_iterator<char> begin_source(source);
-			std::istreambuf_iterator<char> end_source;
-			std::ostreambuf_iterator<char> begin_dest(response); 
-			std::copy(begin_source, end_source, begin_dest);
-		}		
+				std::istreambuf_iterator<char> begin_source(source);
+				std::istreambuf_iterator<char> end_source;
+				std::ostreambuf_iterator<char> begin_dest(response); 
+				std::copy(begin_source, end_source, begin_dest);
+			}		
+		}
+		catch(...)
+		{
+			content = "Object not found on disk";
+			response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		}
 	}
-	catch(...)
+	else
 	{
-		content = "Object not found on disk";
-		response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		//output jpeg
+		boost::filesystem::path newpath = boost::filesystem::unique_path();
+
+		try
+		{
+			if(boost::filesystem::file_size(newpath) > 0)
+			{
+				std::ifstream source(newpath.string(), std::ios::binary);
+				response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << boost::filesystem::file_size(newpath) << "\r\n" 
+					<< "Content-Type: application/dicom\r\n"
+					<< "Content-disposition: attachment; filename=\"" << instance.SOPInstanceUID + ".dcm" << "\"\r\n"
+					<< "\r\n";
+				
+				std::istreambuf_iterator<char> begin_source(source);
+				std::istreambuf_iterator<char> end_source;
+				std::ostreambuf_iterator<char> begin_dest(response); 
+				std::copy(begin_source, end_source, begin_dest);
+			}		
+		}
+		catch(...)
+		{
+			content = "Object not found on disk";
+			response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		}
 	}
 }
 

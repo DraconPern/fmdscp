@@ -10,7 +10,7 @@ public:
 	HttpServer();
 	
 	static void NotFound(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request);	
-	static void Match(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request);	
+	static void SearchForStudies(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request);	
 	static void WADO(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request);	
 	static void decode_query(const std::string &content, std::map<std::string, std::string> &nvp);
 	static bool url_decode(const std::string& in, std::string& out);
