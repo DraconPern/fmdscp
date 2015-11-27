@@ -1,3 +1,6 @@
 [submodule "Simple-Web-Server"]
 	path = Simple-Web-Server
 	url = https://github.com/eidheim/Simple-Web-Server.git
+[submodule "soci"]
+	path = soci
+	url = https://github.com/SOCI/soci.git
