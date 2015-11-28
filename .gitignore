@@ -3,7 +3,6 @@ boost/
 build-Debug/
 build-Release/
 dcmtk/
-fmjpeg2koj/
 openjpeg/
 zlib/
 .DS_Store

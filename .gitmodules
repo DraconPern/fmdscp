@@ -1,8 +1,12 @@
 [submodule "Simple-Web-Server"]
 	path = Simple-Web-Server
-	url = https://github.com/DraconPern/Simple-Web-Server.git
+	url = git@github.com:DraconPern/Simple-Web-Server.git
 	branch = master
 [submodule "soci"]
 	path = soci
 	url = https://github.com/SOCI/soci.git
+	branch = master
+[submodule "fmjpeg2koj"]
+	path = fmjpeg2koj
+	url = git@github.com:DraconPern/fmjpeg2koj.git
 	branch = master
