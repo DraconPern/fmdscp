@@ -3,7 +3,7 @@
 
 #include <boost/filesystem.hpp>
 
-class Config
+class config
 {
 
 public:

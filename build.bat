@@ -58,16 +58,16 @@ cd ..\..
 cd %DEVSPACE%\soci
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G "Visual Studio 11" -DBUILD_SHARED_LIBS=OFF -DSOCI_STATIC=ON -DSOCI_SHARED=OFF -DSOCI_EMPTY=OFF -DSOCI_MYSQL=ON -DSOCI_ODBC=ON -DSOCI_USE_BOOST=ON -DSOCI_TESTS=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DBOOST_ROOT=%DEVSPACE%\boost -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\soci\%TYPE%
+cmake .. -G "Visual Studio 11" -DBUILD_SHARED_LIBS=OFF -DSOCI_STATIC=ON -DSOCI_SHARED=OFF -DSOCI_EMPTY=OFF -DSOCI_ODBC=ON -DSOCI_TESTS=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DWITH_BOOST=ON -DBOOST_ROOT=%DEVSPACE%\boost -DMYSQL_INCLUDE_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%\include -DMYSQL_LIBRARIES=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%\lib -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\soci\%TYPE%
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 cd ..\..
 
-cd %DEVSPACE%\openssl-1.0.1p
-IF %TYPE% == "Release" "c:\Perl\bin\perl.exe" Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl-Release VC-WIN32 
-IF %TYPE% == "Debug"   "c:\Perl\bin\perl.exe" Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl-Debug debug-VC-WIN32 
-call ms\do_ms
-nmake -f ms\ntdll.mak install
-cd ..
+`cd %DEVSPACE%\openssl-1.0.1p
+`IF %TYPE% == "Release" "c:\Perl\bin\perl.exe" Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl-Release VC-WIN32 
+`IF %TYPE% == "Debug"   "c:\Perl\bin\perl.exe" Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl-Debug debug-VC-WIN32 
+`call ms\do_ms
+`nmake -f ms\ntdll.mak install
+`cd ..
 
 cd %DEVSPACE%
 mkdir build-%TYPE%

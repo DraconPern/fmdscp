@@ -53,7 +53,7 @@ void HttpServer::WADO(HttpServer::Response& response, std::shared_ptr<HttpServer
 		return;
 	}
 
-	soci::session dbconnection(Config::getConnectionString());
+	soci::session dbconnection(config::getConnectionString());
 
 	PatientStudy patientstudy;
 	soci::session &patientstudiesselect = dbconnection;
@@ -108,7 +108,7 @@ void HttpServer::WADO(HttpServer::Response& response, std::shared_ptr<HttpServer
 		return;
 	}
 
-	boost::filesystem::path sourcepath = Config::getStoragePath();
+	boost::filesystem::path sourcepath = config::getStoragePath();
 	sourcepath /= patientstudy.StudyInstanceUID;
 	sourcepath /= series.SeriesInstanceUID;	
 	sourcepath /= instance.SOPInstanceUID + ".dcm";

@@ -190,7 +190,7 @@ OFCondition MySCP::handleSTORERequest(T_DIMSE_C_StoreRQ &reqMessage,
 	Uint16 rspStatusCode = STATUS_STORE_Error_CannotUnderstand;
 
 	// get storage location or use temp	
-	boost::filesystem::path filename = Config::getTempPath();
+	boost::filesystem::path filename = config::getTempPath();
 	filename /= dcmSOPClassUIDToModality(reqMessage.AffectedSOPClassUID) + std::string("-") + reqMessage.AffectedSOPInstanceUID + ".dcm";
 
 	std::stringstream msg;

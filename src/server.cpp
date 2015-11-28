@@ -15,12 +15,12 @@ server::server()// : httpserver(8080, 10)
 	// do server wide init
 	soci::register_factory_mysql();
 
-	Config::registerCodecs();
+	config::registerCodecs();
 
-	Config::createDBPool();
+	config::createDBPool();
 
 	std::string errormsg;
-	if(!Config::test(errormsg))
+	if(!config::test(errormsg))
 	{
 		/*
 		app.logger().error(errormsg);
@@ -42,7 +42,7 @@ server::server()// : httpserver(8080, 10)
 
 server::~server()
 {
-	Config::deregisterCodecs();
+	config::deregisterCodecs();
 }
 
 void server::init_scp()

@@ -178,7 +178,7 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalset &resul
 	try
 	{				
 		// open the db
-		soci::session dbconnection(Config::getConnectionString());
+		soci::session dbconnection(config::getConnectionString());
 		PatientStudy study;
 		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = :StudyInstanceUID LIMIT 1", soci::into(study),
 			soci::use(studyinstanceuid);
@@ -213,7 +213,7 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalset &resul
 			instanceselect.execute();
 					
 			boost::filesystem::path serieslocation;
-			serieslocation = Config::getStoragePath();
+			serieslocation = config::getStoragePath();
 			serieslocation /= studyinstanceuid;
 			serieslocation /= seriesinstanceuid;
 
@@ -240,7 +240,7 @@ bool MoveHandler::mapMoveDestination(std::string destinationAE, Destination &des
 {
 	try
 	{
-		soci::session dbconnection(Config::getConnectionString());
+		soci::session dbconnection(config::getConnectionString());
 		
 		soci::session &destinationsselect = dbconnection;
 		destinationsselect << "SELECT id,"

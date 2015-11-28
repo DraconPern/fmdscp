@@ -43,7 +43,7 @@ using namespace Poco::Util;
 #define UNICODE 1
 #endif
 
-boost::filesystem::path Config::getTempPath()
+boost::filesystem::path config::getTempPath()
 {
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
 
@@ -52,7 +52,7 @@ boost::filesystem::path Config::getTempPath()
 	return Path::expand(p);
 }
 
-boost::filesystem::path Config::getStoragePath()
+boost::filesystem::path config::getStoragePath()
 {
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
 
@@ -60,7 +60,7 @@ boost::filesystem::path Config::getStoragePath()
 	return Path::expand(p);
 }
 
-void Config::registerCodecs()
+void config::registerCodecs()
 {
 	DJDecoderRegistration::registerCodecs();
 	DJEncoderRegistration::registerCodecs();
@@ -73,7 +73,7 @@ void Config::registerCodecs()
 }
 
 
-void Config::deregisterCodecs()
+void config::deregisterCodecs()
 {
 	DJDecoderRegistration::cleanup();
 	DJEncoderRegistration::cleanup();
@@ -85,26 +85,26 @@ void Config::deregisterCodecs()
 	FMJP2KDecoderRegistration::cleanup();
 }
 
-std::string Config::getConnectionString()
+std::string config::getConnectionString()
 {
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
 
 	return pConf->getString("ConnectionString", "mysql://host=192.168.1.100 port=3306 user=root db=pacsdb_dev");
 }
 
-void Config::createDBPool()
+void config::createDBPool()
 {
 	//_pool = new SessionPool("MySQL", getConnectionString());
 }
 
-bool Config::test(std::string &errormsg)
+bool config::test(std::string &errormsg)
 {
 	bool result = true;
 
 	try
 	{
 		// test database connection
-		soci::session dbconnection(Config::getConnectionString());
+		soci::session dbconnection(config::getConnectionString());
 	}	
 	catch(std::exception &e)
 	{
@@ -118,7 +118,7 @@ bool Config::test(std::string &errormsg)
 	try
 	{
 		// test to see if we can write to the temp dir
-		boost::filesystem::path tempTest = Config::getTempPath();
+		boost::filesystem::path tempTest = config::getTempPath();
 		tempTest /= "_test";
 
 		if(!boost::filesystem::create_directories(tempTest))
@@ -127,7 +127,7 @@ bool Config::test(std::string &errormsg)
 		boost::filesystem::remove(tempTest);
 
 		// test to see if we can write to the storage dir
-		boost::filesystem::path storageTest = Config::getTempPath();
+		boost::filesystem::path storageTest = config::getTempPath();
 		storageTest /= "_test";
 
 		if(!boost::filesystem::create_directories(storageTest))

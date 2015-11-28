@@ -34,7 +34,7 @@ bool SenderService::getQueued(OutgoingSession &outgoingsession)
 {
 	try
 	{
-		soci::session dbconnection(Config::getConnectionString());		
+		soci::session dbconnection(config::getConnectionString());		
 
 		soci::session &queueselect = dbconnection;
 		
@@ -129,7 +129,7 @@ bool SenderService::findDestination(int id, Destination &destination)
 {
 	try
 	{
-		soci::session dbconnection(Config::getConnectionString());
+		soci::session dbconnection(config::getConnectionString());
 		
 		soci::session &destinationsselect = dbconnection;
 		destinationsselect << "SELECT id,"
@@ -156,7 +156,7 @@ bool SenderService::GetFilesToSend(std::string studyinstanceuid, naturalset &res
 	try
 	{				
 		// open the db
-		soci::session dbconnection(Config::getConnectionString());
+		soci::session dbconnection(config::getConnectionString());
 		PatientStudy study;
 		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = :StudyInstanceUID LIMIT 1", soci::into(study),
 			soci::use(studyinstanceuid);
@@ -191,7 +191,7 @@ bool SenderService::GetFilesToSend(std::string studyinstanceuid, naturalset &res
 			instanceselect.execute();
 					
 			boost::filesystem::path serieslocation;
-			serieslocation = Config::getStoragePath();
+			serieslocation = config::getStoragePath();
 			serieslocation /= studyinstanceuid;
 			serieslocation /= seriesinstanceuid;
 

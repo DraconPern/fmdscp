@@ -113,7 +113,7 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 		try
 		{
 			// open the db
-			session dbconnection(Config::getConnectionString());		
+			session dbconnection(config::getConnectionString());		
 			statement st(dbconnection);						
 
 			// storage of parameters since they must exist until all result are returned

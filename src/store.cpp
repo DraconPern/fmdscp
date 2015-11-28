@@ -63,7 +63,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 		return status;
 	}
 
-	boost::filesystem::path newpath = Config::getStoragePath();
+	boost::filesystem::path newpath = config::getStoragePath();
 	newpath /= studyuid.c_str();
 	newpath /= seriesuid.c_str();
 	boost::filesystem::create_directories(newpath);
@@ -135,7 +135,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	{
 
 		// create a session
-		soci::session dbconnection(Config::getConnectionString());
+		soci::session dbconnection(config::getConnectionString());
 
 
 		//		if(cbdata->last_studyuid != studyuid)

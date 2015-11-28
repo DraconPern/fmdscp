@@ -190,7 +190,7 @@ std::string DICOMSenderImpl::GUILog::Read()
 
 void DICOMSenderImpl::GUILog::SetStatus(std::string msg)
 {
-	soci::session dbconnection(Config::getConnectionString());
+	soci::session dbconnection(config::getConnectionString());
 	dbconnection << "UPDATE outgoing_sessions SET status = :status, updated_at = NOW() WHERE id = :id", soci::use(msg), soci::use(m_outgoingsessionid);
 }
 
