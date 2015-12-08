@@ -6,3 +6,7 @@
 	path = fmjpeg2koj
 	url = git@github.com:DraconPern/fmjpeg2koj.git
 	branch = master
+[submodule "poco"]
+	path = poco
+	url = https://github.com/pocoproject/poco.git
+	branch = poco-1.6.1
