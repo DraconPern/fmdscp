@@ -243,8 +243,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				update.execute();
 			}
 			else
-			{
-				
+			{				
 				patientstudy.created_at = Poco::DateTime();
 
 				Poco::Data::Statement insert(dbconnection);
@@ -254,11 +253,11 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				insert.execute();
 			}
 		}
-		/*
+		
 		//if(cbdata->last_seriesuid != seriesuid)
 		{
 			// update the series table			
-			std::vector<Series> series;
+			std::vector<Series> series_list;
 			Poco::Data::Statement seriesselect(dbconnection);
 			seriesselect << "SELECT id,"
 				"SeriesInstanceUID,"
@@ -268,9 +267,18 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"SeriesNumber,"
 				"SeriesDate,"
 				"created_at,updated_at"
-				" FROM series WHERE SeriesInstanceUID = :seriesuid",
-				into(series),
+				" FROM series WHERE SeriesInstanceUID = ?",
+				into(series_list),
 				use(seriesuid);
+
+			seriesselect.execute();
+
+			if(series_list.size() == 0)
+			{
+				series_list.push_back(Series());
+			}
+
+			Series &series = series_list[0];
 
 			series.SeriesInstanceUID = seriesuid;
 
@@ -291,51 +299,63 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			// use DCM_TimezoneOffsetFromUTC ?
 			if(datebuf.isValid() && timebuf.isValid()) 
 			{
-				ptime t1(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()), hours(timebuf.getHour())+minutes(timebuf.getMinute())+seconds(timebuf.getSecond()));
-				series.SeriesDate = to_tm(t1);
+				series.SeriesDate.assign(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay(), timebuf.getHour(), timebuf.getMinute(), timebuf.getSecond());
+				
 			}
 			
-			series.updated_at = to_tm(second_clock::universal_time());
+			series.updated_at = Poco::DateTime();
 
-			if(seriesselect.got_data())
+			if(series.id != 0)
 			{
-				soci::session &update = dbconnection;
+				Poco::Data::Statement update(dbconnection);
 				update << "UPDATE series SET "
-					"SeriesInstanceUID = :SeriesInstanceUID,"
-					"StudyInstanceUID = :StudyInstanceUID,"
-					"Modality = :Modality,"
-					"SeriesDescription = :SeriesDescription,"
-					"SeriesNumber = :SeriesNumber,"
-					"SeriesDate = :SeriesDate,"
-					"created_at = :created_at, updated_at = :updated_at"
-					" WHERE id = :id",
-					soci::use(series);
+					"id = ?,"
+					"SeriesInstanceUID = ?,"
+					"StudyInstanceUID = ?,"
+					"Modality = ?,"
+					"SeriesDescription = ?,"
+					"SeriesNumber = ?,"
+					"SeriesDate = ?,"
+					"created_at = ?, updated_at = ?"
+					" WHERE id = ?",
+					use(series),
+					use(series.id);
+
+				update.execute();
 			}
 			else
-			{
-				series.id = 0;
-				series.created_at = to_tm(second_clock::universal_time());				
+			{				
+				series.created_at = Poco::DateTime();		
 
-				soci::session &insert = dbconnection;
-				insert << "INSERT INTO series VALUES(0, :SeriesInstanceUID, :StudyInstanceUID, :Modality,"
-					":SeriesDescription, :SeriesNumber,:SeriesDate,"
-					":created_at, :updated_at)",
-					soci::use(series);
+				Poco::Data::Statement insert(dbconnection);
+				insert << "INSERT INTO series VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					use(series);
+
+				insert.execute();
 			}
 		}
-		*/
+		
 		// update the images table
-		/*
-		Instance instance;		
-		soci::session &instanceselect = dbconnection;
+		
+		std::vector<Instance> instances;
+		Poco::Data::Statement instanceselect(dbconnection);
 		instanceselect << "SELECT id,"
 			"SOPInstanceUID,"
 			"SeriesInstanceUID,"
 			"InstanceNumber,"
 			"created_at,updated_at"
-			" FROM instances WHERE SOPInstanceUID = :SOPInstanceUID",
-			soci::into(instance),
-			soci::use(sopuid);
+			" FROM instances WHERE SOPInstanceUID = ?",
+			into(instances),
+			use(sopuid);
+
+		instanceselect.execute();
+
+		if(instances.size() == 0)
+		{
+			instances.push_back(Instance());
+		}
+
+		Instance &instance = instances[0];
 
 		instance.SOPInstanceUID = sopuid;
 
@@ -345,30 +365,31 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		dfile.getDataset()->findAndGetSint32(DCM_InstanceNumber, numberbuf);
 		instance.InstanceNumber = numberbuf;
 
-		instance.updated_at = to_tm(second_clock::universal_time());
+		instance.updated_at = Poco::DateTime();
 
-		if(instanceselect.got_data())
+		if(instance.id != 0)
 		{
-			soci::session &update = dbconnection;			
+			Poco::Data::Statement update(dbconnection);
 			update << "UPDATE instances SET "
-				"SOPInstanceUID = :SOPInstanceUID,"
-				"SeriesInstanceUID = :SeriesInstanceUID,"
-				"InstanceNumber = :InstanceNumber,"
-				"created_at = :created_at, updated_at = :updated_at"
-				" WHERE id = :id",
-				soci::use(instance);
+				"id = ?,"
+				"SOPInstanceUID = ?,"
+				"SeriesInstanceUID = ?,"
+				"InstanceNumber = ?,"
+				"created_at = ?, updated_at = ?"
+				" WHERE id = ?",
+				use(instance),
+				use(instance.id);
+
+			update.execute();
 		}
 		else
-		{
-			instance.id = 0;
-			instance.created_at = to_tm(second_clock::universal_time());				
+		{			
+			instance.created_at = Poco::DateTime();
 			
-			soci::session &insert = dbconnection;
-			insert << "INSERT INTO instances VALUES(0, :SOPInstanceUID, :SeriesInstanceUID, :InstanceNumber,"
-				":created_at, :updated_at)",
-				soci::use(instance);
-		}
-		*/
+			Poco::Data::Statement insert(dbconnection);
+			insert << "INSERT INTO instances VALUES(?, ?, ?, ?, ?, ?)",
+				use(instance);
+		}		
 	}
 	catch(Poco::Data::DataException &e)
 	{
