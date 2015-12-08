@@ -25,7 +25,8 @@
 
 #include "store.h"
 
-#include "soci/soci.h"
+#include "poco/Data/Session.h"
+using namespace Poco::Data::Keywords;
 
 #include "model.h"
 #include "config.h"
@@ -134,15 +135,13 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	try
 	{
 
-		// create a session
-		soci::session dbconnection(config::getConnectionString());
-
+		Poco::Data::Session dbconnection(config::getConnectionString());		
 
 		//		if(cbdata->last_studyuid != studyuid)
 		{
-
-			PatientStudy patientstudy;
-			soci::session &patientstudiesselect = dbconnection;
+			
+			std::vector<PatientStudy> patientstudies;
+			Poco::Data::Statement patientstudiesselect(dbconnection);
 			patientstudiesselect << "SELECT id,"
 				"StudyInstanceUID,"
 				"StudyID,"
@@ -156,9 +155,19 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"PatientBirthDate,"
 				"ReferringPhysicianName,"
 				"created_at,updated_at"
-				" FROM patient_studies WHERE StudyInstanceUID = :studyuid",
-				soci::into(patientstudy),
-				soci::use(studyuid);
+				" FROM patient_studies WHERE StudyInstanceUID = ?",
+				into(patientstudies),
+				use(studyuid);
+
+			patientstudiesselect.execute();
+
+			if(patientstudies.size() == 0)
+			{
+				// insert
+				patientstudies.push_back(PatientStudy());
+			}
+			
+			PatientStudy &patientstudy = patientstudies[0];
 
 			patientstudy.StudyInstanceUID = studyuid;
 
@@ -178,9 +187,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			timebuf = getTime(dfile.getDataset(), DCM_StudyTime);
 			// use DCM_TimezoneOffsetFromUTC ?
 			if(datebuf.isValid() && timebuf.isValid()) 
-			{
-				ptime t1(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()), hours(timebuf.getHour())+minutes(timebuf.getMinute())+seconds(timebuf.getSecond()));
-				patientstudy.StudyDate = to_tm(t1);
+			{			
+				patientstudy.StudyDate.assign(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay(), timebuf.getHour(), timebuf.getMinute(), timebuf.getSecond());
 			}
 
 			// handle modality list...
@@ -199,50 +207,55 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			patientstudy.PatientSex = textbuf.c_str();
 
 			datebuf = getDate(dfile.getDataset(), DCM_PatientBirthDate);
-			if(datebuf.isValid()) patientstudy.PatientBirthDate = to_tm(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
+			if(datebuf.isValid()) 
+				patientstudy.PatientBirthDate.assign(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay());
 
 			dfile.getDataset()->findAndGetOFString(DCM_ReferringPhysicianName, textbuf);
 			patientstudy.ReferringPhysicianName = textbuf.c_str();
 
-			patientstudy.updated_at = to_tm(second_clock::universal_time());
+			patientstudy.updated_at = Poco::DateTime();
 
-			if(patientstudiesselect.got_data())
+			if(patientstudy.id != 0)
 			{				
-				soci::session &update = dbconnection;
+				Poco::Data::Statement update(dbconnection);
 				update << "UPDATE patient_studies SET "
-					"StudyInstanceUID = :StudyInstanceUID,"
-					"StudyID = :StudyID,"
-					"AccessionNumber = :AccessionNumber,"
-					"PatientName = :PatientName,"
-					"PatientID = :PatientID,"
-					"StudyDate = :StudyDate,"
-					"ModalitiesInStudy = :ModalitiesInStudy,"
-					"StudyDescription = :StudyDescription,"
-					"PatientSex = :PatientSex,"
-					"PatientBirthDate = :PatientBirthDate,"
-					"ReferringPhysicianName = :ReferringPhysicianName,"
-					"created_at = :created_at, updated_at = :updated_at"
-					" WHERE id = :id",
-					soci::use(patientstudy);
+					"id = ?,"
+					"StudyInstanceUID = ?,"
+					"StudyID = ?,"
+					"AccessionNumber = ?,"
+					"PatientName = ?,"
+					"PatientID = ?,"
+					"StudyDate = ?,"
+					"ModalitiesInStudy = ?,"
+					"StudyDescription = ?,"
+					"PatientSex = ?,"
+					"PatientBirthDate = ?,"
+					"ReferringPhysicianName = ?,"
+					"created_at = ?, updated_at = ?"
+					" WHERE id = ?",
+					use(patientstudy),
+					use(patientstudy.id);
+
+				update.execute();
 			}
 			else
 			{
-				patientstudy.id = 0;
-				patientstudy.created_at = to_tm(second_clock::universal_time());				
+				
+				patientstudy.created_at = Poco::DateTime();
 
-				soci::session &insert = dbconnection;
-				insert << "INSERT INTO patient_studies VALUES(0, :StudyInstanceUID, :AccessionNumber, :StudyID,:PatientName, :PatientID,"
-					":StudyDate, :ModalitiesInStudy, :StudyDescription, :PatientSex, :PatientBirthDate,:ReferringPhysicianName,"
-					":created_at, :updated_at)",
-					soci::use(patientstudy);
+				Poco::Data::Statement insert(dbconnection);
+				insert << "INSERT INTO patient_studies VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					use(patientstudy);
+
+				insert.execute();
 			}
 		}
-		
+		/*
 		//if(cbdata->last_seriesuid != seriesuid)
 		{
-			// update the series table
-			Series series;
-			soci::session &seriesselect = dbconnection;
+			// update the series table			
+			std::vector<Series> series;
+			Poco::Data::Statement seriesselect(dbconnection);
 			seriesselect << "SELECT id,"
 				"SeriesInstanceUID,"
 				"StudyInstanceUID,"
@@ -252,8 +265,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"SeriesDate,"
 				"created_at,updated_at"
 				" FROM series WHERE SeriesInstanceUID = :seriesuid",
-				soci::into(series),
-				soci::use(seriesuid);
+				into(series),
+				use(seriesuid);
 
 			series.SeriesInstanceUID = seriesuid;
 
@@ -306,9 +319,9 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					soci::use(series);
 			}
 		}
-
+		*/
 		// update the images table
-
+		/*
 		Instance instance;		
 		soci::session &instanceselect = dbconnection;
 		instanceselect << "SELECT id,"
@@ -351,11 +364,11 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				":created_at, :updated_at)",
 				soci::use(instance);
 		}
-		
+		*/
 	}
-	catch(std::exception &e)
+	catch(Poco::Data::DataException &e)
 	{
-		std::string what = e.what();
+		std::string what = e.message();
 		isOk = false;
 		DCMNET_ERROR(what);
 	}

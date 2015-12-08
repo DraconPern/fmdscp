@@ -2,8 +2,8 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/shared_ptr.hpp>
-#include "soci/soci.h"
-#include "soci/mysql/soci-mysql.h"
+#include <Poco/Data/Session.h>
+using namespace Poco::Data::Keywords;
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -44,49 +44,49 @@ FindHandler::FindHandler(std::string aetitle)
 
 // page 299 (sample only), 1433, 1439, 1691, 1473
 // Study ROOT
-// typedef enum {soci::dt_string, soci::dt_integer, soci::dt_date} dbtype;
+typedef enum { dt_string, dt_integer, dt_date} dbtype;
 
 struct DICOM_SQLMapping
 {
 	DcmTagKey dicomtag;
 	char *columnName;
-	enum data_type dataType;
+	dbtype dataType;
 	bool useLike;		// only valid for strings
 };
 
 const DICOM_SQLMapping PatientStudyLevelMapping [] = {
-	{ DCM_StudyDate,							 "StudyDate", soci::dt_date, false},
-	{ DCM_AccessionNumber,						 "AccessionNumber", soci::dt_string, false},
-	{ DCM_PatientName,                           "PatientName",  soci::dt_string, true},
-	{ DCM_PatientID,                             "PatientID", soci::dt_string, false},
-	{ DCM_StudyID,							     "StudyID", soci::dt_string, false},
-	{ DCM_StudyInstanceUID,						 "StudyInstanceUID", soci::dt_string, false},
-	{ DCM_ModalitiesInStudy,                     "ModalitiesInStudy", soci::dt_string, true},
-	{ DCM_ReferringPhysicianName,			     "ReferringPhysicianName", soci::dt_string, false},
-	{ DCM_StudyDescription,			             "StudyDescription", soci::dt_string, true},
-	{ DCM_PatientBirthDate,                      "PatientBirthDate", soci::dt_date, false},
-	{ DCM_PatientSex,                            "PatientSex", soci::dt_string, false},
-	{ DCM_CommandGroupLength, NULL, soci::dt_string, false}
+	{ DCM_StudyDate,							 "StudyDate", dt_date, false},
+	{ DCM_AccessionNumber,						 "AccessionNumber", dt_string, false},
+	{ DCM_PatientName,                           "PatientName",  dt_string, true},
+	{ DCM_PatientID,                             "PatientID", dt_string, false},
+	{ DCM_StudyID,							     "StudyID", dt_string, false},
+	{ DCM_StudyInstanceUID,						 "StudyInstanceUID", dt_string, false},
+	{ DCM_ModalitiesInStudy,                     "ModalitiesInStudy", dt_string, true},
+	{ DCM_ReferringPhysicianName,			     "ReferringPhysicianName", dt_string, false},
+	{ DCM_StudyDescription,			             "StudyDescription", dt_string, true},
+	{ DCM_PatientBirthDate,                      "PatientBirthDate", dt_date, false},
+	{ DCM_PatientSex,                            "PatientSex", dt_string, false},
+	{ DCM_CommandGroupLength, NULL, dt_string, false}
 };
 
 const DICOM_SQLMapping SeriesLevelMapping [] = {
-	{ DCM_StudyInstanceUID,						 "StudyInstanceUID", soci::dt_string, false},
-	{ DCM_SeriesDate,                            "SeriesDate", soci::dt_date, false},
-	{ DCM_Modality,                              "Modality", soci::dt_string, false},
-	{ DCM_SeriesDescription,                     "SeriesDescription", soci::dt_string, false},
-	{ DCM_SeriesNumber,                          "SeriesNumber", soci::dt_integer, false},
-	{ DCM_SeriesInstanceUID,                     "SeriesInstanceUID", soci::dt_string, false},
-	{ DCM_CommandGroupLength, NULL, soci::dt_string, false}
+	{ DCM_StudyInstanceUID,						 "StudyInstanceUID", dt_string, false},
+	{ DCM_SeriesDate,                            "SeriesDate", dt_date, false},
+	{ DCM_Modality,                              "Modality", dt_string, false},
+	{ DCM_SeriesDescription,                     "SeriesDescription", dt_string, false},
+	{ DCM_SeriesNumber,                          "SeriesNumber", dt_integer, false},
+	{ DCM_SeriesInstanceUID,                     "SeriesInstanceUID", dt_string, false},
+	{ DCM_CommandGroupLength, NULL, dt_string, false}
 };
 
 const DICOM_SQLMapping InstanceLevelMapping [] = {	
-	{ DCM_SeriesInstanceUID,                     "SeriesInstanceUID", soci::dt_string, false},
-	{ DCM_InstanceNumber,                        "InstanceNumber", soci::dt_integer, false},
-	{ DCM_SOPInstanceUID,                        "SOPInstanceUID", soci::dt_string, false},
-	{ DCM_CommandGroupLength, NULL, soci::dt_string, false}
+	{ DCM_SeriesInstanceUID,                     "SeriesInstanceUID", dt_string, false},
+	{ DCM_InstanceNumber,                        "InstanceNumber", dt_integer, false},
+	{ DCM_SOPInstanceUID,                        "SOPInstanceUID", dt_string, false},
+	{ DCM_CommandGroupLength, NULL, dt_string, false}
 };
 
-void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, statement &st,
+void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, Poco::Data::Statement &st,
 						   std::vector<boost::shared_ptr<std::string> > &shared_string, std::vector<boost::shared_ptr<int> > &shared_int, std::vector<boost::shared_ptr<std::tm> > &shared_tm);
 
 void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail)
@@ -113,8 +113,8 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 		try
 		{
 			// open the db
-			session dbconnection(config::getConnectionString());		
-			statement st(dbconnection);						
+			Poco::Data::Session dbconnection(config::getConnectionString());		
+			Poco::Data::Statement st(dbconnection);						
 
 			// storage of parameters since they must exist until all result are returned
 			std::vector<boost::shared_ptr<std::string> > shared_string;
@@ -125,38 +125,26 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 			requestIdentifiers->findAndGetOFString(DCM_QueryRetrieveLevel, retrievelevel);
 			if (retrievelevel == "STUDY")
 			{																				
-				querylevel = patientstudyroot;
-				PatientStudy result;
-				st.exchange(into(result));
+				querylevel = patientstudyroot;								
+				st << "" , into(patientstudies);
 				Study_DICOMQueryToSQL("patient_studies", PatientStudyLevelMapping, requestIdentifiers, st, shared_string, shared_int, shared_tm);
-				st.execute();
-				soci::rowset_iterator<PatientStudy > itr(st, result);
-				soci::rowset_iterator<PatientStudy > end;				
-				std::copy(itr, end, std::back_inserter(patientstudies));				
+				st.execute();				
 				patientstudies_itr = patientstudies.begin();
 			} 
 			else if (retrievelevel == "SERIES")
 			{
 				querylevel = seriesroot;
-				Series result;
-				st.exchange(into(result));
+				st << "" , into(series);
 				Study_DICOMQueryToSQL("series", SeriesLevelMapping, requestIdentifiers, st, shared_string, shared_int, shared_tm);			
-				st.execute();
-				soci::rowset_iterator<Series > itr(st, result);
-				soci::rowset_iterator<Series > end;				
-				std::copy(itr, end, std::back_inserter(series));				
+				st.execute();											
 				series_itr = series.begin();
 			}
 			else if(retrievelevel == "IMAGE")
 			{
-				querylevel = instanceroot;
-				Instance result;
-				st.exchange(into(result));
+				querylevel = instanceroot;				
+				st << "" , into(instances);
 				Study_DICOMQueryToSQL("instances", InstanceLevelMapping, requestIdentifiers, st, shared_string, shared_int, shared_tm);						
-				st.execute();
-				soci::rowset_iterator<Instance > itr(st, result);
-				soci::rowset_iterator<Instance > end;				
-				std::copy(itr, end, std::back_inserter(instances));				
+				st.execute();			
 				instances_itr = instances.begin();
 			}			
 			else
@@ -220,7 +208,7 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 
 
 /// Reads the DcmDataset and set up the statement with sql and bindings
-void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, statement &st, 
+void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, Poco::Data::Statement &st, 
 						   std::vector<boost::shared_ptr<std::string> > &shared_string, std::vector<boost::shared_ptr<int> > &shared_int, std::vector<boost::shared_ptr<std::tm> > &shared_tm)
 {
 	int parameters = 0;
@@ -229,9 +217,10 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 	boost::shared_ptr<std::string> shared(new std::string);
 
 	std::string &sqlcommand = *shared;
-
+	
 	sqlcommand = "SELECT * FROM ";
 	sqlcommand += tablename;	
+	st << sqlcommand;
 
 	int i = 0;
 
@@ -240,13 +229,13 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 		DcmElement *element;
 		if(requestIdentifiers->findAndGetElement(sqlmapping[i].dicomtag, element).good() && element->getLength() > 0)
 		{
-			if(sqlmapping[i].dataType == soci::dt_string)
+			if(sqlmapping[i].dataType == dt_string)
 			{
 				requestIdentifiers->findAndGetOFString(sqlmapping[i].dicomtag, somestring);
 
 				if (somestring.length() > 0 && !(somestring.length() == 1 && somestring[0] == '*'))
 				{
-					(parameters == 0)?(sqlcommand += " WHERE "):(sqlcommand += " AND ");
+					(parameters == 0)?(sqlcommand = " WHERE "):(sqlcommand = " AND ");
 					sqlcommand += sqlmapping[i].columnName;
 
 					if(sqlmapping[i].useLike)
@@ -264,15 +253,13 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 					if(somestring[somestring.length() - 1] == '*')
 						somestring.erase(somestring.length() - 1, 1);
 
-					boost::shared_ptr<std::string> shared(new std::string(somestring.c_str()));
-					shared_string.push_back(shared);
-					st.exchange(use(*shared));
+					st << sqlcommand, bind(somestring.c_str());
 					parameters++;
 				}
 			}
-			else if(sqlmapping[i].dataType == soci::dt_integer)
+			else if(sqlmapping[i].dataType == dt_integer)
 			{
-				(parameters == 0)?(sqlcommand += " WHERE "):(sqlcommand += " AND ");
+				(parameters == 0)?(sqlcommand = " WHERE "):(sqlcommand = " AND ");
 				sqlcommand += sqlmapping[i].columnName;				
 				sqlcommand += " = :";
 				sqlcommand += sqlmapping[i].columnName;
@@ -280,27 +267,23 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 				Sint32 someint = 0;
 				requestIdentifiers->findAndGetSint32(sqlmapping[i].dicomtag, someint);
 
-				boost::shared_ptr<int> shared(new int(someint));
-				shared_int.push_back(shared);
-				st.exchange(use(*shared));				
+				st << sqlcommand, bind(someint);							
 				parameters++;
 			}
-			else if(sqlmapping[i].dataType == soci::dt_date)
+			else if(sqlmapping[i].dataType == dt_date)
 			{
 				OFDate datebuf;
 				datebuf = getDate(requestIdentifiers, sqlmapping[i].dicomtag);
 				if(datebuf.isValid())
 				{				
-					(parameters == 0)?(sqlcommand += " WHERE "):(sqlcommand += " AND ");
+					(parameters == 0)?(sqlcommand = " WHERE "):(sqlcommand = " AND ");
 					sqlcommand += sqlmapping[i].columnName;
 
 					// todo range
 					sqlcommand += " = :";
 					sqlcommand += sqlmapping[i].columnName;
 
-					boost::shared_ptr<std::tm> shared(new std::tm(to_tm(date(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()))));
-					shared_tm.push_back(shared);
-					st.exchange(use(*shared));					
+					st << sqlcommand, bind(Poco::DateTime(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
 					parameters++;
 				}
 			}
@@ -309,13 +292,10 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 		i++;
 	}	
 
-	sqlcommand += " LIMIT 1000";
+	sqlcommand = " LIMIT 1000";
+	st << sqlcommand;
 
-	DCMNET_INFO("SQL " << sqlcommand);
-
-	st.alloc();
-	st.prepare(sqlcommand);
-	st.define_and_bind();
+	DCMNET_INFO("SQL " << st.toString());	
 }
 
 void blah(std::string &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
@@ -351,7 +331,7 @@ void blah(int &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDat
 }
 
 
-void blah(std::tm &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
+void blah(Poco::DateTime &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
 {
 	DcmElement *element;		
 	if(requestIdentifiers->findAndGetElement(tag, element).good())
@@ -359,14 +339,14 @@ void blah(std::tm &member, const DcmTag &tag, DcmDataset *requestIdentifiers, Dc
 		DcmElement *e = newDicomElement(tag);
 		if(e->getVR() == EVR_DA)
 		{
-			OFDate datebuf(member.tm_year + 1900, member.tm_mon + 1, member.tm_mday);
+			OFDate datebuf(member.year(), member.month(), member.day());
 			DcmDate *dcmdate = new DcmDate(tag);
 			dcmdate->setOFDate(datebuf);
 			responseIdentifiers->insert(dcmdate);		
 		}
 		else if(e->getVR() == EVR_TM)
 		{
-			OFTime timebuf(member.tm_hour, member.tm_min, member.tm_sec);
+			OFTime timebuf(member.hour(), member.minute(), member.second());
 			DcmTime *dcmtime = new DcmTime(tag);
 			dcmtime->setOFTime(timebuf);
 			responseIdentifiers->insert(dcmtime);		

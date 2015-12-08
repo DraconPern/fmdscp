@@ -21,11 +21,6 @@
 
 #include "model.h"
 
-#include "soci/soci.h"
-#include "soci/mysql/soci-mysql.h"
-
-using namespace soci;
-
 typedef enum { patientstudyroot, seriesroot, instanceroot } QueryLevel;
 
 class FindHandler

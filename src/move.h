@@ -20,9 +20,6 @@
 #endif
 
 #include "model.h"
-
-#include "soci/soci.h"
-#include "soci/mysql/soci-mysql.h"
 #include "dicomsender.h"
 
 class MoveHandler

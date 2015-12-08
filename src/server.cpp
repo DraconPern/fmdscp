@@ -1,7 +1,7 @@
 #include "server.h"
 #include "config.h"
 
-#include "soci/mysql/soci-mysql.h"
+#include "Poco/Data/MySQL/Connector.h"
 #include <boost/asio/io_service.hpp>
 #include "ndcappender.h"
 
@@ -12,8 +12,8 @@ server::server()// : httpserver(8080, 10)
 	dcmtk::log4cplus::Logger my_log = dcmtk::log4cplus::Logger::getRoot();
 	my_log.addAppender(logfile);
 
-	// do server wide init
-	soci::register_factory_mysql();
+	// do server wide init	
+	Poco::Data::MySQL::Connector::registerConnector();
 
 	config::registerCodecs();
 
@@ -21,11 +21,10 @@ server::server()// : httpserver(8080, 10)
 
 	std::string errormsg;
 	if(!config::test(errormsg))
-	{
-		/*
-		app.logger().error(errormsg);
-		app.logger().information("Exiting");
-		*/
+	{		
+		DCMNET_ERROR(errormsg);
+		DCMNET_INFO("Exiting");
+		
 		throw new std::exception(errormsg.c_str());
 	}
 

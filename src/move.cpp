@@ -21,9 +21,8 @@
 #define UNICODE 1
 #endif
 
-#include "soci/soci.h"
-#include "soci/mysql/soci-mysql.h"
-
+#include <Poco/Data/Session.h>
+using namespace Poco::Data::Keywords;
 
 #include "model.h"
 #include "config.h"
@@ -178,48 +177,30 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalset &resul
 	try
 	{				
 		// open the db
-		soci::session dbconnection(config::getConnectionString());
-		PatientStudy study;
-		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = :StudyInstanceUID LIMIT 1", soci::into(study),
-			soci::use(studyinstanceuid);
-		if(!dbconnection.got_data())
+		Poco::Data::Session dbconnection(config::getConnectionString());
+		std::vector<PatientStudy> studies;
+		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = :StudyInstanceUID LIMIT 1", into(studies),
+			use(studyinstanceuid), now;
+		if(studies.size() <= 0)
 		{			
 			throw std::exception();
 		}
-
-		soci::statement seriesselect(dbconnection);
-		Series series;
-		seriesselect.exchange(soci::into(series));
 		
-		seriesselect.exchange(soci::use(studyinstanceuid));
-		seriesselect.alloc();
-		seriesselect.prepare("SELECT * FROM series WHERE StudyInstanceUID = :StudyInstanceUID");
-		seriesselect.define_and_bind();
-		seriesselect.execute();
-
-		std::vector<Series> series_list;		
-		std::copy(soci::rowset_iterator<Series >(seriesselect, series), soci::rowset_iterator<Series >(), std::back_inserter(series_list));
-				
+		std::vector<Series> series_list;
+		dbconnection << "SELECT * FROM series WHERE StudyInstanceUID = :StudyInstanceUID", into(series_list), use(studyinstanceuid), now;						
+		
 		for(std::vector<Series>::iterator itr = series_list.begin(); itr != series_list.end(); itr++)
 		{
-			soci::statement instanceselect(dbconnection);
-			Instance instance;
-			instanceselect.exchange(soci::into(instance));
 			std::string seriesinstanceuid = (*itr).SeriesInstanceUID;
-			instanceselect.exchange(soci::use(seriesinstanceuid));
-			instanceselect.alloc();
-			instanceselect.prepare("SELECT * FROM instances WHERE SeriesInstanceUID = :SeriesInstanceUID");
-			instanceselect.define_and_bind();
-			instanceselect.execute();
+			std::vector<Instance> instances;
+			dbconnection << "SELECT * FROM instances WHERE SeriesInstanceUID = :SeriesInstanceUID", into(instances), use(seriesinstanceuid), now;			
 					
 			boost::filesystem::path serieslocation;
 			serieslocation = config::getStoragePath();
 			serieslocation /= studyinstanceuid;
 			serieslocation /= seriesinstanceuid;
 
-			soci::rowset_iterator<Instance > itr2(instanceselect, instance);
-			soci::rowset_iterator<Instance > end2;
-			while(itr2 != end2)
+			for(std::vector<Instance>::iterator itr2 = instances.begin(); itr2 != instances.end(); itr2++)			
 			{
 				boost::filesystem::path filename = serieslocation;
 				filename /= (*itr2).SOPInstanceUID + ".dcm";
@@ -232,7 +213,7 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalset &resul
 	{
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -240,17 +221,17 @@ bool MoveHandler::mapMoveDestination(std::string destinationAE, Destination &des
 {
 	try
 	{
-		soci::session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(config::getConnectionString());
 		
-		soci::session &destinationsselect = dbconnection;
+		Poco::Data::Statement destinationsselect(dbconnection);
 		destinationsselect << "SELECT id,"
 			"name, destinationhost, destinationport, destinationAE, sourceAE,"
 			"created_at,updated_at"
 			" FROM destinations WHERE destinationAE = :destinationAE LIMIT 1",
-			soci::into(destination),
-			soci::use(destinationAE);
+			into(destination),
+			use(destinationAE);
 
-		if(destinationsselect.got_data())
+		if(destinationsselect.execute())
 		{
 			return true;
 		}

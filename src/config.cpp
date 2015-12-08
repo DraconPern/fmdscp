@@ -2,11 +2,10 @@
 
 #include "Poco/Util/WinRegistryConfiguration.h"
 #include "poco/Path.h"
+#include <Poco/Data/Session.h>
 
 using namespace Poco;
 using namespace Poco::Util;
-
-#include "soci/soci.h"
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -104,11 +103,13 @@ bool config::test(std::string &errormsg)
 	try
 	{
 		// test database connection
-		soci::session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(config::getConnectionString());
 	}	
 	catch(std::exception &e)
 	{
-		errormsg = e.what();
+		errormsg = "database connection not working: ";
+		errormsg += e.what();
+		errormsg += ", try MySQL:///host=<host>;port=3306;user=root;password=<password>;db=pacsdb_dev";
 		result = false;
 	}
 

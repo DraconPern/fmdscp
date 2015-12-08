@@ -83,7 +83,7 @@ protected:
 	}
 
 	int main(const ArgVec& args)
-	{
+	{	
 		if (!_helpRequested)
 		{
 			server s;

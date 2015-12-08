@@ -1,11 +1,9 @@
-
-#include <winsock2.h>	// include winsock2 before soci
 #include "config.h"
 #include "model.h"
 #include "senderservice.h"
-#include "soci/soci.h"
-#include "soci/mysql/soci-mysql.h"
 #include <boost/thread.hpp>
+#include <Poco/Data/Session.h>
+using namespace Poco::Data::Keywords;
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -34,23 +32,26 @@ bool SenderService::getQueued(OutgoingSession &outgoingsession)
 {
 	try
 	{
-		soci::session dbconnection(config::getConnectionString());		
+		Poco::Data::Session dbconnection(config::getConnectionString());		
 
-		soci::session &queueselect = dbconnection;
-		
+		Poco::Data::Statement queueselect(dbconnection);
+		std::vector<OutgoingSession> sessions;
 		queueselect << "SELECT id, uuid, queued, StudyInstanceUID, PatientName, PatientID, destination_id, status,"            
 			"created_at,updated_at"
 			" FROM outgoing_sessions WHERE queued = 1 LIMIT 1",
-			soci::into(outgoingsession);
+			into(sessions);
 
-		if(queueselect.got_data())
+		queueselect.execute();
+
+		if(sessions.size() > 0)
 		{
-			dbconnection << "UPDATE outgoing_sessions SET queued = 0 WHERE id = :id AND queued = 1", soci::use(outgoingsession.id);				
+			dbconnection << "UPDATE outgoing_sessions SET queued = 0 WHERE id = :id AND queued = 1", sessions[0].id, now;				
 			int rowcount = 0;
-			dbconnection << "SELECT ROW_COUNT()", soci::into(rowcount);
+			dbconnection << "SELECT ROW_COUNT()", into(rowcount), now;
 
 			if(rowcount > 0)
 			{
+				outgoingsession = sessions[0];
 				return true;
 			}
 			
@@ -129,18 +130,19 @@ bool SenderService::findDestination(int id, Destination &destination)
 {
 	try
 	{
-		soci::session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(config::getConnectionString());
 		
-		soci::session &destinationsselect = dbconnection;
-		destinationsselect << "SELECT id,"
+		std::vector<Destination> dests;
+		dbconnection << "SELECT id,"
 			"name, destinationhost, destinationport, destinationAE, sourceAE,"
 			"created_at,updated_at"
 			" FROM destinations WHERE id = :id LIMIT 1",
-			soci::into(destination),
-			soci::use(id);
+			into(dests),
+			use(id), now;
 
-		if(destinationsselect.got_data())
+		if(dests.size() > 0)
 		{
+			destination = dests[0];
 			return true;
 		}
 	}
@@ -156,48 +158,30 @@ bool SenderService::GetFilesToSend(std::string studyinstanceuid, naturalset &res
 	try
 	{				
 		// open the db
-		soci::session dbconnection(config::getConnectionString());
-		PatientStudy study;
-		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = :StudyInstanceUID LIMIT 1", soci::into(study),
-			soci::use(studyinstanceuid);
-		if(!dbconnection.got_data())
+		Poco::Data::Session dbconnection(config::getConnectionString());
+		std::vector<PatientStudy> studies;
+		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = :StudyInstanceUID LIMIT 1", into(studies),
+			use(studyinstanceuid), now;
+		if(studies.size() <= 0)
 		{			
 			throw std::exception();
 		}
-
-		soci::statement seriesselect(dbconnection);
-		Series series;
-		seriesselect.exchange(soci::into(series));
 		
-		seriesselect.exchange(soci::use(studyinstanceuid));
-		seriesselect.alloc();
-		seriesselect.prepare("SELECT * FROM series WHERE StudyInstanceUID = :StudyInstanceUID");
-		seriesselect.define_and_bind();
-		seriesselect.execute();
-
-		std::vector<Series> series_list;		
-		std::copy(soci::rowset_iterator<Series >(seriesselect, series), soci::rowset_iterator<Series >(), std::back_inserter(series_list));
-				
+		std::vector<Series> series_list;
+		dbconnection << "SELECT * FROM series WHERE StudyInstanceUID = :StudyInstanceUID", into(series_list), use(studyinstanceuid), now;						
+		
 		for(std::vector<Series>::iterator itr = series_list.begin(); itr != series_list.end(); itr++)
 		{
-			soci::statement instanceselect(dbconnection);
-			Instance instance;
-			instanceselect.exchange(soci::into(instance));
 			std::string seriesinstanceuid = (*itr).SeriesInstanceUID;
-			instanceselect.exchange(soci::use(seriesinstanceuid));
-			instanceselect.alloc();
-			instanceselect.prepare("SELECT * FROM instances WHERE SeriesInstanceUID = :SeriesInstanceUID");
-			instanceselect.define_and_bind();
-			instanceselect.execute();
+			std::vector<Instance> instances;
+			dbconnection << "SELECT * FROM instances WHERE SeriesInstanceUID = :SeriesInstanceUID", into(instances), use(seriesinstanceuid), now;			
 					
 			boost::filesystem::path serieslocation;
 			serieslocation = config::getStoragePath();
 			serieslocation /= studyinstanceuid;
 			serieslocation /= seriesinstanceuid;
 
-			soci::rowset_iterator<Instance > itr2(instanceselect, instance);
-			soci::rowset_iterator<Instance > end2;
-			while(itr2 != end2)
+			for(std::vector<Instance>::iterator itr2 = instances.begin(); itr2 != instances.end(); itr2++)			
 			{
 				boost::filesystem::path filename = serieslocation;
 				filename /= (*itr2).SOPInstanceUID + ".dcm";

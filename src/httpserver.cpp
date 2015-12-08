@@ -41,6 +41,7 @@ void HttpServer::NotFound(HttpServer::Response& response, std::shared_ptr<HttpSe
 
 void HttpServer::WADO(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request)
 {	
+	/*
 	std::string content;
 	std::string querystring = request->path_match[1];
 
@@ -181,7 +182,7 @@ void HttpServer::WADO(HttpServer::Response& response, std::shared_ptr<HttpServer
 			content = "Object not found on disk";
 			response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		}
-	}
+	}*/
 }
 
 void HttpServer::SearchForStudies(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request)
