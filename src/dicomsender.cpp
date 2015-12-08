@@ -1,12 +1,11 @@
-
+#include <winsock2.h>
 #include "dicomsender.h"
 #include <boost/thread/mutex.hpp>
 #include <boost/lexical_cast.hpp>
 #include <codecvt>
 #include "config.h"
-#include <winsock2.h>
-#include "soci/soci.h"
-#include "soci/mysql/soci-mysql.h"
+#include "poco/Data/Session.h"
+using namespace Poco::Data::Keywords;
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -190,8 +189,8 @@ std::string DICOMSenderImpl::GUILog::Read()
 
 void DICOMSenderImpl::GUILog::SetStatus(std::string msg)
 {
-	soci::session dbconnection(config::getConnectionString());
-	dbconnection << "UPDATE outgoing_sessions SET status = :status, updated_at = NOW() WHERE id = :id", soci::use(msg), soci::use(m_outgoingsessionid);
+	Poco::Data::Session dbconnection(config::getConnectionString());
+	dbconnection << "UPDATE outgoing_sessions SET status = ?, updated_at = NOW() WHERE id = ?", use(msg), use(m_outgoingsessionid), now;
 }
 
 void DICOMSenderImpl::DoSend()

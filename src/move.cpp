@@ -1,6 +1,4 @@
-﻿#include <winsock2.h>	// include winsock2 before network includes
-
-#include <boost/algorithm/string.hpp>
+﻿#include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <codecvt>

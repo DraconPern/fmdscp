@@ -1,6 +1,4 @@
-#include <winsock2.h>	// include winsock2 before network includes
 #include "config.h"
-#include "soci/soci.h"
 
 #include "httpserver.h"
 #include <boost/algorithm/string.hpp>
@@ -14,7 +12,6 @@
 #define _UNDEFINEDUNICODE
 #endif
 
-#include <winsock2.h>	// include winsock2 before network includes
 #include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
 #include "dcmtk/dcmdata/dctk.h"
 #include "dcmtk/dcmnet/diutil.h"

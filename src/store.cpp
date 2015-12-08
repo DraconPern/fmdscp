@@ -1,4 +1,11 @@
-﻿#include <boost/algorithm/string.hpp>
+﻿
+
+#include "store.h"
+#include "model.h"
+#include "config.h"
+#include "util.h"
+
+#include <boost/algorithm/string.hpp>
 #include <set>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -12,7 +19,6 @@
 #define _UNDEFINEDUNICODE
 #endif
 
-#include <winsock2.h>	// include winsock2 before network includes
 #include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
 #include "dcmtk/dcmdata/dctk.h"
 #include "dcmtk/dcmnet/diutil.h"
@@ -23,14 +29,9 @@
 #define UNICODE 1
 #endif
 
-#include "store.h"
-
 #include "poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
-#include "model.h"
-#include "config.h"
-#include "util.h"
 
 using namespace boost::gregorian;
 using namespace boost::posix_time;
@@ -98,7 +99,10 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	}
 
 	// now try to add the file into the database
-	AddDICOMFileInfoToDatabase(newpath);
+	if(!AddDICOMFileInfoToDatabase(newpath))
+	{
+		
+	}
 
 	// delete the temp file
 	boost::filesystem::remove(filename);

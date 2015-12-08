@@ -12,7 +12,7 @@
 #endif
 
 #include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
-
+#include "dcmtk/ofstd/ofstd.h"
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
 #define UNICODE 1

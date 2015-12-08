@@ -3,6 +3,11 @@
 #include <boost/uuid/uuid_generators.hpp> // generators
 #include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
 
+#include "myscp.h"
+#include "config.h"
+#include "store.h"
+#include "find.h"
+#include "move.h"
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -11,7 +16,6 @@
 #define _UNDEFINEDUNICODE
 #endif
 
-#include <winsock2.h>	// include winsock2 before soci
 #include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
 #include "dcmtk/dcmnet/diutil.h"
 #include "dcmtk/oflog/ndc.h"
@@ -21,11 +25,6 @@
 #define UNICODE 1
 #endif
 
-#include "myscp.h"
-#include "config.h"
-#include "store.h"
-#include "find.h"
-#include "move.h"
 
 MySCP::MySCP()
 	: DcmThreadSCP()
