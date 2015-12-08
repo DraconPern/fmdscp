@@ -1,8 +1,3 @@
-poco/
-boost/
 build-Debug/
 build-Release/
-dcmtk/
-openjpeg/
-zlib/
 .DS_Store
