@@ -1,0 +1,71 @@
+branches:
+  only:
+    - master
+
+platform:
+  - x86
+
+configuration:
+  - Release
+
+install:
+  - SET TYPE=%CONFIGURATION%
+  - SET DEVSPACE=%APPVEYOR_BUILD_FOLDER%
+
+#zlib
+  - cd %DEVSPACE%
+#  - git clone https://github.com/madler/zlib.git
+  - cd zlib && mkdir build-%TYPE% && cd build-%TYPE%
+  - cmake.exe .. -G "Visual Studio 11" -DCMAKE_C_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Od" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\zlib\%TYPE%
+  - msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
+  - IF "%TYPE%" == "Release" copy /Y %DEVSPACE%\zlib\Release\lib\zlibstatic.lib %DEVSPACE%\zlib\Release\lib\zlib_o.lib
+  - IF "%TYPE%" == "Debug"   copy /Y %DEVSPACE%\zlib\Debug\lib\zlibstaticd.lib %DEVSPACE%\zlib\Debug\lib\zlib_d.lib
+
+# dcmtk
+  - cd %DEVSPACE%
+  - git clone git://git.dcmtk.org/dcmtk.git
+  - cd dcmtk && mkdir build-%TYPE% && cd build-%TYPE%
+  - cmake .. -G "Visual Studio 11" -DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1 -DDCMTK_WITH_ZLIB=1 -DWITH_ZLIBINC=%DEVSPACE%\zlib\%TYPE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\dcmtk\%TYPE%
+  - msbuild /maxcpucount:2 /P:Configuration=%TYPE% INSTALL.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
+# openjpeg
+  - cd %DEVSPACE%
+#  - git clone https://github.com/uclouvain/openjpeg.git
+  - cd openjpeg && git checkout openjpeg-2.1 && mkdir build-%TYPE% && cd build-%TYPE%
+  - cmake .. -G "Visual Studio 11" -DBUILD_THIRDPARTY=1 -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Od" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\openjpeg\%TYPE%
+  - msbuild /P:Configuration=%TYPE% INSTALL.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
+#boost
+  - cd C:\Libraries\boost_1_59_0
+  - call bootstrap
+  - IF "%TYPE%" == "Release" b2 toolset=msvc-11.0 runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 stage release
+  - IF "%TYPE%" == "Debug"   b2 toolset=msvc-11.0 runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 stage debug
+
+#fmjpeg2koj
+  - cd %DEVSPACE%
+#  - git clone https://github.com/DraconPern/fmjpeg2koj.git
+  - cd fmjpeg2koj && mkdir build-%TYPE% && cd build-%TYPE%
+  - cmake .. -G "Visual Studio 11" -DBUILD_SHARED_LIBS=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od" -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DDCMTK_DIR=%DEVSPACE%\dcmtk\build-%TYPE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\fmjpeg2koj\%TYPE%
+  - msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
+
+#mysql client
+  - cd %DEVSPACE%
+#  - wget https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
+  - mkdir build-%TYPE% && cd build-%TYPE%
+  - cmake .. -G "Visual Studio 11" -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
+  - msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
+  - SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
+
+#poco
+  - cd %DEVSPACE%
+  - cd poco && mkdir build-%TYPE% && cd build-%TYPE%
+  - cmake .. -G "Visual Studio 11" -DPOCO_STATIC=ON -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\poco\%TYPE%
+  - msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
+  
+before_build:
+  - cd %DEVSPACE% && mkdir build-%TYPE% && cd build-%TYPE%
+  - cmake .. -G "Visual Studio 11" -DBOOST_ROOT=C:\Libraries\boost_1_59_0 -DDCMTK_DIR=%DEVSPACE%\dcmtk\build-%TYPE% -DZLIB_ROOT=%DEVSPACE%\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE%
+
+build_script:
+  - cd %DEVSPACE%\build-%TYPE%
+  - msbuild /P:Configuration=%TYPE% ALL_BUILD.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
