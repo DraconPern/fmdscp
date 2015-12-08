@@ -51,7 +51,7 @@ install:
 #mysql client
   - cd %DEVSPACE%
 #  - wget https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
-  - mkdir build-%TYPE% && cd build-%TYPE%
+  - cd mysql-connector-c-6.1.6-src && mkdir build-%TYPE% && cd build-%TYPE%
   - cmake .. -G "Visual Studio 11" -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
   - msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
   - SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
