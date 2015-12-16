@@ -51,7 +51,7 @@ cd ..\..
 cd %DEVSPACE%\poco
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G "Visual Studio 11" -DPOCO_STATIC=ON -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\poco\%TYPE%
+cmake .. -G "Visual Studio 11" -DPOCO_STATIC=ON -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DMYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\poco\%TYPE% 
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 cd ..\..
 
