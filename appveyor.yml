@@ -55,7 +55,7 @@ install:
 
 before_build:
   - cd %APPVEYOR_BUILD_FOLDER% && mkdir build-%TYPE% && cd build-%TYPE%
-  - cmake .. -G "Visual Studio 11" -DBOOST_ROOT=C:\Libraries\boost_1_59_0 -DDCMTK_DIR=%DEVSPACE%\dcmtk\build-%TYPE% -DZLIB_ROOT=%DEVSPACE%\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE%
+  - cmake .. -G "Visual Studio 11" -DBOOST_ROOT=C:\Libraries\boost_1_59_0 -DDCMTK_DIR=%DEVSPACE%\dcmtk\dcmtk\%TYPE% -DZLIB_ROOT=%DEVSPACE%\dcmtk\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE%
 
 build_script:
   - cd %APPVEYOR_BUILD_FOLDER%\build-%TYPE%
