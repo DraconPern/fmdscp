@@ -117,10 +117,10 @@ TARGET_LINK_LIBRARIES(fmdscp
   #debug PocoDataSQLited optimized PocoDataSQLite
   debug PocoDataMySQLd optimized PocoDataMySQL
   debug PocoFoundationd optimized PocoFoundation
-  PocoJSONd
-  PocoNetd
-  PocoUtild
-	PocoXMLd
+  debug PocoJSONd optimized PocoJSON
+  debug PocoNetd optimized PocoNet
+  debug PocoUtild optimized PocoUtil
+  debug PocoXMLd optimized PocoXML
   ${MYSQL_LIBRARIES}
 	${OS_SPECIFIC_LIBS}
 	)
