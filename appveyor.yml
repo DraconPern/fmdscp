@@ -17,14 +17,14 @@ install:
 # dcmtk & zlib
   - cd %DEVSPACE%
   - ps: |
-      Invoke-WebRequest http://draconpern-buildcache.s3.amazonaws.com/dcmtk.zip -Outfile "dcmtk.zip"
-  - unzip dcmtk.zip
+      Invoke-WebRequest http://draconpern-buildcache.s3.amazonaws.com/dcmtk.7z -Outfile "dcmtk.7z"
+  - 7z e dcmtk.7z
 
-#fmjpeg2koj
+#fmjpeg2koj & openjpeg
   - cd %DEVSPACE%
   - ps: |
-      Invoke-WebRequest http://draconpern-buildcache.s3.amazonaws.com/fmjpeg2koj.zip -Outfile "fmjpeg2koj.zip"
-  - unzip fmjpeg2koj.zip
+      Invoke-WebRequest http://draconpern-buildcache.s3.amazonaws.com/fmjpeg2koj.7z -Outfile "fmjpeg2koj.7z"
+  - 7z e fmjpeg2koj.7z
   
 #mysql client
   - cd %APPVEYOR_BUILD_FOLDER%
@@ -55,9 +55,9 @@ build_script:
 
 after_build:
   - cd %APPVEYOR_BUILD_FOLDER%\build-%TYPE%\%TYPE%
-  - 7z a fmdscp.zip %APPVEYOR_BUILD_FOLDER%\build-%TYPE%\%TYPE%\fmdscp.exe
-  - mv fmdscp.zip %APPVEYOR_BUILD_FOLDER%
+  - 7z a fmdscp.7z %APPVEYOR_BUILD_FOLDER%\build-%TYPE%\%TYPE%\fmdscp.exe
+  - mv fmdscp.7z %APPVEYOR_BUILD_FOLDER%
 
 artifacts:
-  - path: fmdscp.zip
+  - path: fmdscp.7z
     name: fmdscp
