@@ -7,8 +7,8 @@ SET DEVSPACE=%CD%
 cd %DEVSPACE%\boost
 call bootstrap
 rem http://lists.boost.org/Archives/boost/2014/08/216440.php
-IF "%TYPE%" == "Release" b2 toolset=msvc-11.0 runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex stage release
-IF "%TYPE%" == "Debug"   b2 toolset=msvc-11.0 runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex stage debug
+IF "%TYPE%" == "Release" b2 toolset=msvc-11.0 runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage release
+IF "%TYPE%" == "Debug"   b2 toolset=msvc-11.0 runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage debug
 cd ..
 
 cd %DEVSPACE%\zlib
