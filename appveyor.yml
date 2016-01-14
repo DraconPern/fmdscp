@@ -18,13 +18,13 @@ install:
   - cd %DEVSPACE%
   - ps: |
       Invoke-WebRequest http://draconpern-buildcache.s3.amazonaws.com/dcmtk.7z -Outfile "dcmtk.7z"
-  - 7z e -y dcmtk.7z
+  - 7z x -y dcmtk.7z
 
 #fmjpeg2koj & openjpeg
   - cd %DEVSPACE%
   - ps: |
       Invoke-WebRequest http://draconpern-buildcache.s3.amazonaws.com/fmjpeg2koj.7z -Outfile "fmjpeg2koj.7z"
-  - 7z e -y fmjpeg2koj.7z
+  - 7z x -y fmjpeg2koj.7z
   
 #mysql client
   - cd %APPVEYOR_BUILD_FOLDER%
