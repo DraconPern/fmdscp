@@ -1,0 +1,68 @@
+language: cpp
+compiler:
+    - gcc
+
+os:
+#    - linux
+    - osx
+
+# use containers
+sudo: false
+
+configuration:
+  - Release
+
+cache:
+  directories:
+    - $HOME/dcmtk
+    - $HOME/openjpeg-version.2.1    
+
+install:
+  - export TYPE=$CONFIGURATION
+  - export DEVSPACE=$HOME
+
+  #boost preinstalled
+  #zlib preinstalled
+
+  #dcmtk
+  - cd $DEVSPACE
+  - git clone git://git.dcmtk.org/dcmtk.git
+  - cd dcmtk && git pull && mkdir -p build-$TYPE && cd build-$TYPE
+  - cmake .. -DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1 -DCMAKE_INSTALL_PREFIX=$DEVSPACE/dcmtk/$TYPE
+  - make -j8 install
+
+  #openjpeg
+  - cd $DEVSPACE
+  - wget https://github.com/uclouvain/openjpeg/archive/version.2.1.tar.gz
+  - tar -xzf version.2.1.tar.gz
+  - cd openjpeg-version.2.1 && mkdir -p build-$TYPE && cd build-$TYPE
+  - cmake .. -DBUILD_SHARED_LIBS=0 -DCMAKE_INSTALL_PREFIX=$DEVSPACE/openjpeg/$TYPE
+  - make -j8 install  
+
+  #fmjpeg2koj
+  - cd $DEVSPACE
+  - git clone https://github.com/DraconPern/fmjpeg2koj.git
+  - cd fmjpeg2koj && git pull && mkdir -p build-$TYPE && cd build-$TYPE
+  - cmake .. -DOPENJPEG=$DEVSPACE/openjpeg/$TYPE -DDCMTK_DIR=$DEVSPACE/dcmtk/$TYPE -DCMAKE_INSTALL_PREFIX=$DEVSPACE/fmjpeg2koj/$TYPE
+  - make -j8 install
+  
+#mysql client preinstalled
+
+#poco
+  - cd %DEVSPACE%
+  - git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch
+  - cd poco && mkdir build-%TYPE% && cd build-%TYPE%
+  - cmake .. -G "Visual Studio 11" -DPOCO_STATIC=ON -DENABLE_NETSSL=OFF -DENABLE_CRYPTO=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DMYSQL_LIB=%APPVEYOR_BUILD_FOLDER%\mysql-connector-c-6.1.6-src\%TYPE%\lib\mysqlclient -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\poco\%TYPE%
+  - msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
+
+#simple web server
+  - cd %TRAVIS_BUILD_DIR%
+  - git clone https://github.com/eidheim/Simple-Web-Server.git
+  
+before_script:
+  - cd $TRAVIS_BUILD_DIR && mkdir -p build-$TYPE && cd build-$TYPE
+  - cmake .. -DBOOST_ROOT=$DEVSPACE/boost -DDCMTK_DIR=$DEVSPACE/dcmtk/$TYPE -DFMJPEG2K=$DEVSPACE/fmjpeg2koj/$TYPE -DOPENJPEG=$DEVSPACE/openjpeg/$TYPE -DCMAKE_OSX_SYSROOT=$SYSROOT -DCMAKE_OSX_DEPLOYMENT_TARGET=$CMAKE_OSX_DEPLOYMENT_TARGET
+
+script:
+  - cd $TRAVIS_BUILD_DIR/build-$TYPE
+  - make -j8
