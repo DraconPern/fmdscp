@@ -2,7 +2,3 @@
 	path = Simple-Web-Server
 	url = git@github.com:DraconPern/Simple-Web-Server.git
 	branch = master
-[submodule "openjpeg"]
-	path = openjpeg
-	url = https://github.com/uclouvain/openjpeg.git
-	branch = master
