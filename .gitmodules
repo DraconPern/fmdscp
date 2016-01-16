@@ -1,4 +1,0 @@
-[submodule "Simple-Web-Server"]
-	path = Simple-Web-Server
-	url = git@github.com:DraconPern/Simple-Web-Server.git
-	branch = master
