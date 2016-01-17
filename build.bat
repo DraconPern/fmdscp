@@ -1,5 +1,5 @@
 SET TYPE=Release
-REM SET TYPE=Debug
+SET TYPE=Debug
 
 REM a top level directory for all PACS related code
 SET DEVSPACE=%CD%\..
@@ -66,6 +66,8 @@ REM call ms\do_ms
 REM nmake -f ms\ntdll.mak install
 
 cd %DEVSPACE%\fmdscp
+git clone https://github.com/eidheim/Simple-Web-Server.git
+
 mkdir build-%TYPE%
 cd build-%TYPE%
 cmake .. -G "Visual Studio 11" -DCMAKE_BUILD_TYPE=%TYPE% -DBOOST_ROOT=C:\Libraries\boost_1_60_0 -DDCMTK_DIR=%DEVSPACE%\dcmtk\%TYPE% -DZLIB_ROOT=%DEVSPACE%\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE%

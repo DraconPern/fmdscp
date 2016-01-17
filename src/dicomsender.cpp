@@ -347,7 +347,7 @@ int DICOMSenderImpl::SendABatch()
 					// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
 					log.Write((*itr).string(std::codecvt_utf8<boost::filesystem::path::value_type>()).c_str());
 #else
-					log.Write((*itr).string().c_str());
+					log.Write((*itr).c_str());
 #endif					
 					log.Write(" due to bad data or no valid presentation context id\n");
 					filestosend.erase(itr++);

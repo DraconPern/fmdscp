@@ -87,7 +87,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	{
 		dfile.getDataset()->loadAllDataIntoMemory();
 
-		dfile.saveFile(newpath.string().c_str(), EXS_JPEGLSLossless);
+		dfile.saveFile(newpath.c_str(), EXS_JPEGLSLossless);
 
 		DCMNET_INFO("Changed to JPEG LS lossless");
 	}
@@ -101,14 +101,14 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	// now try to add the file into the database
 	if(!AddDICOMFileInfoToDatabase(newpath))
 	{
-		
+		status = OFCondition(OFM_dcmqrdb, 1, OF_error, "Database error");
 	}
+	else
+		status = EC_Normal;
 
 	// delete the temp file
 	boost::filesystem::remove(filename);
-
-	status = EC_Normal;
-
+	
 	return status;
 }
 
@@ -139,10 +139,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	try
 	{
 
-		Poco::Data::Session dbconnection(config::getConnectionString());		
-
-		//		if(cbdata->last_studyuid != studyuid)
-		{
+		Poco::Data::Session dbconnection(config::getConnectionString());				
 			
 			std::vector<PatientStudy> patientstudies;
 			Poco::Data::Statement patientstudiesselect(dbconnection);
@@ -251,11 +248,11 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					use(patientstudy);
 
 				insert.execute();
+
+				dbconnection << "SELECT LAST_INSERT_ID()", into(patientstudy.id), now;
 			}
-		}
 		
-		//if(cbdata->last_seriesuid != seriesuid)
-		{
+		
 			// update the series table			
 			std::vector<Series> series_list;
 			Poco::Data::Statement seriesselect(dbconnection);
@@ -266,7 +263,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"SeriesDescription,"
 				"SeriesNumber,"
 				"SeriesDate,"
-				"created_at,updated_at"
+				"created_at,updated_at,"
+				"patient_study_id"
 				" FROM series WHERE SeriesInstanceUID = ?",
 				into(series_list),
 				use(seriesuid);
@@ -275,7 +273,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 
 			if(series_list.size() == 0)
 			{
-				series_list.push_back(Series());
+				series_list.push_back(Series(patientstudy.id));
 			}
 
 			Series &series = series_list[0];
@@ -316,7 +314,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"SeriesDescription = ?,"
 					"SeriesNumber = ?,"
 					"SeriesDate = ?,"
-					"created_at = ?, updated_at = ?"
+					"created_at = ?, updated_at = ?,"
+					"patient_study_id = ?"
 					" WHERE id = ?",
 					use(series),
 					use(series.id);
@@ -328,12 +327,13 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				series.created_at = Poco::DateTime();		
 
 				Poco::Data::Statement insert(dbconnection);
-				insert << "INSERT INTO series VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				insert << "INSERT INTO series VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 					use(series);
 
 				insert.execute();
+				dbconnection << "SELECT LAST_INSERT_ID()", into(series.id), now;
 			}
-		}
+		
 		
 		// update the images table
 		
@@ -343,7 +343,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			"SOPInstanceUID,"
 			"SeriesInstanceUID,"
 			"InstanceNumber,"
-			"created_at,updated_at"
+			"created_at,updated_at,"
+			"series_id"
 			" FROM instances WHERE SOPInstanceUID = ?",
 			into(instances),
 			use(sopuid);
@@ -352,7 +353,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 
 		if(instances.size() == 0)
 		{
-			instances.push_back(Instance());
+			instances.push_back(Instance(series.id));
 		}
 
 		Instance &instance = instances[0];
@@ -375,7 +376,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"SOPInstanceUID = ?,"
 				"SeriesInstanceUID = ?,"
 				"InstanceNumber = ?,"
-				"created_at = ?, updated_at = ?"
+				"created_at = ?, updated_at = ?,"
+				"series_id = ?"
 				" WHERE id = ?",
 				use(instance),
 				use(instance.id);
@@ -387,8 +389,10 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			instance.created_at = Poco::DateTime();
 			
 			Poco::Data::Statement insert(dbconnection);
-			insert << "INSERT INTO instances VALUES(?, ?, ?, ?, ?, ?)",
+			insert << "INSERT INTO instances VALUES(?, ?, ?, ?, ?, ?, ?)",
 				use(instance);
+
+			insert.execute();
 		}		
 	}
 	catch(Poco::Data::DataException &e)
