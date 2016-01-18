@@ -55,7 +55,7 @@ bool SendAsHTML(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 
 void HttpServer::WADO(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request)
 {	
-	
+
 	std::string content;
 	std::string querystring = request->path_match[1];
 
@@ -75,40 +75,64 @@ void HttpServer::WADO(HttpServer::Response& response, std::shared_ptr<HttpServer
 		return;
 	}
 
+	std::vector<PatientStudy> patient_studies_list;
 	std::vector<Series> series_list;
 	std::vector<Instance> instances;
 	try
 	{
 
 		Poco::Data::Session dbconnection(config::getConnectionString());	
-		
+
+		Poco::Data::Statement patientstudiesselect(dbconnection);
+		patientstudiesselect << "SELECT id,"
+			"StudyInstanceUID,"
+			"StudyID,"
+			"AccessionNumber,"
+			"PatientName,"
+			"PatientID,"
+			"StudyDate,"
+			"ModalitiesInStudy,"
+			"StudyDescription,"
+			"PatientSex,"
+			"PatientBirthDate,"
+			"ReferringPhysicianName,"
+			"created_at,updated_at"
+			" FROM patient_studies WHERE StudyInstanceUID = ?",
+			into(patient_studies_list),
+			use(queries["studyUID"]);
+
+		patientstudiesselect.execute();
+		if(patient_studies_list.size() != 1)
+		{
+			content = "Unable to find study";
+			response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+			return;
+		}
+
 		Poco::Data::Statement seriesselect(dbconnection);
 		seriesselect << "SELECT id,"
 			"SeriesInstanceUID,"
-			"StudyInstanceUID,"
 			"Modality,"
 			"SeriesDescription,"
 			"SeriesNumber,"
 			"SeriesDate,"
 			"created_at,updated_at,"
 			"patient_study_id"
-			" FROM series WHERE StudyInstanceUID = ? AND SeriesInstanceUID = ?",
+			" FROM series WHERE SeriesInstanceUID = ?",
 			into(series_list),
-			use(queries["studyUID"]),
 			use(queries["seriesUID"]);	
 
 		seriesselect.execute();
 		if(series_list.size() != 1)
 		{
-			content = "Unable to find study or series";		
+			content = "Unable to find series";
 			response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 			return;
 		}
-				
+
 		Poco::Data::Statement instanceselect(dbconnection);
 		instanceselect << "SELECT id,"
 			"SOPInstanceUID,"
-			"SeriesInstanceUID,"
 			"InstanceNumber,"
 			"created_at,updated_at,"
 			"series_id"
@@ -132,10 +156,10 @@ void HttpServer::WADO(HttpServer::Response& response, std::shared_ptr<HttpServer
 	}
 
 	boost::filesystem::path sourcepath = config::getStoragePath();
-	sourcepath /= series_list[0].StudyInstanceUID;
+	sourcepath /= patient_studies_list[0].StudyInstanceUID;
 	sourcepath /= series_list[0].SeriesInstanceUID;	
 	sourcepath /= instances[0].SOPInstanceUID + ".dcm";
-	
+
 	DcmFileFormat dfile;
 	OFCondition cond = dfile.loadFile(sourcepath.c_str());
 
@@ -152,11 +176,11 @@ void HttpServer::WADO(HttpServer::Response& response, std::shared_ptr<HttpServer
 		response << std::string("HTTP/1.1 406 Not Acceptable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;		
 		return;
 	}
-	
+
 	OFString textbuf;
 	dfile.getDataset()->findAndGetOFString(DCM_SOPClassUID, textbuf);
 	std::string sopclass = textbuf.c_str();
-		
+
 	std::string contenttype = queries["contentType"];
 	boost::algorithm::to_lower(contenttype);
 
@@ -225,7 +249,7 @@ bool SendAsDICOM(DcmFileFormat &dfile, HttpServer::Response& response, std::stri
 				<< "Content-Type: application/dicom\r\n"
 				<< "Content-disposition: attachment; filename=\"" << sopuid << ".dcm" << "\"\r\n"
 				<< "\r\n";
-				
+
 			std::istreambuf_iterator<char> begin_source(source);
 			std::istreambuf_iterator<char> end_source;
 			std::ostreambuf_iterator<char> begin_dest(response); 
@@ -247,8 +271,8 @@ bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 	boost::filesystem::path newpath = boost::filesystem::unique_path();
 
 	DiJPEGPlugin plugin;
-    plugin.setQuality(90);
-    plugin.setSampling(ESS_422);
+	plugin.setQuality(90);
+	plugin.setSampling(ESS_422);
 
 	DicomImage di(dfile.getDataset(), EXS_Unknown);
 
@@ -263,12 +287,12 @@ bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 	}
 
 #ifdef _WIN32
-				// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
+	// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
 	int result = di.writePluginFormat(&plugin, newpath.string(std::codecvt_utf8<boost::filesystem::path::value_type>()).c_str());
 #else
 	int result = di.writePluginFormat(&plugin, newpath.c_str());
 #endif					
-		
+
 	if(result == 0)
 		return false;	
 
@@ -281,7 +305,7 @@ bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 				<< "Content-Type: image/jpeg\r\n"
 				<< "Content-disposition: filename=\"" << sopuid << ".jpg" << "\"\r\n"
 				<< "\r\n";
-				
+
 			std::istreambuf_iterator<char> begin_source(source);
 			std::istreambuf_iterator<char> end_source;
 			std::ostreambuf_iterator<char> begin_dest(response); 
@@ -305,9 +329,9 @@ bool SendAsPDF(DcmFileFormat &dfile, HttpServer::Response& response, std::string
 		return false;
 
 	response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << size << "\r\n" 
-				<< "Content-Type: application/pdf\r\n"
-				<< "Content-disposition: attachment; filename=\"" << sopuid << ".pdf" << "\"\r\n"
-				<< "\r\n";
+		<< "Content-Type: application/pdf\r\n"
+		<< "Content-disposition: attachment; filename=\"" << sopuid << ".pdf" << "\"\r\n"
+		<< "\r\n";
 	std::ostreambuf_iterator<char> begin_dest(response); 
 	std::copy(&bytes[0], &bytes[size], begin_dest);
 
@@ -322,11 +346,11 @@ bool SendAsHTML(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 	OFCondition result = dsrdoc.read(*dfile.getDataset());
 	std::stringstream strbuf;
 	dsrdoc.renderHTML(strbuf);
-	
+
 	response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << strbuf.str().size() << "\r\n" 
-				<< "Content-Type: text/html\r\n"
-				<< "Content-disposition: filename=\"" << sopuid << ".pdf" << "\"\r\n"
-				<< "\r\n";
+		<< "Content-Type: text/html\r\n"
+		<< "Content-disposition: filename=\"" << sopuid << ".pdf" << "\"\r\n"
+		<< "\r\n";
 
 	response << strbuf.str();		
 	return true;

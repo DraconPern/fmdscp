@@ -236,7 +236,6 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					" WHERE id = ?",
 					use(patientstudy),
 					use(patientstudy.id);
-
 				update.execute();
 			}
 			else
@@ -246,7 +245,6 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				Poco::Data::Statement insert(dbconnection);
 				insert << "INSERT INTO patient_studies VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 					use(patientstudy);
-
 				insert.execute();
 
 				dbconnection << "SELECT LAST_INSERT_ID()", into(patientstudy.id), now;
@@ -258,7 +256,6 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			Poco::Data::Statement seriesselect(dbconnection);
 			seriesselect << "SELECT id,"
 				"SeriesInstanceUID,"
-				"StudyInstanceUID,"
 				"Modality,"
 				"SeriesDescription,"
 				"SeriesNumber,"
@@ -278,10 +275,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 
 			Series &series = series_list[0];
 
-			series.SeriesInstanceUID = seriesuid;
-
-			dfile.getDataset()->findAndGetOFString(DCM_StudyInstanceUID, textbuf);
-			series.StudyInstanceUID = textbuf.c_str();
+			series.SeriesInstanceUID = seriesuid;			
 
 			dfile.getDataset()->findAndGetOFString(DCM_Modality, textbuf);
 			series.Modality = textbuf.c_str();
@@ -309,7 +303,6 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				update << "UPDATE series SET "
 					"id = ?,"
 					"SeriesInstanceUID = ?,"
-					"StudyInstanceUID = ?,"
 					"Modality = ?,"
 					"SeriesDescription = ?,"
 					"SeriesNumber = ?,"
@@ -319,7 +312,6 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					" WHERE id = ?",
 					use(series),
 					use(series.id);
-
 				update.execute();
 			}
 			else
@@ -327,10 +319,10 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				series.created_at = Poco::DateTime();		
 
 				Poco::Data::Statement insert(dbconnection);
-				insert << "INSERT INTO series VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				insert << "INSERT INTO series VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
 					use(series);
-
 				insert.execute();
+
 				dbconnection << "SELECT LAST_INSERT_ID()", into(series.id), now;
 			}
 		
@@ -340,8 +332,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		std::vector<Instance> instances;
 		Poco::Data::Statement instanceselect(dbconnection);
 		instanceselect << "SELECT id,"
-			"SOPInstanceUID,"
-			"SeriesInstanceUID,"
+			"SOPInstanceUID,"			
 			"InstanceNumber,"
 			"created_at,updated_at,"
 			"series_id"
@@ -360,9 +351,6 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 
 		instance.SOPInstanceUID = sopuid;
 
-		dfile.getDataset()->findAndGetOFString(DCM_SeriesInstanceUID, textbuf);
-		instance.SeriesInstanceUID = textbuf.c_str();
-
 		dfile.getDataset()->findAndGetSint32(DCM_InstanceNumber, numberbuf);
 		instance.InstanceNumber = numberbuf;
 
@@ -374,7 +362,6 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			update << "UPDATE instances SET "
 				"id = ?,"
 				"SOPInstanceUID = ?,"
-				"SeriesInstanceUID = ?,"
 				"InstanceNumber = ?,"
 				"created_at = ?, updated_at = ?,"
 				"series_id = ?"
@@ -389,10 +376,11 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			instance.created_at = Poco::DateTime();
 			
 			Poco::Data::Statement insert(dbconnection);
-			insert << "INSERT INTO instances VALUES(?, ?, ?, ?, ?, ?, ?)",
+			insert << "INSERT INTO instances VALUES(?, ?, ?, ?, ?, ?)",
 				use(instance);
-
 			insert.execute();
+
+			dbconnection << "SELECT LAST_INSERT_ID()", into(series.id), now;
 		}		
 	}
 	catch(Poco::Data::DataException &e)

@@ -412,7 +412,6 @@ DIC_US FindHandler::FindSeriesLevel(DcmDataset *requestIdentifiers, DcmDataset *
 		(*responseIdentifiers)->putAndInsertString(DCM_QueryRetrieveLevel, "SERIES");
 		(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, aetitle.c_str());
 		blah(series.SeriesInstanceUID, DCM_SeriesInstanceUID,  requestIdentifiers, *responseIdentifiers);
-		blah(series.StudyInstanceUID, DCM_StudyInstanceUID,  requestIdentifiers, *responseIdentifiers);
 		blah(series.Modality, DCM_Modality,  requestIdentifiers, *responseIdentifiers);
 		blah(series.SeriesDescription, DCM_SeriesDescription,  requestIdentifiers, *responseIdentifiers);
 		blah(series.SeriesNumber, DCM_SeriesNumber,  requestIdentifiers, *responseIdentifiers);
@@ -440,7 +439,6 @@ DIC_US  FindHandler::FindInstanceLevel(DcmDataset *requestIdentifiers, DcmDatase
 		(*responseIdentifiers)->putAndInsertString(DCM_QueryRetrieveLevel, "IMAGE");
 		(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, aetitle.c_str());
 		blah(instance.SOPInstanceUID, DCM_SOPInstanceUID, requestIdentifiers, *responseIdentifiers);
-		blah(instance.SeriesInstanceUID, DCM_SeriesInstanceUID, requestIdentifiers, *responseIdentifiers);
 		blah(instance.InstanceNumber, DCM_InstanceNumber, requestIdentifiers, *responseIdentifiers);
 
 		++instances_itr;
