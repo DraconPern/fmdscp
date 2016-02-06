@@ -8,12 +8,6 @@ install:
   - SET TYPE=%CONFIGURATION%
   - SET DEVSPACE=%APPVEYOR_BUILD_FOLDER%\..
 
-#boost
-  - cd C:\Libraries\boost_1_59_0
-  - call bootstrap
-  - IF "%TYPE%" == "Release" b2 toolset=msvc-11.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage release
-  - IF "%TYPE%" == "Debug"   b2 toolset=msvc-11.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage debug
-  
 # dcmtk & zlib
   - cd %DEVSPACE%
   - ps: |
@@ -25,7 +19,7 @@ install:
   - ps: |
       Invoke-WebRequest http://draconpern-buildcache.s3.amazonaws.com/fmjpeg2koj.7z -Outfile "fmjpeg2koj.7z"
   - 7z x -y fmjpeg2koj.7z
-  
+
 #mysql client
   - cd %APPVEYOR_BUILD_FOLDER%
 #  - wget https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
@@ -33,6 +27,13 @@ install:
   - cmake .. -G "Visual Studio 11" -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%\mysql-connector-c-6.1.6-src\%TYPE%
   - msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
   - SET MYSQL_DIR=%APPVEYOR_BUILD_FOLDER%\mysql-connector-c-6.1.6-src\%TYPE%
+
+#boost
+  - cd C:\Libraries\boost_1_59_0
+  - call bootstrap
+  - SET BOOST_MODULES="--with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine"
+  - IF "%TYPE%" == "Release" b2 toolset=msvc-11.0 runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 asmflags=\safeseh %BOOST_MODULES% stage release
+  - IF "%TYPE%" == "Debug"   b2 toolset=msvc-11.0 runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 asmflags=\safeseh %BOOST_MODULES% stage debug
 
 #poco
   - cd %DEVSPACE%
@@ -44,7 +45,7 @@ install:
 #simple web server
   - cd %APPVEYOR_BUILD_FOLDER%
   - git clone https://github.com/eidheim/Simple-Web-Server.git
-  
+
 before_build:
   - cd %APPVEYOR_BUILD_FOLDER% && mkdir build-%TYPE% && cd build-%TYPE%
   - cmake .. -G "Visual Studio 11" -DBOOST_ROOT=C:\Libraries\boost_1_59_0 -DDCMTK_DIR=%DEVSPACE%\dcmtk\%TYPE% -DZLIB_ROOT=%DEVSPACE%\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE%
@@ -54,10 +55,19 @@ build_script:
   - msbuild /P:Configuration=%TYPE% ALL_BUILD.vcxproj /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 after_build:
-  - cd %APPVEYOR_BUILD_FOLDER%\build-%TYPE%\%TYPE%
-  - 7z a fmdscp.7z %APPVEYOR_BUILD_FOLDER%\build-%TYPE%\%TYPE%\fmdscp.exe
-  - mv fmdscp.7z %APPVEYOR_BUILD_FOLDER%
+  - 7z a %APPVEYOR_BUILD_FOLDER%\fmdscp.7z %APPVEYOR_BUILD_FOLDER%\build-%TYPE%\%TYPE%\fmdscp.exe
 
 artifacts:
   - path: fmdscp.7z
     name: fmdscp
+
+deploy:
+  provider: S3
+  access_key_id:
+    secure: ocfx3RWVSyFaLRBBJXRLrvwqFGoftzrWzqUWrx20/bc=
+  secret_access_key:
+    secure: cVrRAHZDL4OZaPmgpH2RAa6yKD1ckjrMvtL/RozVMTTxiMWe5+3BKGrWv7RzNQLK
+  bucket: draconpern-buildcache
+  set_public: true
+  folder:
+  artifact: fmdscp
