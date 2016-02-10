@@ -35,7 +35,7 @@ msbuild /maxcpucount:8 /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit %ERRORLEVEL%
 
 cd %DEVSPACE%
-git clone --branch=openjpeg-2.1 https://github.com/uclouvain/openjpeg.git
+git clone --branch=openjpeg-2.1 --single-branch https://github.com/uclouvain/openjpeg.git
 cd openjpeg
 git pull
 mkdir build-%TYPE%
@@ -74,8 +74,17 @@ msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
 
 cd %DEVSPACE%
+git clone https://github.com/awslabs/aws-sdk-cpp.git
+cd aws-sdk-cpp
+git pull
+mkdir build-%TYPE%
+cd build-%TYPE%
+cmake .. -G "Visual Studio 11" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\aws-sdk-cpp\%TYPE%
+msbuild /p:Configuration=%TYPE% INSTALL.vcxproj 
+
+cd %DEVSPACE%
 git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch
-cd %DEVSPACE%\poco
+cd poco
 mkdir build-%TYPE%
 cd build-%TYPE%
 cmake .. -G "Visual Studio 11" -DPOCO_STATIC=ON -DENABLE_NETSSL=OFF -DENABLE_CRYPTO=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DMYSQL_LIB=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%\lib\mysqlclient -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\poco\%TYPE% 
