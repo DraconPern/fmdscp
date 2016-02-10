@@ -63,12 +63,15 @@ rem http://lists.boost.org/Archives/boost/2014/08/216440.php
 IF "%TYPE%" == "Release" b2 toolset=msvc-11.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage release
 IF "%TYPE%" == "Debug"   b2 toolset=msvc-11.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage debug
 
-cd %DEVSPACE%\fmdscp\mysql-connector-c-6.1.6-src
+cd %DEVSPACE%
+wget -C https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
+unzip -n mysql-connector-c-6.1.6-src.zip
+cd mysql-connector-c-6.1.6-src
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G "Visual Studio 11" -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\fmdscp\mysql-connector-c-6.1.6-src\%TYPE%
+cmake .. -G "Visual Studio 11" -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
-SET MYSQL_DIR=%DEVSPACE%\fmdscp\mysql-connector-c-6.1.6-src\%TYPE%
+SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
 
 cd %DEVSPACE%
 git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch
@@ -77,6 +80,7 @@ mkdir build-%TYPE%
 cd build-%TYPE%
 cmake .. -G "Visual Studio 11" -DPOCO_STATIC=ON -DENABLE_NETSSL=OFF -DENABLE_CRYPTO=OFF -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DMYSQL_LIB=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%\lib\mysqlclient -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\poco\%TYPE% 
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
+if ERRORLEVEL 1 exit %ERRORLEVEL%
 
 REM cd %DEVSPACE%\openssl-1.0.1p
 REM IF %TYPE% == "Release" "c:\Perl\bin\perl.exe" Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl-Release VC-WIN32 
