@@ -11,6 +11,8 @@ IF "%1"=="Debug" (
 SET BUILD_DIR=%CD%
 SET DEVSPACE=%CD%
 
+SET CL=/MP
+
 cd %DEVSPACE%
 git clone --branch=master https://github.com/madler/zlib.git
 cd zlib
@@ -69,7 +71,7 @@ unzip -n mysql-connector-c-6.1.6-src.zip
 cd mysql-connector-c-6.1.6-src
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_CXX_FLAGS="-DHAVE_STRUCT_TIMESPEC" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
+cmake .. -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_CXX_FLAGS="" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
