@@ -476,7 +476,7 @@ DIC_US MoveHandler::moveNextImage()
     {
         log << "  Status Detail:\n";
         stDetail->print(log);
-        DCMNET_INFO(log);
+        DCMNET_INFO(log.str());
         delete stDetail;
     }
     
