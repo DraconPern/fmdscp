@@ -61,8 +61,8 @@ unzip -n boost_1_60_0.zip
 cd boost_1_60_0
 call bootstrap
 rem http://lists.boost.org/Archives/boost/2014/08/216440.php
-IF "%TYPE%" == "Release" b2 toolset=msvc-11.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage release
-IF "%TYPE%" == "Debug"   b2 toolset=msvc-11.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage debug
+IF "%TYPE%" == "Release" b2 toolset=msvc-12.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage release
+IF "%TYPE%" == "Debug"   b2 toolset=msvc-12.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage debug
 
 cd %DEVSPACE%
 wget -C https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
