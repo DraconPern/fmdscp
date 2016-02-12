@@ -60,12 +60,25 @@ wget -c http://downloads.sourceforge.net/project/boost/boost/1.60.0/boost_1_60_0
 unzip -n boost_1_60_0.zip
 cd boost_1_60_0
 call bootstrap
+SET BOOSTMODULES=--with-atomic --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine --with-chrono --with-random
 rem http://lists.boost.org/Archives/boost/2014/08/216440.php
-IF "%TYPE%" == "Release" b2 toolset=msvc-12.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage release
-IF "%TYPE%" == "Debug"   b2 toolset=msvc-12.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine stage debug
+IF "%TYPE%" == "Release" b2 toolset=msvc-12.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 %BOOSTMODULES% stage release
+IF "%TYPE%" == "Debug"   b2 toolset=msvc-12.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 %BOOSTMODULES% stage debug
 
 cd %DEVSPACE%
-wget -C https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
+git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch
+cd openssl
+SET OLDPATH=%PATH%
+SET PATH=C:\Perl\bin;%PATH%
+IF "%TYPE%" == "Release" perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Release VC-WIN32 
+IF "%TYPE%" == "Debug"   perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Debug debug-VC-WIN32 
+call ms\do_ms.bat
+nmake -f ms\nt.mak install
+SET OPENSSL_ROOT_DIR=%DEVSPACE%\openssl\%TYPE%
+SET PATH=%OLDPATH%
+
+cd %DEVSPACE%
+wget -c https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
 unzip -n mysql-connector-c-6.1.6-src.zip
 cd mysql-connector-c-6.1.6-src
 mkdir build-%TYPE%
@@ -95,11 +108,13 @@ cmake .. -G "Visual Studio 12" -DPOCO_STATIC=ON -DENABLE_NETSSL=OFF -DENABLE_CRY
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
-REM cd %DEVSPACE%\openssl-1.0.1p
-REM IF %TYPE% == "Release" "c:\Perl\bin\perl.exe" Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl-Release VC-WIN32 
-REM IF %TYPE% == "Debug"   "c:\Perl\bin\perl.exe" Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl-Debug debug-VC-WIN32 
-REM call ms\do_ms
-REM nmake -f ms\ntdll.mak install
+cd %DEVSPACE%
+git clone https://github.com/Microsoft/cpprestsdk.git casablanca
+cd casablanca\Release
+mkdir build-%TYPE%
+cd build-%TYPE%
+cmake .. -G "Visual Studio 12" -DCMAKE_BUILD_TYPE=%TYPE% -DBUILD_SHARED_LIBS=0 -DBUILD_TESTS=OFF -DBoost_USE_STATIC_LIBS=ON -DBoost_USE_MULTITHREADED=ON -DBoost_USE_STATIC_RUNTIME=ON -DBOOST_ROOT=%DEVSPACE%\boost_1_60_0
+msbuild /P:Configuration=%TYPE% ALL_BUILD.vcxproj
 
 cd %BUILD_DIR%
 git pull
