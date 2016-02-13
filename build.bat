@@ -25,6 +25,18 @@ IF "%TYPE%" == "Release" copy /Y %DEVSPACE%\zlib\Release\lib\zlibstatic.lib %DEV
 IF "%TYPE%" == "Debug"   copy /Y %DEVSPACE%\zlib\Debug\lib\zlibstaticd.lib %DEVSPACE%\zlib\Debug\lib\zlib_d.lib
 
 cd %DEVSPACE%
+git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch
+cd openssl
+SET OLDPATH=%PATH%
+rem SET PATH=C:\Perl\bin;%PATH%
+IF "%TYPE%" == "Release" perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Release VC-WIN32 
+IF "%TYPE%" == "Debug"   perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Debug debug-VC-WIN32 
+call ms\do_ms.bat
+nmake -f ms\nt.mak install
+SET OPENSSL_ROOT_DIR=%DEVSPACE%\openssl\%TYPE%
+SET PATH=%OLDPATH%
+
+cd %DEVSPACE%
 git clone git://git.dcmtk.org/dcmtk.git
 cd dcmtk
 git pull
@@ -64,18 +76,6 @@ SET BOOSTMODULES=--with-atomic --with-thread --with-filesystem --with-system --w
 rem http://lists.boost.org/Archives/boost/2014/08/216440.php
 IF "%TYPE%" == "Release" b2 toolset=msvc-12.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 %BOOSTMODULES% stage release
 IF "%TYPE%" == "Debug"   b2 toolset=msvc-12.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 %BOOSTMODULES% stage debug
-
-cd %DEVSPACE%
-git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch
-cd openssl
-SET OLDPATH=%PATH%
-SET PATH=C:\Perl\bin;%PATH%
-IF "%TYPE%" == "Release" perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Release VC-WIN32 
-IF "%TYPE%" == "Debug"   perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Debug debug-VC-WIN32 
-call ms\do_ms.bat
-nmake -f ms\nt.mak install
-SET OPENSSL_ROOT_DIR=%DEVSPACE%\openssl\%TYPE%
-SET PATH=%OLDPATH%
 
 cd %DEVSPACE%
 wget -c https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
