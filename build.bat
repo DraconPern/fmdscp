@@ -14,7 +14,7 @@ SET CL=/MP
 
 cd %DEVSPACE%
 REM git clone --branch=master https://github.com/madler/zlib.git
-git clone --branch=master http://192.168.1.34/DraconPern/cpprestsdk.git
+git clone --branch=master http://192.168.1.34/DraconPern/zlib.git
 cd zlib
 git pull
 mkdir build-%TYPE%
