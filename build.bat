@@ -13,7 +13,8 @@ SET DEVSPACE=%CD%
 SET CL=/MP
 
 cd %DEVSPACE%
-git clone --branch=master https://github.com/madler/zlib.git
+REM git clone --branch=master https://github.com/madler/zlib.git
+git clone --branch=master http://192.168.1.34/DraconPern/cpprestsdk.git
 cd zlib
 git pull
 mkdir build-%TYPE%
@@ -25,7 +26,8 @@ IF "%TYPE%" == "Release" copy /Y %DEVSPACE%\zlib\Release\lib\zlibstatic.lib %DEV
 IF "%TYPE%" == "Debug"   copy /Y %DEVSPACE%\zlib\Debug\lib\zlibstaticd.lib %DEVSPACE%\zlib\Debug\lib\zlib_d.lib
 
 cd %DEVSPACE%
-git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch
+REM git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch
+git clone http://192.168.1.34/DraconPern/openssl.git --branch OpenSSL_1_0_2-stable --single-branch
 cd openssl
 SET OLDPATH=%PATH%
 rem SET PATH=C:\Perl\bin;%PATH%
@@ -37,7 +39,8 @@ SET OPENSSL_ROOT_DIR=%DEVSPACE%\openssl\%TYPE%
 SET PATH=%OLDPATH%
 
 cd %DEVSPACE%
-git clone git://git.dcmtk.org/dcmtk.git
+REM git clone git://git.dcmtk.org/dcmtk.git
+git clone http://192.168.1.34/DraconPern/dcmtk.git
 cd dcmtk
 git pull
 git checkout -f 5371e1d84526e7544ab7e70fb47e3cdb4e9231b2
@@ -48,7 +51,8 @@ msbuild /maxcpucount:8 /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
-git clone --branch=openjpeg-2.1 --single-branch https://github.com/uclouvain/openjpeg.git
+REM git clone --branch=openjpeg-2.1 --single-branch https://github.com/uclouvain/openjpeg.git
+git clone --branch=openjpeg-2.1 --single-branch http://192.168.1.34/DraconPern/openjpeg.git
 cd openjpeg
 git pull
 mkdir build-%TYPE%
@@ -58,7 +62,8 @@ msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
-git clone --branch=master https://github.com/DraconPern/fmjpeg2koj.git
+REM git clone --branch=master https://github.com/DraconPern/fmjpeg2koj.git
+git clone --branch=master http://192.168.1.34/DraconPern/fmjpeg2koj.git
 cd fmjpeg2koj
 git pull
 mkdir build-%TYPE%
@@ -89,7 +94,8 @@ if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
 
 cd %DEVSPACE%
-git clone https://github.com/awslabs/aws-sdk-cpp.git
+REM git clone https://github.com/awslabs/aws-sdk-cpp.git
+git clone http://192.168.1.34/DraconPern/aws-sdk-cpp.git
 cd aws-sdk-cpp
 git pull
 mkdir build-%TYPE%
@@ -100,7 +106,8 @@ msbuild /maxcpucount:8 /p:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
-git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch
+REM git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch
+git clone http://192.168.1.34/DraconPern/poco.git --branch poco-1.6.1 --single-branch
 cd poco
 mkdir build-%TYPE%
 cd build-%TYPE%
@@ -109,7 +116,8 @@ msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
-git clone https://github.com/Microsoft/cpprestsdk.git casablanca
+REM git clone https://github.com/Microsoft/cpprestsdk.git casablanca
+git clone http://192.168.1.34/DraconPern/cpprestsdk.git casablanca
 cd casablanca\Release
 mkdir build-%TYPE%
 cd build-%TYPE%
@@ -118,7 +126,8 @@ msbuild /P:Configuration=%TYPE% ALL_BUILD.vcxproj
 
 cd %BUILD_DIR%
 git pull
-git clone https://github.com/eidheim/Simple-Web-Server.git
+REM git clone https://github.com/eidheim/Simple-Web-Server.git
+git clone http://192.168.1.34/DraconPern/Simple-Web-Server.git
 mkdir build-%TYPE%
 cd build-%TYPE%
 cmake .. -G "Visual Studio 12" -DCMAKE_BUILD_TYPE=%TYPE% -DBOOST_ROOT=%DEVSPACE%\boost_1_60_0 -DDCMTK_DIR=%DEVSPACE%\dcmtk\%TYPE% -DZLIB_ROOT=%DEVSPACE%\zlib\%TYPE% -DFMJPEG2K=%DEVSPACE%\fmjpeg2koj\%TYPE% -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DPOCO=%DEVSPACE%\poco\%TYPE%
