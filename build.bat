@@ -115,15 +115,6 @@ cmake .. -G "Visual Studio 12" -DPOCO_STATIC=ON -DENABLE_NETSSL=OFF -DENABLE_CRY
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
-cd %DEVSPACE%
-REM git clone https://github.com/Microsoft/cpprestsdk.git casablanca
-git clone http://192.168.1.34/DraconPern/cpprestsdk.git casablanca
-cd casablanca\Release
-mkdir build-%TYPE%
-cd build-%TYPE%
-cmake .. -G "Visual Studio 12" -DCMAKE_BUILD_TYPE=%TYPE% -DBUILD_SHARED_LIBS=0 -DBUILD_TESTS=OFF -DBoost_USE_STATIC_LIBS=ON -DBoost_USE_MULTITHREADED=ON -DBoost_USE_STATIC_RUNTIME=ON -DBOOST_ROOT=%DEVSPACE%\boost_1_60_0
-msbuild /P:Configuration=%TYPE% ALL_BUILD.vcxproj
-
 cd %BUILD_DIR%
 git pull
 REM git clone https://github.com/eidheim/Simple-Web-Server.git
