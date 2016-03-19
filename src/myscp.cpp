@@ -49,98 +49,6 @@ OFCondition MySCP::run(T_ASC_Association* incomingAssoc)
 	return DcmThreadSCP::run(incomingAssoc);	
 }
 
-OFCondition MySCP::negotiateAssociation()
-{
-	OFCondition result;
-
-	// Check whether there is something to negotiate...
-	if (assoc_ == NULL)
-		return DIMSE_ILLEGALASSOCIATION;
-
-	// instead of using evaluateIncomingAssociation, we are going to use ASC_acceptContextsWithPreferredTransferSyntaxes
-	
-	const char* verificationAbstractSyntaxes[] =
-    {
-        UID_VerificationSOPClass
-    };
-
-	const char *verificationTransferSyntaxes[] =
-	{
-		UID_LittleEndianExplicitTransferSyntax,
-		UID_LittleEndianImplicitTransferSyntax
-	};
-
-    result = ASC_acceptContextsWithPreferredTransferSyntaxes(assoc_->params, verificationAbstractSyntaxes, DIM_OF(verificationAbstractSyntaxes), verificationTransferSyntaxes, DIM_OF(verificationTransferSyntaxes));
-    if (result.bad() && result != ASC_NOPRESENTATIONCONTEXTPROPOSED)
-	{
-		return result;
-	}
-
-	const char* storageTransferSyntaxes[] = {
-		UID_LittleEndianImplicitTransferSyntax,
-		UID_LittleEndianExplicitTransferSyntax,
-		UID_JPEGProcess1TransferSyntax,
-		UID_JPEGProcess2_4TransferSyntax,
-		UID_JPEGProcess3_5TransferSyntax,
-		UID_JPEGProcess6_8TransferSyntax,
-		UID_JPEGProcess7_9TransferSyntax,
-		UID_JPEGProcess10_12TransferSyntax,
-		UID_JPEGProcess11_13TransferSyntax,
-		UID_JPEGProcess14TransferSyntax,
-		UID_JPEGProcess15TransferSyntax,
-		UID_JPEGProcess16_18TransferSyntax,
-		UID_JPEGProcess17_19TransferSyntax,
-		UID_JPEGProcess20_22TransferSyntax,
-		UID_JPEGProcess21_23TransferSyntax,
-		UID_JPEGProcess24_26TransferSyntax,
-		UID_JPEGProcess25_27TransferSyntax,
-		UID_JPEGProcess28TransferSyntax,
-		UID_JPEGProcess29TransferSyntax,
-		UID_JPEGProcess14SV1TransferSyntax,
-		UID_RLELosslessTransferSyntax,
-		UID_JPEGLSLosslessTransferSyntax,
-		UID_JPEGLSLossyTransferSyntax,
-		UID_DeflatedExplicitVRLittleEndianTransferSyntax,
-		UID_JPEG2000LosslessOnlyTransferSyntax,
-		UID_JPEG2000TransferSyntax,
-		UID_MPEG2MainProfileAtMainLevelTransferSyntax,
-		UID_MPEG2MainProfileAtHighLevelTransferSyntax,
-		UID_JPEG2000Part2MulticomponentImageCompressionLosslessOnlyTransferSyntax,
-		UID_JPEG2000Part2MulticomponentImageCompressionTransferSyntax,
-		UID_MPEG4HighProfileLevel4_1TransferSyntax,
-		UID_MPEG4BDcompatibleHighProfileLevel4_1TransferSyntax,
-		UID_MPEG4HighProfileLevel4_2_For2DVideoTransferSyntax,
-		UID_MPEG4HighProfileLevel4_2_For3DVideoTransferSyntax,
-		UID_MPEG4StereoHighProfileLevel4_2TransferSyntax
-	};
-
-	result = ASC_acceptContextsWithPreferredTransferSyntaxes( assoc_->params, dcmAllStorageSOPClassUIDs, numberOfAllDcmStorageSOPClassUIDs, storageTransferSyntaxes, DIM_OF(storageTransferSyntaxes));
-    if (result.bad() && result != ASC_NOPRESENTATIONCONTEXTPROPOSED)
-	{
-		return result;
-	}
-
-    const char* QRAbstractSyntaxes[] =
-    {
-        UID_FINDStudyRootQueryRetrieveInformationModel,
-		UID_MOVEStudyRootQueryRetrieveInformationModel
-    };
-
-	result = ASC_acceptContextsWithPreferredTransferSyntaxes( assoc_->params, QRAbstractSyntaxes, DIM_OF(QRAbstractSyntaxes), verificationTransferSyntaxes, DIM_OF(verificationTransferSyntaxes));
-    if (result.bad() && result != ASC_NOPRESENTATIONCONTEXTPROPOSED)
-	{
-		return result;
-	}
-
-	if (result.bad())
-	{
-		OFString tempStr;
-		DCMNET_ERROR(DimseCondition::dump(tempStr, result));
-	}
-	return result;
-
-}
-
 OFCondition MySCP::handleIncomingCommand(T_DIMSE_Message *incomingMsg,
 										 const DcmPresentationContextInfo &presInfo)
 {
@@ -295,8 +203,6 @@ MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
 
 	// DICOM standard transfer syntaxes
 	const char* transferSyntaxes[] = {
-		UID_LittleEndianImplicitTransferSyntax, /* default xfer syntax first */
-		UID_LittleEndianExplicitTransferSyntax,
 		UID_JPEGProcess1TransferSyntax,
 		UID_JPEGProcess2_4TransferSyntax,
 		UID_JPEGProcess3_5TransferSyntax,
@@ -332,21 +238,23 @@ MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
 		UID_MPEG4StereoHighProfileLevel4_2TransferSyntax
 	};
 
-	OFList<OFString> syntaxes;
+	OFList<OFString> imagesyntaxes;
 	for(int i = 0; i < DIM_OF(transferSyntaxes); i++)
-		syntaxes.push_back(transferSyntaxes[i]);		
+		imagesyntaxes.push_back(transferSyntaxes[i]);
 
-	getConfig().addPresentationContext(UID_VerificationSOPClass, syntaxes, ASC_SC_ROLE_DEFAULT);
+	OFList<OFString> simplesyntaxes;
+	simplesyntaxes.push_back(UID_LittleEndianExplicitTransferSyntax);
+	simplesyntaxes.push_back(UID_LittleEndianImplicitTransferSyntax);
+
+	getConfig().addPresentationContext(UID_VerificationSOPClass, simplesyntaxes);
 
 	for(int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
-		getConfig().addPresentationContext(dcmAllStorageSOPClassUIDs[i], syntaxes, ASC_SC_ROLE_DEFAULT, "STORAGE");
+		getConfig().addPresentationContext(dcmAllStorageSOPClassUIDs[i], imagesyntaxes);
+	for (int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
+		getConfig().addPresentationContext(dcmAllStorageSOPClassUIDs[i], simplesyntaxes);
 
-	syntaxes.clear();
-	syntaxes.push_back(UID_LittleEndianExplicitTransferSyntax);
-	syntaxes.push_back(UID_LittleEndianImplicitTransferSyntax);
-	getConfig().addPresentationContext(UID_FINDStudyRootQueryRetrieveInformationModel, syntaxes, ASC_SC_ROLE_DEFAULT, "FIND");
-
-	getConfig().addPresentationContext(UID_MOVEStudyRootQueryRetrieveInformationModel, syntaxes, ASC_SC_ROLE_DEFAULT, "MOVE");
+	getConfig().addPresentationContext(UID_FINDStudyRootQueryRetrieveInformationModel, simplesyntaxes);
+	getConfig().addPresentationContext(UID_MOVEStudyRootQueryRetrieveInformationModel, simplesyntaxes);
 
 }
 

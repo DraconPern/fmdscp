@@ -40,9 +40,7 @@ public:
 
 	// override run simply because we need a copy of assoc
 	virtual OFCondition run(T_ASC_Association* incomingAssoc);
-protected:
-	virtual OFCondition negotiateAssociation();
-
+protected:	
 	virtual OFCondition handleIncomingCommand(T_DIMSE_Message *incomingMsg,
 		const DcmPresentationContextInfo &presInfo);
 
