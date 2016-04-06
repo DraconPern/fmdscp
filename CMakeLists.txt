@@ -109,13 +109,14 @@ if(APPLE)
 ENDIF()
 
 TARGET_LINK_LIBRARIES(fmdscp
-	${FMJPEG2K_LIBRARIES}  
+	${FMJPEG2K_LIBRARIES}
 	${OPENJPEG_LIBRARIES}
+	${FMJP2K_LIBRARIES}
+	jasper
 	${ZLIB_LIBRARIES}
 	${DCMTK_LIBRARIES}
 	${Boost_LIBRARIES}
-	${Poco_LIBRARIES}
-	jasper
+	${Poco_LIBRARIES}	
 	debug PocoDatad optimized PocoData
   #debug PocoDataODBCd optimized PocoDataODBC
   #debug PocoDataSQLited optimized PocoDataSQLite
