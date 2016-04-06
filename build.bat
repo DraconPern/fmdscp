@@ -66,10 +66,10 @@ if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
 git clone --branch=master https://github.com/DraconPern/fmjpeg2kjasper.git
-wget -c https://www.ece.uvic.ca/~frodo/jasper/software/jasper-1.900.1.zip
-unzip -n jasper-1.900.1.zip
 cd fmjpeg2kjasper
 git pull
+wget -c https://www.ece.uvic.ca/~frodo/jasper/software/jasper-1.900.1.zip
+unzip -n jasper-1.900.1.zip
 cd jasper
 mkdir build-%TYPE%
 cd build-%TYPE%

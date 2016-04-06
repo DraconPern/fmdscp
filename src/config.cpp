@@ -29,7 +29,7 @@ using namespace Poco::Util;
 #include "dcmtk/dcmdata/dcrleerg.h"
 #include "fmjpeg2k/djencode.h"
 #include "fmjpeg2k/djdecode.h"
-
+#include "fmjp2k/fmjp2kcrg.h"
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
 #define UNICODE 1
@@ -60,8 +60,9 @@ void config::registerCodecs()
 	DJLSDecoderRegistration::registerCodecs();
 	DcmRLEEncoderRegistration::registerCodecs();
 	DcmRLEDecoderRegistration::registerCodecs();
-	FMJP2KEncoderRegistration::registerCodecs();
-	FMJP2KDecoderRegistration::registerCodecs();
+	FMJPEG2KEncoderRegistration::registerCodecs();
+	//FMJPEG2KDecoderRegistration::registerCodecs();
+	FMJP2KCodecRegistration::registerCodecs();
 }
 
 
@@ -73,8 +74,10 @@ void config::deregisterCodecs()
 	DJLSEncoderRegistration::cleanup();
 	DcmRLEEncoderRegistration::cleanup();
 	DcmRLEDecoderRegistration::cleanup();
-	FMJP2KEncoderRegistration::cleanup();
-	FMJP2KDecoderRegistration::cleanup();
+
+	FMJPEG2KEncoderRegistration::cleanup();
+	// FMJPEG2KDecoderRegistration::cleanup();
+	FMJP2KCodecRegistration::cleanup();
 }
 
 std::string config::getConnectionString()
