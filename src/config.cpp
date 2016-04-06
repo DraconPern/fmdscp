@@ -30,13 +30,6 @@ using namespace Poco::Util;
 #include "fmjpeg2k/djencode.h"
 #include "fmjpeg2k/djdecode.h"
 
-#include "dcmtk/dcmjpls/djrparam.h"   /* for class DJLSRepresentationParameter */
-
-// check DCMTK functionality
-#if !defined(WIDE_CHAR_FILE_IO_FUNCTIONS) && defined(_WIN32)
-#error "DCMTK and this program must be compiled with DCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS"
-#endif
-
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
 #define UNICODE 1

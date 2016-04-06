@@ -36,6 +36,8 @@ server::server()// : httpserver(8080, 10)
 	io_service_.post(boost::bind(&SenderService::run, &senderService));	
 
 	// add REST API
+	httpserver.shutdownCallback = boost::bind(&server::stop, this);
+
 	io_service_.post(boost::bind(&HttpServer::start, &httpserver));
 }
 
