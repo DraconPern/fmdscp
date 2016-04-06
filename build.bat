@@ -7,7 +7,7 @@ SET TYPE=Debug
 SET BUILD_DIR=%CD%
 SET DEVSPACE=%CD%
 SET CL=/MP
-SET GENERATOR=%GENERATOR%
+SET GENERATOR="Visual Studio 12"
 
 cd %DEVSPACE%
 git clone --branch=master https://github.com/madler/zlib.git
