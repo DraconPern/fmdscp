@@ -9,7 +9,6 @@
 #include "myscp.h"
 
 #include "httpserver.h"
-typedef SimpleWeb::Server<SimpleWeb::HTTP> HttpServer2;
 
 class server
 {
@@ -25,7 +24,7 @@ protected:
 
 	void init_scp();
 
-	void stop(bool flag);
+	void setStop(bool flag);
 	boost::mutex event_mutex;
 	bool stopEvent;
 

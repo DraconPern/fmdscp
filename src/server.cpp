@@ -5,7 +5,7 @@
 #include <boost/asio/io_service.hpp>
 #include "ndcappender.h"
 
-server::server()// : httpserver(8080, 10)
+server::server() : httpserver(std::bind(&server::stop, this))
 {
 	// configure logging
 	dcmtk::log4cplus::SharedAppenderPtr logfile(new NDCAsFilenameAppender("C:\\PACS\\Log"));
@@ -35,9 +35,7 @@ server::server()// : httpserver(8080, 10)
 	// add sender
 	io_service_.post(boost::bind(&SenderService::run, &senderService));	
 
-	// add REST API
-	httpserver.shutdownCallback = boost::bind(&server::stop, this);
-
+	// add web/rest API
 	io_service_.post(boost::bind(&HttpServer::start, &httpserver));
 }
 
@@ -85,7 +83,7 @@ void server::join()
 
 void server::stop()
 {
-	stop(true);
+	setStop(true);
 
 	// also tell ioservice to stop servicing
 	io_service_.stop();
@@ -99,7 +97,7 @@ void server::stop()
 	httpserver.stop();
 }
 
-void server::stop(bool flag)
+void server::setStop(bool flag)
 {
 	boost::mutex::scoped_lock lk(event_mutex);
 	stopEvent = flag;

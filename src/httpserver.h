@@ -7,7 +7,7 @@
 class HttpServer : public SimpleWeb::Server<SimpleWeb::HTTP>
 {
 public:
-	HttpServer();
+	HttpServer(std::function< void(void) > shutdownCallback);
 	
 	void Version(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request);
 	void Shutdown(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request);

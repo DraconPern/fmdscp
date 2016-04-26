@@ -30,12 +30,14 @@
 #include "poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
-HttpServer::HttpServer() : SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10)
-{	
+HttpServer::HttpServer(std::function< void(void) > shutdownCallback) :
+	SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10),
+	shutdownCallback(shutdownCallback)
+{		
 	resource["^/studies\\?(.+)$"]["GET"] = std::bind(&HttpServer::SearchForStudies, this, std::placeholders::_1, std::placeholders::_2);
 	resource["^/wado\\?(.+)$"]["GET"] = std::bind(&HttpServer::WADO, this, std::placeholders::_1, std::placeholders::_2);
-	resource["^/version"]["GET"] = std::bind(&HttpServer::Version, this, std::placeholders::_1, std::placeholders::_2);
-	resource["^/shutdown"]["POST"] = std::bind(&HttpServer::Shutdown, this, std::placeholders::_1, std::placeholders::_2);
+	resource["^/api/version"]["GET"] = std::bind(&HttpServer::Version, this, std::placeholders::_1, std::placeholders::_2);
+	resource["^/api/shutdown"]["POST"] = std::bind(&HttpServer::Shutdown, this, std::placeholders::_1, std::placeholders::_2);
 	default_resource["GET"] = std::bind(&HttpServer::NotFound, this, std::placeholders::_1, std::placeholders::_2);
 }
 
@@ -56,8 +58,7 @@ void HttpServer::Version(HttpServer::Response& response, std::shared_ptr<HttpSer
 
 void HttpServer::Shutdown(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request)
 {
-	if (shutdownCallback)
-		shutdownCallback();
+	shutdownCallback();
 	std::string content = "Stoping";
 	response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 }
