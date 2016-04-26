@@ -31,6 +31,8 @@ find_package(dcmtk REQUIRED CONFIG HINTS ${DCMTK_DIR})
 #include zlib
 find_package(zlib REQUIRED ${ZLIB_ROOT})
 
+find_package(openssl REQUIRED)
+
 #include openjpeg
 find_package(openjpeg HINTS ${OPENJPEG})
 add_definitions(-DOPJ_STATIC)
@@ -50,8 +52,8 @@ find_package(poco REQUIRED HINTS ${POCO})
 add_definitions(-DPOCO_STATIC)
 add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/Simple-Web-Server ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${FMJP2K_INCLUDE_DIRS}  ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS})
-LINK_DIRECTORIES(${FMJPEG2K}/lib ${FMJP2K}/lib ${JASPER}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${MYSQL_LIB_DIR})
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/Simple-Web-Server ${CMAKE_SOURCE_DIR}/Simple-WebSocket-Server ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${FMJP2K_INCLUDE_DIRS}  ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${SOCKETIO}/build/include)
+LINK_DIRECTORIES(${FMJPEG2K}/lib ${FMJP2K}/lib ${JASPER}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${MYSQL_LIB_DIR} ${SOCKETIO}/build/lib/${CMAKE_BUILD_TYPE})
 
 set(fmdscp_HEADERS
 	sqlite3/sqlite3.h
@@ -67,8 +69,8 @@ set(fmdscp_HEADERS
 	src/dicomsender.h
 	src/alphanum.hpp
 	src/senderservice.h
-	Simple-Web-Server/server_http.hpp
-	src/httpserver.h
+	Simple-Web-Server/server_http.hpp	
+	src/httpserver.h	
 )
 
 set(fmdscp_SRCS
@@ -86,7 +88,7 @@ set(fmdscp_SRCS
 	sqlite3/sqlite3_exec_stmt.c
 	src/dicomsender.cpp
 	src/senderservice.cpp	
-	src/httpserver.cpp
+	src/httpserver.cpp	
 )
 
 if(WIN32)
@@ -127,5 +129,8 @@ TARGET_LINK_LIBRARIES(fmdscp
   debug PocoUtild optimized PocoUtil
   debug PocoXMLd optimized PocoXML
   ${MYSQL_LIBRARIES}
+# ${OPENSSL_LIBRARIES}
 	${OS_SPECIFIC_LIBS}
+	sioclient
+	sioclient_tls
 	)

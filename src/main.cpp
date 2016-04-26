@@ -88,7 +88,11 @@ protected:
 		{
 			server s;
 			s.run_async();
+			
+			// wait for OS to tell us to stop
 			waitForTerminationRequest();
+
+			// stop server
 			s.stop();
 			s.join();
 		}

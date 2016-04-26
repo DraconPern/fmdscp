@@ -9,6 +9,7 @@
 #include "myscp.h"
 
 #include "httpserver.h"
+#include "sio_client.h"
 
 class server
 {
@@ -33,10 +34,13 @@ protected:
 
 	/// The io_service used to perform asynchronous operations.
 	boost::asio::io_service io_service_;
-			
+
+	// all the background tasks
 	MyDcmSCPPool storageSCP;
 	SenderService senderService;
 	HttpServer httpserver;
+
+	sio::client socketioclient;
 };
 
 #endif // __SERVER_H__

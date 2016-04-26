@@ -5,7 +5,8 @@
 #include <boost/asio/io_service.hpp>
 #include "ndcappender.h"
 
-server::server() : httpserver(std::bind(&server::stop, this))
+server::server() : 
+	httpserver(std::bind(&server::stop, this))
 {
 	// configure logging
 	dcmtk::log4cplus::SharedAppenderPtr logfile(new NDCAsFilenameAppender("C:\\PACS\\Log"));
@@ -37,6 +38,9 @@ server::server() : httpserver(std::bind(&server::stop, this))
 
 	// add web/rest API
 	io_service_.post(boost::bind(&HttpServer::start, &httpserver));
+
+	// add websocket that connects to cloud
+	socketioclient.connect("http://home.draconpern.com");
 }
 
 server::~server()
@@ -94,7 +98,12 @@ void server::stop()
 	// tell senderservice to stop
 	senderService.stop();
 
-	httpserver.stop();
+	// stop webserver
+	httpserver.stop();	
+
+	// stop socketio to cloud
+	socketioclient.sync_close();
+	socketioclient.clear_con_listeners(); // needed?	
 }
 
 void server::setStop(bool flag)
