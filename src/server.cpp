@@ -6,7 +6,8 @@
 #include "ndcappender.h"
 
 server::server() : 
-	httpserver(std::bind(&server::stop, this))
+	httpserver(std::bind(&server::stop, this)),
+	cloudclient(std::bind(&server::stop, this))
 {
 	// configure logging
 	dcmtk::log4cplus::SharedAppenderPtr logfile(new NDCAsFilenameAppender("C:\\PACS\\Log"));
@@ -40,7 +41,7 @@ server::server() :
 	io_service_.post(boost::bind(&HttpServer::start, &httpserver));
 
 	// add websocket that connects to cloud
-	socketioclient.connect("http://home.draconpern.com");
+	cloudclient.connect("http://home.draconpern.com");
 }
 
 server::~server()
@@ -102,8 +103,7 @@ void server::stop()
 	httpserver.stop();	
 
 	// stop socketio to cloud
-	socketioclient.sync_close();
-	socketioclient.clear_con_listeners(); // needed?	
+	cloudclient.sync_close();	
 }
 
 void server::setStop(bool flag)

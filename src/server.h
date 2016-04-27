@@ -9,7 +9,7 @@
 #include "myscp.h"
 
 #include "httpserver.h"
-#include "sio_client.h"
+#include "cloudclient.h"
 
 class server
 {
@@ -40,7 +40,7 @@ protected:
 	SenderService senderService;
 	HttpServer httpserver;
 
-	sio::client socketioclient;
+	CloudClient cloudclient;
 };
 
 #endif // __SERVER_H__

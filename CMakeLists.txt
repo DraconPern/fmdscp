@@ -65,12 +65,13 @@ set(fmdscp_HEADERS
 	src/config.h
 	src/util.h
 	src/server.h
-	src/ndcappender.h
-	src/dicomsender.h
+	src/ndcappender.h	
 	src/alphanum.hpp
 	src/senderservice.h
 	Simple-Web-Server/server_http.hpp	
-	src/httpserver.h	
+	src/httpserver.h
+	src/cloudclient.h
+	src/dicomsender.h
 )
 
 set(fmdscp_SRCS
@@ -85,10 +86,11 @@ set(fmdscp_SRCS
 	src/server.cpp
 	src/ndcappender.cpp
 	sqlite3/sqlite3.c
-	sqlite3/sqlite3_exec_stmt.c
-	src/dicomsender.cpp
+	sqlite3/sqlite3_exec_stmt.c	
 	src/senderservice.cpp	
-	src/httpserver.cpp	
+	src/httpserver.cpp
+	src/cloudclient.cpp
+	src/dicomsender.cpp
 )
 
 if(WIN32)
