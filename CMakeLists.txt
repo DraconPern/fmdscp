@@ -71,7 +71,7 @@ set(fmdscp_HEADERS
 	Simple-Web-Server/server_http.hpp	
 	src/httpserver.h
 	src/cloudclient.h
-	src/dicomsender.h
+	src/sender.h
 )
 
 set(fmdscp_SRCS
@@ -90,7 +90,7 @@ set(fmdscp_SRCS
 	src/senderservice.cpp	
 	src/httpserver.cpp
 	src/cloudclient.cpp
-	src/dicomsender.cpp
+	src/sender.cpp
 )
 
 if(WIN32)
