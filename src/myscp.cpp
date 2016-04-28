@@ -34,7 +34,7 @@ MySCP::MySCP()
 
 MySCP::~MySCP()
 {
-
+	dcmtk::log4cplus::threadCleanup();
 }
 
 void MySCP::setUUID(boost::uuids::uuid uuid)
@@ -44,9 +44,51 @@ void MySCP::setUUID(boost::uuids::uuid uuid)
 
 OFCondition MySCP::run(T_ASC_Association* incomingAssoc)
 {
-	// save a copy because SCP's m_assoc is private :(   also note DcmThreadSCP is friend class of SCP, and that's how m_assoc is set
+	// save a copy for DIMSE_ because SCP's m_assoc is private :(   also note DcmThreadSCP is friend class of SCP, and that's how m_assoc is set
 	assoc_ = incomingAssoc;
 	return DcmThreadSCP::run(incomingAssoc);	
+}
+
+OFCondition MySCP::negotiateAssociation()
+{
+	// instead of being limited to a list of 127 SOPClassUID... we accept everything.
+
+	OFCondition result = EC_Normal;
+	// Check whether there is something to negotiate...
+	if (assoc_ == NULL)
+		return DIMSE_ILLEGALASSOCIATION;
+
+	T_ASC_SC_ROLE acceptedRole = ASC_SC_ROLE_DEFAULT;
+
+	int numContexts = ASC_countPresentationContexts(assoc_->params);
+
+	// traverse list of presentation contexts
+	for (int i = 0; i < numContexts; ++i)
+	{
+		// retrieve presentation context
+		T_ASC_PresentationContext pc;
+		result = ASC_getPresentationContext(assoc_->params, i, &pc);
+		if (result.bad()) return result;
+
+		// loop through list of transfer syntaxes in presentation context
+		for (char j = 0; j < pc.transferSyntaxCount; ++j)
+		{
+			result = ASC_acceptPresentationContext(
+				assoc_->params, pc.presentationContextID,
+				pc.proposedTransferSyntaxes[j], acceptedRole);
+
+			// SCP/SCU role selection failed, reject presentation context
+			if (result == ASC_SCPSCUROLESELECTIONFAILED)
+			{
+				result = ASC_refusePresentationContext(assoc_->params,
+					pc.presentationContextID, ASC_P_NOREASON);
+			}
+			if (result.bad()) return result;
+
+		}
+	}
+
+	return result;
 }
 
 OFCondition MySCP::handleIncomingCommand(T_DIMSE_Message *incomingMsg,
@@ -186,7 +228,8 @@ OFCondition MyDcmSCPPool::MySCPWorker::workerListen(T_ASC_Association* const ass
 	DCMNET_INFO(info);
 	ASC_dumpParameters(info, assoc->params, ASC_ASSOC_RQ);
 	DCMNET_INFO(info);
-	return MySCP::run(assoc);
+	OFCondition cond = MySCP::run(assoc);
+	return cond;
 }
 
 MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
@@ -200,6 +243,8 @@ MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
 
 	getConfig().setHostLookupEnabled(true);
 	getConfig().setAETitle("FMDSCP");	
+	
+	getConfig().setPort(11112);
 
 	// DICOM standard transfer syntaxes
 	const char* transferSyntaxes[] = {
@@ -235,7 +280,9 @@ MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
 		UID_MPEG4BDcompatibleHighProfileLevel4_1TransferSyntax,
 		UID_MPEG4HighProfileLevel4_2_For2DVideoTransferSyntax,
 		UID_MPEG4HighProfileLevel4_2_For3DVideoTransferSyntax,
-		UID_MPEG4StereoHighProfileLevel4_2TransferSyntax
+		UID_MPEG4StereoHighProfileLevel4_2TransferSyntax,
+		UID_LittleEndianExplicitTransferSyntax,
+		UID_LittleEndianImplicitTransferSyntax
 	};
 
 	OFList<OFString> imagesyntaxes;
@@ -247,14 +294,13 @@ MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
 	simplesyntaxes.push_back(UID_LittleEndianImplicitTransferSyntax);
 
 	getConfig().addPresentationContext(UID_VerificationSOPClass, simplesyntaxes);
+	getConfig().addPresentationContext(UID_FINDStudyRootQueryRetrieveInformationModel, simplesyntaxes);
+	getConfig().addPresentationContext(UID_MOVEStudyRootQueryRetrieveInformationModel, simplesyntaxes);
 
 	for(int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
 		getConfig().addPresentationContext(dcmAllStorageSOPClassUIDs[i], imagesyntaxes);
-	for (int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
-		getConfig().addPresentationContext(dcmAllStorageSOPClassUIDs[i], simplesyntaxes);
-
-	getConfig().addPresentationContext(UID_FINDStudyRootQueryRetrieveInformationModel, simplesyntaxes);
-	getConfig().addPresentationContext(UID_MOVEStudyRootQueryRetrieveInformationModel, simplesyntaxes);
+	
+	
 
 }
 
@@ -263,5 +309,7 @@ OFCondition MyDcmSCPPool::listen()
 	DCMNET_INFO("Listening.");
 	OFCondition result = DcmBaseSCPPool::listen();
 	DCMNET_INFO("Stopped listening.");
+
+	dcmtk::log4cplus::threadCleanup();
 	return result;
 }

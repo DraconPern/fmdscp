@@ -20,7 +20,7 @@
 #endif
 
 #include "model.h"
-#include "dicomsender.h"
+#include "sender.h"
 
 class MoveHandler
 {
@@ -29,7 +29,7 @@ public:
 	static void MoveCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_MoveRSP *response, DcmDataset **statusDetail, DcmDataset **responseIdentifiers);
 protected:
 	void MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_MoveRSP *response, DcmDataset **statusDetail, DcmDataset **responseIdentifiers);
-	bool GetFilesToSend(std::string studyinstanceuid, naturalset &result);
+	bool GetFilesToSend(std::string studyinstanceuid, naturalpathmap &result);
 	bool mapMoveDestination(std::string destinationAE, Destination &destination);
 	void addFailedUIDInstance(const char *sopInstance);
 	OFCondition buildSubAssociation(T_DIMSE_C_MoveRQ *request, Destination &destination);
@@ -44,7 +44,7 @@ protected:
 
 	std::string aetitle, peeraetitle;
 
-	naturalset filestosend;
+	naturalpathmap instances;
 	OFList<OFString> sopClassUIDList;    // the list of sop classes
 
 	// info of the subassociation

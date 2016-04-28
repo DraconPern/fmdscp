@@ -27,6 +27,12 @@
 #define UNICODE 1
 #endif
 
+
+// Visual Leak Detector
+#if defined(_WIN32) && defined(_DEBUG)
+#include <vld.h>
+#endif
+
 using namespace Poco;
 using namespace Poco::Util;
 

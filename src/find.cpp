@@ -86,7 +86,7 @@ const DICOM_SQLMapping InstanceLevelMapping [] = {
 	{ DCM_CommandGroupLength, NULL, dt_string, false}
 };
 
-void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, Poco::Data::Statement &st,
+void Study_DICOMQueryToSQL(std::string tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, Poco::Data::Statement &st,
 						   std::vector<boost::shared_ptr<std::string> > &shared_string, std::vector<boost::shared_ptr<int> > &shared_int, std::vector<boost::shared_ptr<std::tm> > &shared_tm);
 
 void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail)
@@ -208,7 +208,7 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 
 
 /// Reads the DcmDataset and set up the statement with sql and bindings
-void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, Poco::Data::Statement &st, 
+void Study_DICOMQueryToSQL(std::string tablename, const DICOM_SQLMapping *sqlmapping, DcmDataset *requestIdentifiers, Poco::Data::Statement &st, 
 						   std::vector<boost::shared_ptr<std::string> > &shared_string, std::vector<boost::shared_ptr<int> > &shared_int, std::vector<boost::shared_ptr<std::tm> > &shared_tm)
 {
 	int parameters = 0;
@@ -221,6 +221,16 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 	sqlcommand = "SELECT * FROM ";
 	sqlcommand += tablename;	
 	st << sqlcommand;
+
+	if (tablename == "series")
+	{
+		sqlcommand = " INNER JOIN patient_studies ON series.patient_study_id = patient_studies.id ";
+		st << sqlcommand;
+	} else if (tablename == "instances")
+	{
+		sqlcommand = " INNER JOIN series ON instances.series_id = series.id ";
+		st << sqlcommand;
+	}
 
 	int i = 0;
 
@@ -240,18 +250,18 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 
 					if(sqlmapping[i].useLike)
 					{
-						sqlcommand += " LIKE ('%' + :";
-						sqlcommand += sqlmapping[i].columnName;
-						sqlcommand += " + '%')";
+						sqlcommand += " LIKE ?";
 					}
 					else
 					{
-						sqlcommand += " = :";
-						sqlcommand += sqlmapping[i].columnName;
+						sqlcommand += " = ?";
 					}
 
 					if(somestring[somestring.length() - 1] == '*')
 						somestring.erase(somestring.length() - 1, 1);
+
+					if (sqlmapping[i].useLike)
+						somestring = '%' + somestring + '%';
 
 					st << sqlcommand, bind(somestring.c_str());
 					parameters++;
@@ -295,7 +305,7 @@ void Study_DICOMQueryToSQL(char *tablename, const DICOM_SQLMapping *sqlmapping, 
 	sqlcommand = " LIMIT 1000";
 	st << sqlcommand;
 
-	DCMNET_INFO("SQL " << st.toString());	
+	DCMNET_INFO("Generated SQL: " << st.toString());	
 }
 
 void blah(std::string &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)

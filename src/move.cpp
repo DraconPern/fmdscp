@@ -25,7 +25,6 @@ using namespace Poco::Data::Keywords;
 #include "model.h"
 #include "config.h"
 #include "move.h"
-#include "dicomsender.h"
 
 using namespace boost::gregorian;
 using namespace boost::posix_time;
@@ -55,19 +54,21 @@ void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmD
 	{	
 		std::stringstream log;
 		log << "Move SCP Request Identifiers:";
-		requestIdentifiers->print(log);
-		log << "-------";
+		requestIdentifiers->print(log);		
+		log << "-------\n";
+		log << "Move Destination: " << request->MoveDestination;
 		DCMNET_INFO(log.str());
+
 
 		OFString studyuid;
 		requestIdentifiers->findAndGetOFString(DCM_StudyInstanceUID, studyuid);		
 		if(studyuid.size() > 0)
 		{			
-			if(GetFilesToSend(studyuid.c_str(), filestosend))
+			if(GetFilesToSend(studyuid.c_str(), instances))
 			{								
-				DCMNET_INFO("Number of files to send: " << filestosend.size());				
+				DCMNET_INFO("Number of files to send: " << instances.size());
 
-				if(filestosend.size() > 0)					
+				if (instances.size() > 0)
 				{
 					// scan the files for sop class
 					scanFiles();
@@ -149,7 +150,7 @@ void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmD
     }
        
 	response->DimseStatus = dimseStatus;
-    response->NumberOfRemainingSubOperations = filestosend.size();
+	response->NumberOfRemainingSubOperations = instances.size();
     response->NumberOfCompletedSubOperations = nCompleted;
     response->NumberOfFailedSubOperations = nFailed;
     response->NumberOfWarningSubOperations = nWarning;
@@ -170,14 +171,14 @@ void MoveHandler::addFailedUIDInstance(const char *sopInstance)
     }
 }
 
-bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalset &result)
+bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalpathmap &result)
 {
 	try
 	{				
 		// open the db
 		Poco::Data::Session dbconnection(config::getConnectionString());
 		std::vector<PatientStudy> studies;
-		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = :StudyInstanceUID LIMIT 1", into(studies),
+		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = ? LIMIT 1", into(studies),
 			use(studyinstanceuid), now;
 		if(studies.size() <= 0)
 		{			
@@ -185,13 +186,13 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalset &resul
 		}
 		
 		std::vector<Series> series_list;
-		dbconnection << "SELECT * FROM series WHERE StudyInstanceUID = :StudyInstanceUID", into(series_list), use(studyinstanceuid), now;						
+		dbconnection << "SELECT * FROM series WHERE patient_study_id = ?", into(series_list), use(studies[0].id), now;
 		
 		for(std::vector<Series>::iterator itr = series_list.begin(); itr != series_list.end(); itr++)
 		{
 			std::string seriesinstanceuid = (*itr).SeriesInstanceUID;
 			std::vector<Instance> instances;
-			dbconnection << "SELECT * FROM instances WHERE SeriesInstanceUID = :SeriesInstanceUID", into(instances), use(seriesinstanceuid), now;			
+			dbconnection << "SELECT * FROM instances WHERE series_id = ?", into(instances), use((*itr).id), now;
 					
 			boost::filesystem::path serieslocation;
 			serieslocation = config::getStoragePath();
@@ -202,8 +203,7 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalset &resul
 			{
 				boost::filesystem::path filename = serieslocation;
 				filename /= (*itr2).SOPInstanceUID + ".dcm";
-				result.insert(filename);
-				itr2++;
+				result.insert(std::pair<std::string, boost::filesystem::path>((*itr2).SOPInstanceUID, filename));				
 			}
 		}
 	}
@@ -222,10 +222,7 @@ bool MoveHandler::mapMoveDestination(std::string destinationAE, Destination &des
 		Poco::Data::Session dbconnection(config::getConnectionString());
 		
 		Poco::Data::Statement destinationsselect(dbconnection);
-		destinationsselect << "SELECT id,"
-			"name, destinationhost, destinationport, destinationAE, sourceAE,"
-			"created_at,updated_at"
-			" FROM destinations WHERE destinationAE = :destinationAE LIMIT 1",
+		destinationsselect << "SELECT * FROM destinations WHERE destinationAE = ? LIMIT 1",
 			into(destination),
 			use(destinationAE);
 
@@ -376,11 +373,11 @@ DIC_US MoveHandler::moveNextImage()
     std::stringstream log;
     DIC_US dbStatus = STATUS_Pending;
     
-    if (filestosend.size() <= 0)
+    if (instances.size() <= 0)
 		return STATUS_Success;
     
-	boost::filesystem::path filename = *filestosend.begin();
-	filestosend.erase(filestosend.begin());
+	boost::filesystem::path filename = instances.begin()->second;
+	instances.erase(instances.begin());
 	
 	std::stringstream msg;
 #ifdef _WIN32
@@ -486,8 +483,8 @@ DIC_US MoveHandler::moveNextImage()
 
 void MoveHandler::scanFiles()
 {	
-	for(naturalset::iterator itr = filestosend.begin(); itr != filestosend.end(); itr++)
-		scanFile(*itr);	
+	for (naturalpathmap::iterator itr = instances.begin(); itr != instances.end(); itr++)
+		scanFile(itr->second);	
 }
 
 bool MoveHandler::scanFile(boost::filesystem::path currentFilename)
