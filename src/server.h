@@ -14,12 +14,11 @@
 class server
 {
 public:
-	server();
+	server(boost::function< void(void) > shutdownCallback);
 	~server();
 
 	void run_async();
-	void join();
-	void stop();
+	void stop();		
 	bool shouldStop();
 protected:	
 
@@ -27,8 +26,8 @@ protected:
 	boost::mutex event_mutex;
 	bool stopEvent;
 		
-	boost::thread_group threads;
-	
+	boost::thread_group threads;	
+
 	// all the background tasks
 	MyDcmSCPPool storageSCP;
 	SenderService senderService;

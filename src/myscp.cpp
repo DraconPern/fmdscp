@@ -51,8 +51,6 @@ OFCondition MySCP::run(T_ASC_Association* incomingAssoc)
 
 OFCondition MySCP::negotiateAssociation()
 {
-	// instead of being limited to a list of 127 SOPClassUID... we accept everything.
-
 	OFCondition result = EC_Normal;
 	// Check whether there is something to negotiate...
 	if (assoc_ == NULL)
@@ -70,25 +68,54 @@ OFCondition MySCP::negotiateAssociation()
 		result = ASC_getPresentationContext(assoc_->params, i, &pc);
 		if (result.bad()) return result;
 
-		// loop through list of transfer syntaxes in presentation context
-		for (char j = 0; j < pc.transferSyntaxCount; ++j)
+		if (IsStorageAbstractSyntax(pc.abstractSyntax) || IsSupportedOperationAbstractSyntax(pc.abstractSyntax))
 		{
-			result = ASC_acceptPresentationContext(
-				assoc_->params, pc.presentationContextID,
-				pc.proposedTransferSyntaxes[j], acceptedRole);
-
-			// SCP/SCU role selection failed, reject presentation context
-			if (result == ASC_SCPSCUROLESELECTIONFAILED)
+			// loop through list of transfer syntaxes in presentation context, accept it all
+			for (char j = 0; j < pc.transferSyntaxCount; ++j)
 			{
-				result = ASC_refusePresentationContext(assoc_->params,
-					pc.presentationContextID, ASC_P_NOREASON);
-			}
-			if (result.bad()) return result;
+				result = ASC_acceptPresentationContext(
+					assoc_->params, pc.presentationContextID,
+					pc.proposedTransferSyntaxes[j], acceptedRole);
 
+				// SCP/SCU role selection failed, reject presentation context
+				if (result == ASC_SCPSCUROLESELECTIONFAILED)
+				{
+					result = ASC_refusePresentationContext(assoc_->params,
+						pc.presentationContextID, ASC_P_NOREASON);
+				}
+
+				if (result.bad()) 
+					return result;
+			}
 		}
 	}
 
 	return result;
+}
+
+bool MySCP::IsStorageAbstractSyntax(DIC_UI abstractsyntax)
+{
+	for (int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
+	{
+		if (strcmp(dcmAllStorageSOPClassUIDs[i], abstractsyntax) == 0)
+			return true;
+	}
+		
+	return false;
+}
+
+bool MySCP::IsSupportedOperationAbstractSyntax(DIC_UI abstractsyntax)
+{
+	if (strcmp(UID_VerificationSOPClass, abstractsyntax) == 0)
+		return true;
+
+	if (strcmp(UID_FINDStudyRootQueryRetrieveInformationModel, abstractsyntax) == 0)
+		return true;
+
+	if (strcmp(UID_MOVEStudyRootQueryRetrieveInformationModel, abstractsyntax) == 0)
+		return true;
+
+	return false;
 }
 
 OFCondition MySCP::handleIncomingCommand(T_DIMSE_Message *incomingMsg,
@@ -245,62 +272,6 @@ MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
 	getConfig().setAETitle("FMDSCP");	
 	
 	getConfig().setPort(11112);
-
-	// DICOM standard transfer syntaxes
-	const char* transferSyntaxes[] = {
-		UID_JPEGProcess1TransferSyntax,
-		UID_JPEGProcess2_4TransferSyntax,
-		UID_JPEGProcess3_5TransferSyntax,
-		UID_JPEGProcess6_8TransferSyntax,
-		UID_JPEGProcess7_9TransferSyntax,
-		UID_JPEGProcess10_12TransferSyntax,
-		UID_JPEGProcess11_13TransferSyntax,
-		UID_JPEGProcess14TransferSyntax,
-		UID_JPEGProcess15TransferSyntax,
-		UID_JPEGProcess16_18TransferSyntax,
-		UID_JPEGProcess17_19TransferSyntax,
-		UID_JPEGProcess20_22TransferSyntax,
-		UID_JPEGProcess21_23TransferSyntax,
-		UID_JPEGProcess24_26TransferSyntax,
-		UID_JPEGProcess25_27TransferSyntax,
-		UID_JPEGProcess28TransferSyntax,
-		UID_JPEGProcess29TransferSyntax,
-		UID_JPEGProcess14SV1TransferSyntax,
-		UID_RLELosslessTransferSyntax,
-		UID_JPEGLSLosslessTransferSyntax,
-		UID_JPEGLSLossyTransferSyntax,
-		UID_DeflatedExplicitVRLittleEndianTransferSyntax,
-		UID_JPEG2000LosslessOnlyTransferSyntax,
-		UID_JPEG2000TransferSyntax,
-		UID_MPEG2MainProfileAtMainLevelTransferSyntax,
-		UID_MPEG2MainProfileAtHighLevelTransferSyntax,
-		UID_JPEG2000Part2MulticomponentImageCompressionLosslessOnlyTransferSyntax,
-		UID_JPEG2000Part2MulticomponentImageCompressionTransferSyntax,
-		UID_MPEG4HighProfileLevel4_1TransferSyntax,
-		UID_MPEG4BDcompatibleHighProfileLevel4_1TransferSyntax,
-		UID_MPEG4HighProfileLevel4_2_For2DVideoTransferSyntax,
-		UID_MPEG4HighProfileLevel4_2_For3DVideoTransferSyntax,
-		UID_MPEG4StereoHighProfileLevel4_2TransferSyntax,
-		UID_LittleEndianExplicitTransferSyntax,
-		UID_LittleEndianImplicitTransferSyntax
-	};
-
-	OFList<OFString> imagesyntaxes;
-	for(int i = 0; i < DIM_OF(transferSyntaxes); i++)
-		imagesyntaxes.push_back(transferSyntaxes[i]);
-
-	OFList<OFString> simplesyntaxes;
-	simplesyntaxes.push_back(UID_LittleEndianExplicitTransferSyntax);
-	simplesyntaxes.push_back(UID_LittleEndianImplicitTransferSyntax);
-
-	getConfig().addPresentationContext(UID_VerificationSOPClass, simplesyntaxes);
-	getConfig().addPresentationContext(UID_FINDStudyRootQueryRetrieveInformationModel, simplesyntaxes);
-	getConfig().addPresentationContext(UID_MOVEStudyRootQueryRetrieveInformationModel, simplesyntaxes);
-
-	for(int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
-		getConfig().addPresentationContext(dcmAllStorageSOPClassUIDs[i], imagesyntaxes);
-	
-	
 
 }
 

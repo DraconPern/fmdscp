@@ -4,15 +4,19 @@
 #include "Poco/Data/MySQL/Connector.h"
 #include <boost/asio/io_service.hpp>
 #include "ndcappender.h"
+#include "cloudappender.h"
 
-server::server() : 
-	httpserver(std::bind(&server::stop, this)),
-	cloudclient(std::bind(&server::stop, this))
+server::server(boost::function< void(void) > shutdownCallback) :
+	httpserver(shutdownCallback),
+	cloudclient(shutdownCallback)
 {
 	// configure logging
 	dcmtk::log4cplus::SharedAppenderPtr logfile(new NDCAsFilenameAppender("C:\\PACS\\Log"));
+	dcmtk::log4cplus::SharedAppenderPtr cloud(new CloudAppender(cloudclient));
+
 	dcmtk::log4cplus::Logger my_log = dcmtk::log4cplus::Logger::getRoot();
 	my_log.addAppender(logfile);
+	my_log.addAppender(cloud);
 
 	// do server wide init	
 	Poco::Data::MySQL::Connector::registerConnector();
@@ -30,16 +34,6 @@ server::server() :
 		throw new std::exception(errormsg.c_str());
 	}
 
-	// should probably use thread_group instead...
-	
-	// add sender
-	// io_service_.post(boost::bind(&SenderService::run, &senderService));	
-
-	// add web/rest API
-	// io_service_.post(boost::bind(&HttpServer::start, &httpserver));
-
-	// add websocket that connects to cloud
-	// cloudclient.connect("http://home.draconpern.com");
 }
 
 server::~server()
@@ -57,30 +51,26 @@ void server::run_async()
 	// add sender
 	threads.create_thread(boost::bind(&SenderService::run, &senderService));
 
-	cloudclient.connect("http://home.draconpern.com");
-}
-
-void server::join()
-{
-	threads.join_all();
+	cloudclient.connect("http://localhost:8090");
 }
 
 void server::stop()
 {
 	setStop(true);
+
+	// stop webserver
+	httpserver.stop();
+
+	// tell senderservice to stop
+	senderService.stop();
 	
 	// tell scp to stop
 	storageSCP.stopAfterCurrentAssociations();
 
-	// tell senderservice to stop
-	senderService.stop();
-
-	// stop webserver
-	httpserver.stop();	
-
 	// stop socketio to cloud
-	cloudclient.close();		
-	cloudclient.clear_con_listeners();
+	cloudclient.stop();
+
+	threads.join_all();
 }
 
 void server::setStop(bool flag)

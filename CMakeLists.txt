@@ -71,6 +71,7 @@ set(fmdscp_HEADERS
 	Simple-Web-Server/server_http.hpp	
 	src/httpserver.h
 	src/cloudclient.h
+	src/cloudappender.h
 	src/sender.h
 )
 
@@ -90,6 +91,7 @@ set(fmdscp_SRCS
 	src/senderservice.cpp	
 	src/httpserver.cpp
 	src/cloudclient.cpp
+	src/cloudappender.cpp
 	src/sender.cpp
 )
 

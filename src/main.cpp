@@ -92,15 +92,14 @@ protected:
 	{	
 		if (!_helpRequested)
 		{
-			server s;
+			server s(boost::bind(ServerApplication::terminate));
 			s.run_async();
 			
 			// wait for OS to tell us to stop
 			waitForTerminationRequest();
 
-			// stop server
-			s.stop();
-			s.join();
+			// stop server			
+			s.stop();			
 		}
 		return Application::EXIT_OK;
 	}

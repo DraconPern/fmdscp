@@ -42,7 +42,8 @@ public:
 	virtual OFCondition run(T_ASC_Association* incomingAssoc);
 protected:	
 	virtual OFCondition negotiateAssociation();
-
+	bool IsStorageAbstractSyntax(DIC_UI abstractsyntax);
+	bool IsSupportedOperationAbstractSyntax(DIC_UI abstractsyntax);
 	virtual OFCondition handleIncomingCommand(T_DIMSE_Message *incomingMsg,
 		const DcmPresentationContextInfo &presInfo);
 
