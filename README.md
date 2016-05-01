@@ -1,5 +1,5 @@
 # fmdscp
-Windows [![Build status](https://ci.appveyor.com/api/projects/status/foefxfqx4muey6m3/branch/master?svg=true)](https://ci.appveyor.com/project/DraconPern/fmdscp/branch/master)
+Windows [![Build Status](http://jenkins:8080/buildStatus/icon?job=fmdscp.release)](http://jenkins:8080/job/fmdscp.release)
 
 Simple DICOM SCP
 

@@ -27,7 +27,7 @@ void CloudAppender::append(const spi::InternalLoggingEvent& event)
 	if(event.getNDC().length() != 0)
 		context = event.getNDC().c_str();
 	else
-		context = "_listener";
+		context = "listener";
 	stringstream message;	
 	layout->formatAndAppend(message, event);
 	cloudclient.sendlog(context, message.str());
