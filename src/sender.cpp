@@ -220,56 +220,6 @@ int Sender::SendABatch()
 	return 0;
 }
 
-
-static bool
-	isaListMember(OFList<OFString>& lst, OFString& s)
-{	
-	bool found = false;
-
-	for(OFListIterator(OFString) itr = lst.begin(); itr != lst.end() && !found; itr++)
-	{
-		found = (s == *itr);	
-	}
-
-	return found;
-}
-
-static OFCondition
-	addPresentationContext(T_ASC_Parameters *params,
-	int presentationContextId, const OFString& abstractSyntax,
-	const OFString& transferSyntax,
-	T_ASC_SC_ROLE proposedRole = ASC_SC_ROLE_DEFAULT)
-{
-	const char* c_p = transferSyntax.c_str();
-	OFCondition cond = ASC_addPresentationContext(params, presentationContextId,
-		abstractSyntax.c_str(), &c_p, 1, proposedRole);
-	return cond;
-}
-
-static OFCondition
-	addPresentationContext(T_ASC_Parameters *params,
-	int presentationContextId, const OFString& abstractSyntax,
-	const OFList<OFString>& transferSyntaxList,
-	T_ASC_SC_ROLE proposedRole = ASC_SC_ROLE_DEFAULT)
-{
-	// create an array of supported/possible transfer syntaxes
-	const char** transferSyntaxes = new const char*[transferSyntaxList.size()];
-	int transferSyntaxCount = 0;
-	OFListConstIterator(OFString) s_cur = transferSyntaxList.begin();
-	OFListConstIterator(OFString) s_end = transferSyntaxList.end();
-	while (s_cur != s_end)
-	{
-		transferSyntaxes[transferSyntaxCount++] = (*s_cur).c_str();
-		++s_cur;
-	}
-
-	OFCondition cond = ASC_addPresentationContext(params, presentationContextId,
-		abstractSyntax.c_str(), transferSyntaxes, transferSyntaxCount, proposedRole);
-
-	delete[] transferSyntaxes;
-	return cond;
-}
-
 bool Sender::scanFile(boost::filesystem::path currentFilename)
 {	
 
