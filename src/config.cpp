@@ -29,7 +29,7 @@ using namespace Poco::Util;
 #include "dcmtk/dcmdata/dcrleerg.h"
 #include "fmjpeg2k/djencode.h"
 #include "fmjpeg2k/djdecode.h"
-#include "fmjp2k/fmjp2kcrg.h"
+
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
 #define UNICODE 1
