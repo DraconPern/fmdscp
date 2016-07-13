@@ -1,5 +1,5 @@
 # fmdscp
-Windows [![Build Status](http://home.draconpern:8080/buildStatus/icon?job=fmdscp.release)](http://home.draconpern:8080/job/fmdscp.release)
+Windows [![Build Status](http://home.draconpern.com:8080/buildStatus/icon?job=fmdscp.release)](http://home.draconpern.com:8080/job/fmdscp.release)
 
 Simple DICOM SCP
 
