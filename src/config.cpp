@@ -61,8 +61,7 @@ void config::registerCodecs()
 	DcmRLEEncoderRegistration::registerCodecs();
 	DcmRLEDecoderRegistration::registerCodecs();
 	FMJPEG2KEncoderRegistration::registerCodecs();
-	//FMJPEG2KDecoderRegistration::registerCodecs();
-	FMJP2KCodecRegistration::registerCodecs();
+	FMJPEG2KDecoderRegistration::registerCodecs();	
 }
 
 
@@ -74,10 +73,8 @@ void config::deregisterCodecs()
 	DJLSEncoderRegistration::cleanup();
 	DcmRLEEncoderRegistration::cleanup();
 	DcmRLEDecoderRegistration::cleanup();
-
 	FMJPEG2KEncoderRegistration::cleanup();
-	// FMJPEG2KDecoderRegistration::cleanup();
-	FMJP2KCodecRegistration::cleanup();
+	FMJPEG2KDecoderRegistration::cleanup();	
 }
 
 std::string config::getConnectionString()

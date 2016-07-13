@@ -40,9 +40,6 @@ add_definitions(-DOPJ_STATIC)
 #include fmjpeg2koj
 find_package(fmjpeg2k REQUIRED HINTS ${FMJPEG2K})
 
-#include fmjpeg2kjasper
-find_package(fmjp2k REQUIRED HINTS ${FMJP2K})
-
 #include mysql
 find_package(MySQL REQUIRED)
 
@@ -52,8 +49,8 @@ find_package(poco REQUIRED HINTS ${POCO})
 add_definitions(-DPOCO_STATIC)
 add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/Simple-Web-Server ${CMAKE_SOURCE_DIR}/Simple-WebSocket-Server ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${FMJP2K_INCLUDE_DIRS}  ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${SOCKETIO}/build/include ${VLD}/include)
-LINK_DIRECTORIES(${FMJPEG2K}/lib ${FMJP2K}/lib ${JASPER}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${MYSQL_LIB_DIR} ${SOCKETIO}/build/lib/${CMAKE_BUILD_TYPE} ${VLD}/lib/Win32)
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/Simple-Web-Server ${CMAKE_SOURCE_DIR}/Simple-WebSocket-Server ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${SOCKETIO}/build/include ${VLD}/include)
+LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${MYSQL_LIB_DIR} ${SOCKETIO}/build/lib/${CMAKE_BUILD_TYPE} ${VLD}/lib/Win32)
 
 set(fmdscp_HEADERS
 	sqlite3/sqlite3.h
@@ -116,9 +113,7 @@ ENDIF()
 
 TARGET_LINK_LIBRARIES(fmdscp
 	${FMJPEG2K_LIBRARIES}
-	${OPENJPEG_LIBRARIES}
-	${FMJP2K_LIBRARIES}
-	jasper
+	${OPENJPEG_LIBRARIES}	
 	${ZLIB_LIBRARIES}
 	${DCMTK_LIBRARIES}
 	${Boost_LIBRARIES}

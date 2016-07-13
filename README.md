@@ -1,15 +1,14 @@
 # fmdscp
-Windows [![Build Status](http://jenkins:8080/buildStatus/icon?job=fmdscp.release)](http://jenkins:8080/job/fmdscp.release)
+Windows [![Build Status](http://home.draconpern:8080/buildStatus/icon?job=fmdscp.release)](http://home.draconpern:8080/job/fmdscp.release)
 
 Simple DICOM SCP
 
-- Available on Windows, OS X, and Linux
+- Available on Windows
 - Supports Unicode file and path.
 - No dll's need to be distributed.
 - Native, no Java required.
 
 ## Download
-Binary http://www.draconpern.com/software/fmdscp
 Source https://github.com/DraconPern/fmdscp
 
 ## Development notes
@@ -34,4 +33,4 @@ The program is http://utf8everywhere.org/
 Ing-Long Eric Kuo <draconpern@hotmail.com>
 
 ## License
-This software is licensed under the GPL.  For use under another license, please contact Ing-Long Eric Kuo <eric@frontmotion.com>
+This software is licensed under the GPL.
