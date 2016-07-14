@@ -91,7 +91,7 @@ cd aws-sdk-cpp
 git pull
 mkdir build-%TYPE%
 cd build-%TYPE%
-SET AWSMODULE="aws-cpp-sdk-s3"
+SET AWSMODULE="s3"
 cmake .. -G %GENERATOR% -DSTATIC_LINKING=1 -DCMAKE_EXE_LINKER_FLAGS_DEBUGOPT="" -DCMAKE_CXX_FLAGS_DEBUGOPT="" -DCMAKE_CXX_FLAGS="/WX-" -DBUILD_ONLY=%AWSMODULE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\aws-sdk-cpp\%TYPE%
 msbuild /maxcpucount:8 /p:Configuration=%TYPE% INSTALL.vcxproj 
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
