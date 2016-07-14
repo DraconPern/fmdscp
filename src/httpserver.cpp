@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include "httpserver.h"
+#include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -34,11 +35,11 @@ HttpServer::HttpServer(std::function< void(void) > shutdownCallback) :
 	SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10),
 	shutdownCallback(shutdownCallback)
 {		
-	resource["^/studies\\?(.+)$"]["GET"] = std::bind(&HttpServer::SearchForStudies, this, std::placeholders::_1, std::placeholders::_2);
-	resource["^/wado\\?(.+)$"]["GET"] = std::bind(&HttpServer::WADO, this, std::placeholders::_1, std::placeholders::_2);
-	resource["^/api/version"]["GET"] = std::bind(&HttpServer::Version, this, std::placeholders::_1, std::placeholders::_2);
-	resource["^/api/shutdown"]["POST"] = std::bind(&HttpServer::Shutdown, this, std::placeholders::_1, std::placeholders::_2);
-	default_resource["GET"] = std::bind(&HttpServer::NotFound, this, std::placeholders::_1, std::placeholders::_2);
+	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
+	resource["^/wado\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO, this, _1, _2);
+	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
+	resource["^/api/shutdown"]["POST"] = boost::bind(&HttpServer::Shutdown, this, _1, _2);
+	default_resource["GET"] = boost::bind(&HttpServer::NotFound, this, _1, _2);
 }
 
 void HttpServer::Version(HttpServer::Response& response, std::shared_ptr<HttpServer::Request> request)
@@ -405,7 +406,7 @@ void HttpServer::decode_query(const std::string &content, std::map<std::string, 
 {
 	// split into a map
 	std::vector<std::string> pairs;
-	boost::split(pairs, content, boost::is_any_of("&"), boost::token_compress_on);
+// 	boost::split(pairs, content, boost::is_any_of("&"), boost::token_compress_on);
 
 	for(int i = 0; i < pairs.size(); i++)
 	{
