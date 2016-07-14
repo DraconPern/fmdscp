@@ -22,7 +22,7 @@ IF "%TYPE%" == "Release" copy /Y %DEVSPACE%\zlib\Release\lib\zlibstatic.lib %DEV
 IF "%TYPE%" == "Debug"   copy /Y %DEVSPACE%\zlib\Debug\lib\zlibstaticd.lib %DEVSPACE%\zlib\Debug\lib\zlib_d.lib
 
 cd %DEVSPACE%
-git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch
+git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch --depth 1
 cd openssl
 SET OLDPATH=%PATH%
 rem SET PATH=C:\Perl\bin;%PATH%
@@ -45,7 +45,7 @@ msbuild /maxcpucount:8 /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
-git clone --branch=openjpeg-2.1 https://github.com/uclouvain/openjpeg.git
+git clone --branch=openjpeg-2.1 --depth 1 https://github.com/uclouvain/openjpeg.git
 cd openjpeg
 git pull
 mkdir build-%TYPE%
