@@ -80,7 +80,7 @@ unzip -n mysql-connector-c-6.1.6-src.zip
 cd mysql-connector-c-6.1.6-src
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G %GENERATOR% -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG /D HAVE" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
+cmake .. -G %GENERATOR% -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
@@ -92,7 +92,7 @@ git pull
 mkdir build-%TYPE%
 cd build-%TYPE%
 SET AWSMODULE="s3"
-cmake .. -G %GENERATOR% -DSTATIC_LINKING=1 -DCMAKE_EXE_LINKER_FLAGS_DEBUGOPT="" -DCMAKE_CXX_FLAGS_DEBUGOPT="" -DCMAKE_CXX_FLAGS="/WX-" -DBUILD_ONLY=%AWSMODULE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\aws-sdk-cpp\%TYPE%
+cmake .. -G %GENERATOR% -DSTATIC_LINKING=1 -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DBUILD_ONLY=%AWSMODULE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\aws-sdk-cpp\%TYPE%
 msbuild /maxcpucount:8 /p:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 

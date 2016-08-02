@@ -4,13 +4,18 @@
 #include "model.h"
 #include "config.h"
 #include "util.h"
-
 #include <boost/algorithm/string.hpp>
 #include <set>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include "boost/date_time/local_time/local_time.hpp"
 #include <codecvt>
+
+#include <ios>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/PutObjectRequest.h>
+#include <aws/s3/model/GetObjectRequest.h>
+#include <aws/core/utils/memory/stl/AwsStringStream.h> 
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -36,6 +41,9 @@ using namespace Poco::Data::Keywords;
 using namespace boost::gregorian;
 using namespace boost::posix_time;
 using namespace boost::local_time;
+
+using namespace Aws::S3;
+using namespace Aws::S3::Model;
 
 OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 {
@@ -97,6 +105,23 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 		DCMNET_INFO("Copied");
 	}
+
+	// upload to S3
+	// s3.aws.amazon.com/siteid/studyuid/seriesuid/sopuid.dcm
+	S3Client client;
+	
+	std::string s3path = studyuid.c_str();
+	newpath += std::string("/") + seriesuid.c_str();	
+	newpath += std::string(sopuid.c_str()) + ".dcm";
+
+	PutObjectRequest putObjectRequest;
+	putObjectRequest.WithKey(s3path).WithBucket("draconpernhome");
+		
+	auto requestStream = Aws::MakeShared<Aws::FStream>("fff", newpath.c_str(), std::ios::in);
+
+	putObjectRequest.SetBody(requestStream);
+
+	auto outcome = client.PutObject(putObjectRequest);
 
 	// now try to add the file into the database
 	if(!AddDICOMFileInfoToDatabase(newpath))

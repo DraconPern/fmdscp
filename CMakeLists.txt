@@ -22,7 +22,7 @@ add_definitions(-D_BIND_TO_CURRENT_VCLIBS_VERSION=1)
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME     ON)
-find_package(Boost REQUIRED thread filesystem system)
+find_package(Boost REQUIRED thread filesystem system )
 
 #enable dcmtk filename to have wide version, only affects WIN32.  http://utf8everywhere.org/
 add_definitions(-DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1)
@@ -49,8 +49,8 @@ find_package(poco REQUIRED HINTS ${POCO})
 add_definitions(-DPOCO_STATIC)
 add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/Simple-Web-Server ${CMAKE_SOURCE_DIR}/Simple-WebSocket-Server ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${SOCKETIO}/build/include ${VLD}/include)
-LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${MYSQL_LIB_DIR} ${SOCKETIO}/build/lib/${CMAKE_BUILD_TYPE} ${VLD}/lib/Win32)
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/Simple-Web-Server ${CMAKE_SOURCE_DIR}/Simple-WebSocket-Server ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${SOCKETIO}/build/include ${AWS}/include ${VLD}/include)
+LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${MYSQL_LIB_DIR} ${SOCKETIO}/build/lib/${CMAKE_BUILD_TYPE} ${AWS}/lib ${VLD}/lib/Win32)
 
 set(fmdscp_HEADERS
 	sqlite3/sqlite3.h
@@ -132,4 +132,7 @@ TARGET_LINK_LIBRARIES(fmdscp
 	${OS_SPECIFIC_LIBS}
 	sioclient
 	sioclient_tls
+	aws-cpp-sdk-core
+	aws-cpp-sdk-s3
+
 	)
