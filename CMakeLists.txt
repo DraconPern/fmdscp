@@ -100,7 +100,7 @@ endif(WIN32)
 ADD_EXECUTABLE(fmdscp MACOSX_BUNDLE ${fmdscp_SRCS})
 
 IF(WIN32)
-  SET(OS_SPECIFIC_LIBS netapi32 wsock32 odbc32 Rpcrt4 Iphlpapi)
+  SET(OS_SPECIFIC_LIBS netapi32 wsock32 odbc32 Rpcrt4 Iphlpapi Wininet Userenv Winhttp Bcrypt)
 ELSE(WIN32)
   SET(OS_SPECIFIC_LIBS )
 ENDIF(WIN32)
