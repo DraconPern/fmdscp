@@ -15,8 +15,10 @@
 #include <aws/s3/S3Client.h>
 #include <aws/transfer/TransferClient.h>
 #include <aws/transfer/UploadFileRequest.h>
+#include <aws/s3/model/GetBucketLocationRequest.h>
 using namespace Aws::Client;
 using namespace Aws::S3;
+using namespace Aws::S3::Model;
 using namespace Aws::Transfer;
 
 
@@ -89,7 +91,6 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 #endif
 	DCMNET_INFO(msg.str());
 
-
 	dfile.getDataset()->chooseRepresentation(EXS_JPEGLSLossless, NULL);
 	if (dfile.getDataset()->canWriteXfer(EXS_JPEGLSLossless))
 	{
@@ -106,15 +107,27 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 		DCMNET_INFO("Copied");
 	}
 
+	// tell upstream about the object and get an S3 upload info
+	
 	// upload to S3
 	// s3.aws.amazon.com/siteid/studyuid/seriesuid/sopuid.dcm
 	TransferClientConfiguration transferConfig;
 	transferConfig.m_uploadBufferCount = 20;
 
+	std::string bucket = "draconpern-buildcache";
+	
 	static const char* ALLOCATION_TAG = "TransferTests";
 	ClientConfiguration config;
-	// config.verifySSL = false;
+	config.region = Aws::Region::US_EAST_1;
+
 	std::shared_ptr<S3Client> m_s3Client = Aws::MakeShared<S3Client>(ALLOCATION_TAG, config, false);
+
+	/*GetBucketLocationRequest locationRequest;
+	locationRequest.SetBucket(bucket);
+	auto locationOutcome = m_s3Client->GetBucketLocation(locationRequest);
+	config.region = locationOutcome.GetResult().GetLocationConstraint();
+	*/
+
 	std::shared_ptr<TransferClient> m_transferClient = Aws::MakeShared<TransferClient>(ALLOCATION_TAG, m_s3Client, transferConfig);
 
 	// s3path += std::string("/") + seriesuid.c_str();
@@ -122,15 +135,18 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 	std::string s3path = std::string(sopuid.c_str()) + ".dcm";
 
-	std::shared_ptr<UploadFileRequest> requestPtr = m_transferClient->UploadFile(newpath.string(), "draconpernhome", s3path.c_str(), "", false, true);
+	std::shared_ptr<UploadFileRequest> requestPtr = m_transferClient->UploadFile(newpath.string(), bucket, s3path.c_str(), "", false, true);
 	requestPtr->WaitUntilDone();
 	if (!requestPtr->CompletedSuccessfully())
-	{
+	{		
 		DCMNET_ERROR(requestPtr->GetFailure().c_str());
 		status = OFCondition(OFM_dcmqrdb, 1, OF_error, requestPtr->GetFailure().c_str());
 	}
 	else
+	{
+		// tell upstream we are done with S3 upload
 		status = EC_Normal;
+	}
 	
 	// s3path += std::string("/") + seriesuid.c_str();
 	// s3path += std::string("/") + std::string(sopuid.c_str()) + ".dcm";
