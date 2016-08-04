@@ -79,7 +79,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	boost::filesystem::create_directories(newpath);
 	newpath /= std::string(sopuid.c_str()) + ".dcm";
 
-	
+
 	std::stringstream msg;
 #ifdef _WIN32
 	// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
@@ -91,7 +91,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 
 	dfile.getDataset()->chooseRepresentation(EXS_JPEGLSLossless, NULL);
-	if(dfile.getDataset()->canWriteXfer(EXS_JPEGLSLossless))
+	if (dfile.getDataset()->canWriteXfer(EXS_JPEGLSLossless))
 	{
 		dfile.getDataset()->loadAllDataIntoMemory();
 
@@ -113,6 +113,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 	static const char* ALLOCATION_TAG = "TransferTests";
 	ClientConfiguration config;
+	// config.verifySSL = false;
 	std::shared_ptr<S3Client> m_s3Client = Aws::MakeShared<S3Client>(ALLOCATION_TAG, config, false);
 	std::shared_ptr<TransferClient> m_transferClient = Aws::MakeShared<TransferClient>(ALLOCATION_TAG, m_s3Client, transferConfig);
 
@@ -121,9 +122,15 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 	std::string s3path = std::string(sopuid.c_str()) + ".dcm";
 
-	std::shared_ptr<UploadFileRequest> requestPtr = m_transferClient->UploadFile(newpath.string(), "draconpernhome", s3path.c_str(), "", true, true);
-	
+	std::shared_ptr<UploadFileRequest> requestPtr = m_transferClient->UploadFile(newpath.string(), "draconpernhome", s3path.c_str(), "", false, true);
 	requestPtr->WaitUntilDone();
+	if (!requestPtr->CompletedSuccessfully())
+	{
+		DCMNET_ERROR(requestPtr->GetFailure().c_str());
+		status = OFCondition(OFM_dcmqrdb, 1, OF_error, requestPtr->GetFailure().c_str());
+	}
+	else
+		status = EC_Normal;
 	
 	// s3path += std::string("/") + seriesuid.c_str();
 	// s3path += std::string("/") + std::string(sopuid.c_str()) + ".dcm";

@@ -93,10 +93,10 @@ protected:
 	int main(const ArgVec& args)
 	{	
 		if (!_helpRequested)
-		{
+		{			
 			Aws::SDKOptions options;
 			options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
-			Aws::InitAPI(options);			
+			Aws::InitAPI(options);
 
 			server s(boost::bind(ServerApplication::terminate));
 			s.run_async();
@@ -105,7 +105,7 @@ protected:
 			waitForTerminationRequest();
 
 			// stop server			
-			s.stop();			
+			s.stop();
 
 			Aws::ShutdownAPI(options);
 		}
