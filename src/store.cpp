@@ -11,11 +11,14 @@
 #include "boost/date_time/local_time/local_time.hpp"
 #include <codecvt>
 
-#include <ios>
+#include <aws/core/client/ClientConfiguration.h>
 #include <aws/s3/S3Client.h>
-#include <aws/s3/model/PutObjectRequest.h>
-#include <aws/s3/model/GetObjectRequest.h>
-#include <aws/core/utils/memory/stl/AwsStringStream.h> 
+#include <aws/transfer/TransferClient.h>
+#include <aws/transfer/UploadFileRequest.h>
+using namespace Aws::Client;
+using namespace Aws::S3;
+using namespace Aws::Transfer;
+
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -41,9 +44,6 @@ using namespace Poco::Data::Keywords;
 using namespace boost::gregorian;
 using namespace boost::posix_time;
 using namespace boost::local_time;
-
-using namespace Aws::S3;
-using namespace Aws::S3::Model;
 
 OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 {
@@ -108,21 +108,27 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 	// upload to S3
 	// s3.aws.amazon.com/siteid/studyuid/seriesuid/sopuid.dcm
-	S3Client client;
+	TransferClientConfiguration transferConfig;
+	transferConfig.m_uploadBufferCount = 20;
+
+	static const char* ALLOCATION_TAG = "TransferTests";
+	ClientConfiguration config;
+	std::shared_ptr<S3Client> m_s3Client = Aws::MakeShared<S3Client>(ALLOCATION_TAG, config, false);
+	std::shared_ptr<TransferClient> m_transferClient = Aws::MakeShared<TransferClient>(ALLOCATION_TAG, m_s3Client, transferConfig);
+
+	// s3path += std::string("/") + seriesuid.c_str();
+	// s3path += std::string("/") + std::string(sopuid.c_str()) + ".dcm";
+
+	std::string s3path = std::string(sopuid.c_str()) + ".dcm";
+
+	std::shared_ptr<UploadFileRequest> requestPtr = m_transferClient->UploadFile(newpath.string(), "draconpernhome", s3path.c_str(), "", true, true);
 	
-	std::string s3path = studyuid.c_str();
-	newpath += std::string("/") + seriesuid.c_str();	
-	newpath += std::string(sopuid.c_str()) + ".dcm";
+	requestPtr->WaitUntilDone();
+	
+	// s3path += std::string("/") + seriesuid.c_str();
+	// s3path += std::string("/") + std::string(sopuid.c_str()) + ".dcm";
 
-	PutObjectRequest putObjectRequest;
-	putObjectRequest.WithKey(s3path).WithBucket("draconpernhome");
-		
-	auto requestStream = Aws::MakeShared<Aws::FStream>("fff", newpath.c_str(), std::ios::in);
-
-	putObjectRequest.SetBody(requestStream);
-
-	auto outcome = client.PutObject(putObjectRequest);
-
+	/*
 	// now try to add the file into the database
 	if(!AddDICOMFileInfoToDatabase(newpath))
 	{
@@ -130,6 +136,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	}
 	else
 		status = EC_Normal;
+	*/
 
 	// delete the temp file
 	boost::filesystem::remove(filename);

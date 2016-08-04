@@ -51,7 +51,7 @@ void server::run_async()
 	// add sender
 	threads.create_thread(boost::bind(&SenderService::run, &senderService));
 
-	cloudclient.connect("http://localhost:8090");
+	// cloudclient.connect("http://localhost:8090");
 }
 
 void server::stop()
