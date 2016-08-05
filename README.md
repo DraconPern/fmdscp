@@ -1,5 +1,5 @@
 # fmdscp
-Windows [![Build Status](http://home.draconpern.com:8080/buildStatus/icon?job=fmdscp.release)](http://home.draconpern.com:8080/job/fmdscp.release)
+Windows [![Build Status](http://home.draconpern.com:8080/buildStatus/icon?job=fmdscp.debug)](http://home.draconpern.com:8080/job/fmdscp.debug)
 
 Simple DICOM SCP
 
@@ -17,7 +17,7 @@ The program is http://utf8everywhere.org/
 ## Requirements
 - CMake http://www.cmake.org/download/
 - XCode on OS X
-- Visual Studio 2012 or higher on Windows
+- Visual Studio 2013 or higher on Windows
 - gcc on Linux
 
 ## Third party dependency
@@ -28,6 +28,7 @@ The program is http://utf8everywhere.org/
 - zlib please extract under ./zlib
 - openjpeg http://www.openjpeg.org please extract under ./openjpeg
 - fmjpeg2koj https://github.com/DraconPern/fmjpeg2koj please extract under ./fmjpeg2koj
+- aws SDK
 
 ## Author
 Ing-Long Eric Kuo <draconpern@hotmail.com>
