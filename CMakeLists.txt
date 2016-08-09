@@ -22,7 +22,7 @@ add_definitions(-D_BIND_TO_CURRENT_VCLIBS_VERSION=1)
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME     ON)
-find_package(Boost REQUIRED thread filesystem system )
+find_package(Boost REQUIRED thread filesystem system random)
 
 #enable dcmtk filename to have wide version, only affects WIN32.  http://utf8everywhere.org/
 add_definitions(-DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1)
