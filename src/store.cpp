@@ -62,16 +62,20 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	if (studyuid.length() == 0)
 	{
 		// DEBUGLOG(sessionguid, DB_ERROR, L"No Study UID\r\n");
+		
+		boost::filesystem::remove(filename);
 		return status;
 	}
 	if (seriesuid.length() == 0)
 	{
 		// DEBUGLOG(sessionguid, DB_ERROR, L"No Series UID\r\n");
+		boost::filesystem::remove(filename);
 		return status;
 	}
 	if (sopuid.length() == 0)
 	{
 		// DEBUGLOG(sessionguid, DB_ERROR, L"No SOP UID\r\n");
+		boost::filesystem::remove(filename);
 		return status;
 	}
 
@@ -109,13 +113,35 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 	// tell upstream about the object and get an S3 upload info
 	
+	UploadToS3(newpath, sopuid.c_str(), seriesuid.c_str(), studyuid.c_str());
+	
+	// now try to add the file into the database
+	if(!AddDICOMFileInfoToDatabase(newpath))
+	{
+		status = OFCondition(OFM_dcmqrdb, 1, OF_error, "Database error");
+	}
+	else
+		status = EC_Normal;
+
+	// delete the temp file
+	boost::filesystem::remove(filename);
+	
+	return status;
+}
+
+OFCondition StoreHandler::UploadToS3(boost::filesystem::path filename, std::string studyuid, std::string sopuid, std::string seriesuid)
+{
+	// s3path += std::string("/") + seriesuid.c_str();
+	// s3path += std::string("/") + std::string(sopuid.c_str()) + ".dcm";
+
+
 	// upload to S3
 	// s3.aws.amazon.com/siteid/studyuid/seriesuid/sopuid.dcm
 	TransferClientConfiguration transferConfig;
 	transferConfig.m_uploadBufferCount = 20;
 
 	std::string bucket = "draconpern-buildcache";
-	
+
 	static const char* ALLOCATION_TAG = "TransferTests";
 	ClientConfiguration config;
 	config.region = Aws::Region::US_EAST_1;
@@ -135,36 +161,19 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 	std::string s3path = std::string(sopuid.c_str()) + ".dcm";
 
-	std::shared_ptr<UploadFileRequest> requestPtr = m_transferClient->UploadFile(newpath.string(), bucket, s3path.c_str(), "", false, true);
+	std::shared_ptr<UploadFileRequest> requestPtr = m_transferClient->UploadFile(filename.string(), bucket, s3path.c_str(), "", false, true);
 	requestPtr->WaitUntilDone();
 	if (!requestPtr->CompletedSuccessfully())
-	{		
+	{
 		DCMNET_ERROR(requestPtr->GetFailure().c_str());
-		status = OFCondition(OFM_dcmqrdb, 1, OF_error, requestPtr->GetFailure().c_str());
+		return OFCondition(OFM_dcmqrdb, 1, OF_error, requestPtr->GetFailure().c_str());
 	}
 	else
 	{
 		// tell upstream we are done with S3 upload
-		status = EC_Normal;
+		return EC_Normal;
 	}
-	
-	// s3path += std::string("/") + seriesuid.c_str();
-	// s3path += std::string("/") + std::string(sopuid.c_str()) + ".dcm";
 
-	/*
-	// now try to add the file into the database
-	if(!AddDICOMFileInfoToDatabase(newpath))
-	{
-		status = OFCondition(OFM_dcmqrdb, 1, OF_error, "Database error");
-	}
-	else
-		status = EC_Normal;
-	*/
-
-	// delete the temp file
-	boost::filesystem::remove(filename);
-	
-	return status;
 }
 
 bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)

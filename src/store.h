@@ -21,9 +21,10 @@
 class StoreHandler
 {
 
-public:
+public:	
 	OFCondition handleSTORERequest(boost::filesystem::path filename);
 	bool AddDICOMFileInfoToDatabase(boost::filesystem::path filename);
+	OFCondition UploadToS3(boost::filesystem::path filename, std::string sopuid, std::string seriesuid, std::string studyuid);
 };
 
 #endif
