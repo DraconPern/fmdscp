@@ -7,7 +7,7 @@ SET TYPE=Debug
 SET BUILD_DIR=%CD%
 SET DEVSPACE=%CD%
 SET CL=/MP
-SET GENERATOR="Visual Studio 12"
+SET GENERATOR="Visual Studio 12 Win64"
 
 cd %DEVSPACE%
 git clone --branch=master https://github.com/madler/zlib.git
@@ -69,7 +69,7 @@ wget -c http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0
 if NOT EXIST boost_1_61_0 unzip -n boost_1_61_0.zip
 cd boost_1_61_0
 call bootstrap
-SET COMMONb2Flag=toolset=msvc-12.0 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 stage
+SET COMMONb2Flag=toolset=msvc-12.0 address-model=64 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 stage
 SET BOOSTmodules=--with-atomic --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine --with-chrono --with-random
 IF "%TYPE%" == "Release" b2 %COMMONb2Flag% %BOOSTmodules% release
 IF "%TYPE%" == "Debug"   b2 %COMMONb2Flag% %BOOSTmodules% debug

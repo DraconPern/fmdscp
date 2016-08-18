@@ -50,7 +50,7 @@ add_definitions(-DPOCO_STATIC)
 add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/Simple-Web-Server ${CMAKE_SOURCE_DIR}/Simple-WebSocket-Server ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${SOCKETIO}/build/include ${AWS}/include ${VLD}/include)
-LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${MYSQL_LIB_DIR} ${SOCKETIO}/build/lib/${CMAKE_BUILD_TYPE} ${AWS}/lib ${VLD}/lib/Win32)
+LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${MYSQL_LIB_DIR} ${SOCKETIO}/build/lib/${CMAKE_BUILD_TYPE} ${AWS}/lib ${VLD}/lib/Win64)
 
 set(fmdscp_HEADERS
 	sqlite3/sqlite3.h
@@ -62,10 +62,10 @@ set(fmdscp_HEADERS
 	src/config.h
 	src/util.h
 	src/server.h
-	src/ndcappender.h	
+	src/ndcappender.h
 	src/alphanum.hpp
 	src/senderservice.h
-	Simple-Web-Server/server_http.hpp	
+	Simple-Web-Server/server_http.hpp
 	src/httpserver.h
 	src/cloudclient.h
 	src/cloudappender.h
@@ -84,8 +84,8 @@ set(fmdscp_SRCS
 	src/server.cpp
 	src/ndcappender.cpp
 	sqlite3/sqlite3.c
-	sqlite3/sqlite3_exec_stmt.c	
-	src/senderservice.cpp	
+	sqlite3/sqlite3_exec_stmt.c
+	src/senderservice.cpp
 	src/httpserver.cpp
 	src/cloudclient.cpp
 	src/cloudappender.cpp
@@ -113,11 +113,11 @@ ENDIF()
 
 TARGET_LINK_LIBRARIES(fmdscp
 	${FMJPEG2K_LIBRARIES}
-	${OPENJPEG_LIBRARIES}	
+	${OPENJPEG_LIBRARIES}
 	${ZLIB_LIBRARIES}
 	${DCMTK_LIBRARIES}
 	${Boost_LIBRARIES}
-	${Poco_LIBRARIES}	
+	${Poco_LIBRARIES}
 	debug PocoDatad optimized PocoData
   #debug PocoDataODBCd optimized PocoDataODBC
   #debug PocoDataSQLited optimized PocoDataSQLite
