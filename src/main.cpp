@@ -31,7 +31,7 @@
 
 
 // Visual Leak Detector
-#if defined(_WIN32) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG) && !defined(_WIN64)
 #include <vld.h>
 #endif
 

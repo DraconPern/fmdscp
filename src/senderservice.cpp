@@ -36,7 +36,7 @@ bool SenderService::getQueued(OutgoingSession &outgoingsession)
 		Poco::Data::Statement queueselect(dbconnection);
 		std::vector<OutgoingSession> sessions;
 		queueselect << "SELECT id, uuid, queued, StudyInstanceUID, PatientName, PatientID, destination_id, status,"
-			"created_at,updated_at"
+			"createdAt,updatedAt"
 			" FROM outgoing_sessions WHERE queued = 1 LIMIT 1",
 			into(sessions);
 
@@ -56,9 +56,9 @@ bool SenderService::getQueued(OutgoingSession &outgoingsession)
 
 		}
 	}
-	catch (std::exception &e)
+	catch (Poco::Exception &e)
 	{
-		std::string what = e.what();
+		std::string what = e.displayText();		
 		DCMNET_ERROR(what);
 	}
 
@@ -160,7 +160,7 @@ bool SenderService::findDestination(int id, Destination &destination)
 		std::vector<Destination> dests;
 		dbconnection << "SELECT id,"
 			"name, destinationhost, destinationport, destinationAE, sourceAE,"
-			"created_at,updated_at"
+			"createdAt,updatedAt"
 			" FROM destinations WHERE id = :id LIMIT 1",
 			into(dests),
 			use(id), now;

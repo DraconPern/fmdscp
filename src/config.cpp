@@ -81,7 +81,7 @@ std::string config::getConnectionString()
 {
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
 
-	return pConf->getString("ConnectionString", "mysql://host=192.168.1.100 port=3306 user=root db=pacsdb_dev");
+	return pConf->getString("ConnectionString", "mysql:///host=mysql;port=3306;user=root;password=root;db=test");
 }
 
 void config::createDBPool()

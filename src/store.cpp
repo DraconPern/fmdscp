@@ -59,24 +59,11 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	dfile.getDataset()->findAndGetOFString(DCM_SeriesInstanceUID, seriesuid);
 	dfile.getDataset()->findAndGetOFString(DCM_SOPInstanceUID, sopuid);
 
-	if (studyuid.length() == 0)
-	{
-		// DEBUGLOG(sessionguid, DB_ERROR, L"No Study UID\r\n");
-		
-		boost::filesystem::remove(filename);
-		return status;
-	}
-	if (seriesuid.length() == 0)
-	{
-		// DEBUGLOG(sessionguid, DB_ERROR, L"No Series UID\r\n");
-		boost::filesystem::remove(filename);
-		return status;
-	}
-	if (sopuid.length() == 0)
+	if (studyuid.length() == 0 || seriesuid.length() == 0 || sopuid.length() == 0)
 	{
 		// DEBUGLOG(sessionguid, DB_ERROR, L"No SOP UID\r\n");
 		boost::filesystem::remove(filename);
-		return status;
+		return OFCondition(OFM_dcmqrdb, 1, OF_error, "One or more uid is blank");;
 	}
 
 	boost::filesystem::path newpath = config::getStoragePath();
@@ -113,7 +100,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 	// tell upstream about the object and get an S3 upload info
 	
-	UploadToS3(newpath, sopuid.c_str(), seriesuid.c_str(), studyuid.c_str());
+	// UploadToS3(newpath, sopuid.c_str(), seriesuid.c_str(), studyuid.c_str());
 	
 	// now try to add the file into the database
 	if(!AddDICOMFileInfoToDatabase(newpath))
@@ -219,7 +206,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"PatientSex,"
 				"PatientBirthDate,"
 				"ReferringPhysicianName,"
-				"created_at,updated_at"
+				"createdAt,updatedAt"
 				" FROM patient_studies WHERE StudyInstanceUID = ?",
 				into(patientstudies),
 				use(studyuid);
@@ -296,7 +283,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"PatientSex = ?,"
 					"PatientBirthDate = ?,"
 					"ReferringPhysicianName = ?,"
-					"created_at = ?, updated_at = ?"
+					"createdAt = ?, updatedAt = ?"
 					" WHERE id = ?",
 					use(patientstudy),
 					use(patientstudy.id);
@@ -324,7 +311,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"SeriesDescription,"
 				"SeriesNumber,"
 				"SeriesDate,"
-				"created_at,updated_at,"
+				"createdAt,updatedAt,"
 				"patient_study_id"
 				" FROM series WHERE SeriesInstanceUID = ?",
 				into(series_list),
@@ -371,7 +358,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"SeriesDescription = ?,"
 					"SeriesNumber = ?,"
 					"SeriesDate = ?,"
-					"created_at = ?, updated_at = ?,"
+					"createdAt = ?, updatedAt = ?,"
 					"patient_study_id = ?"
 					" WHERE id = ?",
 					use(series),
@@ -398,7 +385,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		instanceselect << "SELECT id,"
 			"SOPInstanceUID,"			
 			"InstanceNumber,"
-			"created_at,updated_at,"
+			"createdAt,updatedAt,"
 			"series_id"
 			" FROM instances WHERE SOPInstanceUID = ?",
 			into(instances),
@@ -427,7 +414,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"id = ?,"
 				"SOPInstanceUID = ?,"
 				"InstanceNumber = ?,"
-				"created_at = ?, updated_at = ?,"
+				"createdAt = ?, updatedAt = ?,"
 				"series_id = ?"
 				" WHERE id = ?",
 				use(instance),
