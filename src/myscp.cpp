@@ -271,7 +271,7 @@ MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
 	getConfig().setHostLookupEnabled(true);
 	getConfig().setAETitle("FMDSCP");	
 	
-	getConfig().setPort(11112);
+	getConfig().setPort(104);
 
 }
 

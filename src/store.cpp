@@ -294,7 +294,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				patientstudy.created_at = Poco::DateTime();
 
 				Poco::Data::Statement insert(dbconnection);
-				insert << "INSERT INTO patient_studies VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				insert << "INSERT INTO patient_studies (id, StudyInstanceUID, StudyID, AccessionNumber, PatientName, PatientID, StudyDate, ModalitiesInStudy, StudyDescription, PatientSex, PatientBirthDate, ReferringPhysicianName, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 					use(patientstudy);
 				insert.execute();
 
@@ -311,8 +311,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"SeriesDescription,"
 				"SeriesNumber,"
 				"SeriesDate,"
-				"createdAt,updatedAt,"
-				"patient_study_id"
+				"patient_study_id,"
+				"createdAt,updatedAt"				
 				" FROM series WHERE SeriesInstanceUID = ?",
 				into(series_list),
 				use(seriesuid);
@@ -358,8 +358,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"SeriesDescription = ?,"
 					"SeriesNumber = ?,"
 					"SeriesDate = ?,"
-					"createdAt = ?, updatedAt = ?,"
-					"patient_study_id = ?"
+					"patient_study_id = ?,"
+					"createdAt = ?, updatedAt = ?"
 					" WHERE id = ?",
 					use(series),
 					use(series.id);
@@ -370,7 +370,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				series.created_at = Poco::DateTime();		
 
 				Poco::Data::Statement insert(dbconnection);
-				insert << "INSERT INTO series VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				insert << "INSERT INTO series (id, SeriesInstanceUID, Modality, SeriesDescription, SeriesNumber, SeriesDate, patient_study_id, createdAt, updatedAt) VALUES(?, ? , ? , ? , ? , ? , ? , ? , ?)",
 					use(series);
 				insert.execute();
 
@@ -385,8 +385,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		instanceselect << "SELECT id,"
 			"SOPInstanceUID,"			
 			"InstanceNumber,"
-			"createdAt,updatedAt,"
-			"series_id"
+			"series_id,"
+			"createdAt,updatedAt"
 			" FROM instances WHERE SOPInstanceUID = ?",
 			into(instances),
 			use(sopuid);
@@ -414,8 +414,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"id = ?,"
 				"SOPInstanceUID = ?,"
 				"InstanceNumber = ?,"
-				"createdAt = ?, updatedAt = ?,"
-				"series_id = ?"
+				"series_id = ?,"
+				"createdAt = ?, updatedAt = ?"
 				" WHERE id = ?",
 				use(instance),
 				use(instance.id);
@@ -427,7 +427,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			instance.created_at = Poco::DateTime();
 			
 			Poco::Data::Statement insert(dbconnection);
-			insert << "INSERT INTO instances VALUES(?, ?, ?, ?, ?, ?)",
+			insert << "INSERT INTO instances (id, SOPInstanceUID, InstanceNumber, series_id, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?)",
 				use(instance);
 			insert.execute();
 

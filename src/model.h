@@ -44,9 +44,9 @@ public:
 	std::string SeriesDescription;
 	int SeriesNumber;
 	Poco::DateTime SeriesDate;
+	int patient_study_id;	// fk
 	Poco::DateTime created_at;
-	Poco::DateTime updated_at;
-	int patient_study_id;
+	Poco::DateTime updated_at;	
 };
 
 // rails generate model Instance SOPInstanceUID:string DCM_SeriesInstanceUID:string
@@ -62,9 +62,9 @@ public:
 	int id;
 	std::string SOPInstanceUID;
 	int InstanceNumber;
+	int series_id;		// fk
 	Poco::DateTime created_at;
-	Poco::DateTime updated_at;
-	int series_id;
+	Poco::DateTime updated_at;	
 };
 
 class Destination
@@ -95,7 +95,7 @@ public:
 	std::string StudyInstanceUID;
 	std::string PatientName;
 	std::string PatientID;
-	int destination_id;
+	int destination_id;	//fk
 	std::string status;
 	Poco::DateTime created_at;
 	Poco::DateTime updated_at;
@@ -190,9 +190,9 @@ namespace Poco {
 				TypeHandler<std::string>::bind(pos++, obj.SeriesDescription, pBinder, dir);
 				TypeHandler<int>::bind(pos++, obj.SeriesNumber, pBinder, dir);
 				TypeHandler<Poco::DateTime>::bind(pos++, obj.SeriesDate, pBinder, dir);
+				TypeHandler<int>::bind(pos++, obj.patient_study_id, pBinder, dir);
 				TypeHandler<Poco::DateTime>::bind(pos++, obj.created_at, pBinder, dir);
 				TypeHandler<Poco::DateTime>::bind(pos++, obj.updated_at, pBinder, dir);
-				TypeHandler<int>::bind(pos++, obj.patient_study_id, pBinder, dir);
 			}
 
 			static std::size_t size()
@@ -209,9 +209,9 @@ namespace Poco {
 				TypeHandler<std::string>::prepare(pos++, obj.SeriesDescription, pPrepare);
 				TypeHandler<int>::prepare(pos++, obj.SeriesNumber, pPrepare);
 				TypeHandler<Poco::DateTime>::prepare(pos++, obj.SeriesDate, pPrepare);
-				TypeHandler<Poco::DateTime>::prepare(pos++, obj.created_at, pPrepare);
-				TypeHandler<Poco::DateTime>::prepare(pos++, obj.updated_at, pPrepare);
 				TypeHandler<int>::prepare(pos++, obj.patient_study_id, pPrepare);
+				TypeHandler<Poco::DateTime>::prepare(pos++, obj.created_at, pPrepare);
+				TypeHandler<Poco::DateTime>::prepare(pos++, obj.updated_at, pPrepare);				
 			}
 
 			static void extract(std::size_t pos, Series& obj, const Series& defVal, AbstractExtractor::Ptr pExt)
@@ -224,9 +224,9 @@ namespace Poco {
 				TypeHandler<std::string>::extract(pos++, obj.SeriesDescription, defVal.SeriesDescription, pExt);
 				TypeHandler<int>::extract(pos++, obj.SeriesNumber, defVal.SeriesNumber, pExt);
 				TypeHandler<Poco::DateTime>::extract(pos++, obj.SeriesDate, defVal.SeriesDate, pExt);
-				TypeHandler<Poco::DateTime>::extract(pos++, obj.created_at, defVal.created_at, pExt);
-				TypeHandler<Poco::DateTime>::extract(pos++, obj.updated_at, defVal.updated_at, pExt);
 				TypeHandler<int>::extract(pos++, obj.patient_study_id, defVal.patient_study_id, pExt);
+				TypeHandler<Poco::DateTime>::extract(pos++, obj.created_at, defVal.created_at, pExt);
+				TypeHandler<Poco::DateTime>::extract(pos++, obj.updated_at, defVal.updated_at, pExt);				
 			}
 
 		private:
@@ -246,9 +246,9 @@ namespace Poco {
 				TypeHandler<int>::bind(pos++, obj.id, pBinder, dir);
 				TypeHandler<std::string>::bind(pos++, obj.SOPInstanceUID, pBinder, dir);
 				TypeHandler<int>::bind(pos++, obj.InstanceNumber, pBinder, dir);
-				TypeHandler<DateTime>::bind(pos++, obj.created_at, pBinder, dir);
-				TypeHandler<DateTime>::bind(pos++, obj.updated_at, pBinder, dir);
 				TypeHandler<int>::bind(pos++, obj.series_id, pBinder, dir);
+				TypeHandler<DateTime>::bind(pos++, obj.created_at, pBinder, dir);
+				TypeHandler<DateTime>::bind(pos++, obj.updated_at, pBinder, dir);				
 			}
 
 			static std::size_t size()
@@ -262,9 +262,9 @@ namespace Poco {
 				TypeHandler<int>::prepare(pos++, obj.id, pPrepare);
 				TypeHandler<std::string>::prepare(pos++, obj.SOPInstanceUID, pPrepare);
 				TypeHandler<int>::prepare(pos++, obj.InstanceNumber, pPrepare);
-				TypeHandler<Poco::DateTime>::prepare(pos++, obj.created_at, pPrepare);
-				TypeHandler<Poco::DateTime>::prepare(pos++, obj.updated_at, pPrepare);
 				TypeHandler<int>::prepare(pos++, obj.series_id, pPrepare);
+				TypeHandler<Poco::DateTime>::prepare(pos++, obj.created_at, pPrepare);
+				TypeHandler<Poco::DateTime>::prepare(pos++, obj.updated_at, pPrepare);				
 			}
 
 			static void extract(std::size_t pos, Instance& obj, const Instance& defVal, AbstractExtractor::Ptr pExt)
@@ -274,9 +274,9 @@ namespace Poco {
 				TypeHandler<int>::extract(pos++, obj.id, defVal.id, pExt);
 				TypeHandler<std::string>::extract(pos++, obj.SOPInstanceUID, defVal.SOPInstanceUID, pExt);
 				TypeHandler<int>::extract(pos++, obj.InstanceNumber, defVal.InstanceNumber, pExt);
-				TypeHandler<Poco::DateTime>::extract(pos++, obj.created_at, defVal.created_at, pExt);
-				TypeHandler<Poco::DateTime>::extract(pos++, obj.updated_at, defVal.updated_at, pExt);
 				TypeHandler<int>::extract(pos++, obj.series_id, defVal.series_id, pExt);
+				TypeHandler<Poco::DateTime>::extract(pos++, obj.created_at, defVal.created_at, pExt);
+				TypeHandler<Poco::DateTime>::extract(pos++, obj.updated_at, defVal.updated_at, pExt);				
 			}
 
 		private:
