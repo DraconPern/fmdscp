@@ -18,8 +18,10 @@
 #define UNICODE 1
 #endif
 
+#include "Poco/DateTime.h"
 
 OFDate getDate(DcmDataset *dataset, const DcmTagKey& tagKey);
 OFTime getTime(DcmDataset *dataset, const DcmTagKey& tagKey);
+std::string ToJSON(Poco::DateTime &datetime);
 
 #endif // UTIL_H

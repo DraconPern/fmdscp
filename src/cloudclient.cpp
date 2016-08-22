@@ -13,7 +13,20 @@ CloudClient::CloudClient(boost::function< void(void) > shutdownCallback) :
 	set_socket_open_listener(std::bind(&CloudClient::OnConnection, this));
 	socket()->on("send", (sio::socket::event_listener_aux) boost::bind(&CloudClient::OnSend, this, _1, _2, _3, _4));
 	socket()->on("shutdown", (sio::socket::event_listener) boost::bind(&CloudClient::OnShutdown, this, _1));
+
+	socket()->on("new_access_token", (sio::socket::event_listener_aux) boost::bind(&CloudClient::OnNewAccessToken, this, _1, _2, _3, _4));	
 	// socket()->on("connection", (sio::socket::event_listener) boost::bind(&CloudClient::OnConnection, this, std::placeholders::_1));	
+}
+
+void CloudClient::OnNewAccessToken(const std::string& name, message::ptr const& message, bool need_ack, message::list& ack_message)
+{
+	if (message->get_flag() == message::flag_object)
+	{
+		std::string access_token = message->get_map()["access_token"]->get_string();
+		int expires_in = message->get_map()["expires_in"]->get_int();
+	}
+
+
 }
 
 void CloudClient::stop()
@@ -44,9 +57,9 @@ void CloudClient::OnSend(const std::string& name, message::ptr const& message, b
 void CloudClient::OnConnection()
 {		
 	message::ptr o = object_message::create();	
-	o->get_map()["wow"] = string_message::create("hmm");
+	o->get_map()["access_token"] = string_message::create("Dkdjfj3kd9LKjf");
 	
-	socket()->emit("siteauth", o);
+	socket()->emit("agent_auth", o);
 	//socket()->emit("something", username);
 }
 

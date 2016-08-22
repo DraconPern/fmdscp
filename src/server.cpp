@@ -45,13 +45,16 @@ server::~server()
 
 void server::run_async()
 {	
+	// connect to cloud
+	// cloudclient.connect("http://localhost:8090");
+
 	// add scp
 	threads.create_thread(boost::bind(&MyDcmSCPPool::listen, &storageSCP));
 	
 	// add sender
 	threads.create_thread(boost::bind(&SenderService::run, &senderService));
 
-	// cloudclient.connect("http://localhost:8090");
+	httpserver.start();
 }
 
 void server::stop()

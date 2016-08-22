@@ -271,8 +271,7 @@ void Study_DICOMQueryToSQL(std::string tablename, const DICOM_SQLMapping *sqlmap
 			{
 				(parameters == 0)?(sqlcommand = " WHERE "):(sqlcommand = " AND ");
 				sqlcommand += sqlmapping[i].columnName;				
-				sqlcommand += " = :";
-				sqlcommand += sqlmapping[i].columnName;
+				sqlcommand += " = ?";				
 
 				Sint32 someint = 0;
 				requestIdentifiers->findAndGetSint32(sqlmapping[i].dicomtag, someint);
@@ -288,12 +287,11 @@ void Study_DICOMQueryToSQL(std::string tablename, const DICOM_SQLMapping *sqlmap
 				{				
 					(parameters == 0)?(sqlcommand = " WHERE "):(sqlcommand = " AND ");
 					sqlcommand += sqlmapping[i].columnName;
-
-					// todo range
-					sqlcommand += " = :";
+					sqlcommand += " > ? AND ";
 					sqlcommand += sqlmapping[i].columnName;
+					sqlcommand += " < ?";
 
-					st << sqlcommand, bind(Poco::DateTime(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay()));
+					st << sqlcommand, bind(Poco::DateTime(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay())), bind(Poco::DateTime(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay(), 23, 59, 59));
 					parameters++;
 				}
 			}

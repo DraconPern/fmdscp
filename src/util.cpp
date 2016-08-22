@@ -1,4 +1,5 @@
 #include "util.h"
+#include "Poco/DateTimeFormatter.h"
 
 OFDate getDate(DcmDataset *dataset, const DcmTagKey& tagKey)
 {
@@ -22,4 +23,10 @@ OFTime getTime(DcmDataset *dataset, const DcmTagKey& tagKey)
 		t->getOFTime(result);
 	}
 	return result;
+}
+
+std::string ToJSON(Poco::DateTime &datetime)
+{
+	Poco::DateTimeFormatter f;
+	return f.format(datetime, "%Y-%m-%dT%H:%M:%S%z");
 }

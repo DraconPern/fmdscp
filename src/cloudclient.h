@@ -40,6 +40,7 @@ protected:
 
 	void OnShutdown(sio::event &event);
 	void OnSend(const std::string& name, message::ptr const& message, bool need_ack, message::list& ack_message);
+	void OnNewAccessToken(const std::string& name, message::ptr const& message, bool need_ack, message::list& ack_message);
 	boost::function< void(void) > shutdownCallback;
 };
 

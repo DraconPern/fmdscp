@@ -7,7 +7,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <codecvt>
 #include "model.h"
-
+#include "util.h"
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -34,7 +34,7 @@ using namespace Poco::Data::Keywords;
 HttpServer::HttpServer(std::function< void(void) > shutdownCallback) :
 	SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10),
 	shutdownCallback(shutdownCallback)
-{		
+{
 	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
 	resource["^/wado\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
@@ -52,7 +52,6 @@ void HttpServer::Version(std::shared_ptr<HttpServer::Response> response, std::sh
 
 	std::ostringstream buf;
 	boost::property_tree::json_parser::write_json(buf, pt, true);
-
 	std::string content = buf.str();
 	*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 }
@@ -124,7 +123,7 @@ void HttpServer::WADO(std::shared_ptr<HttpServer::Response> response, std::share
 			"PatientSex,"
 			"PatientBirthDate,"
 			"ReferringPhysicianName,"
-			"created_at,updated_at"
+			"createdAt,updatedAt"
 			" FROM patient_studies WHERE StudyInstanceUID = ?",
 			into(patient_studies_list),
 			use(queries["studyUID"]);
@@ -144,8 +143,8 @@ void HttpServer::WADO(std::shared_ptr<HttpServer::Response> response, std::share
 			"SeriesDescription,"
 			"SeriesNumber,"
 			"SeriesDate,"
-			"created_at,updated_at,"
-			"patient_study_id"
+			"patient_study_id,"
+			"createdAt,updatedAt"
 			" FROM series WHERE SeriesInstanceUID = ?",
 			into(series_list),
 			use(queries["seriesUID"]);	
@@ -162,8 +161,8 @@ void HttpServer::WADO(std::shared_ptr<HttpServer::Response> response, std::share
 		instanceselect << "SELECT id,"
 			"SOPInstanceUID,"
 			"InstanceNumber,"
-			"created_at,updated_at,"
-			"series_id"
+			"series_id,"
+			"createdAt,updatedAt"			
 			" FROM instances WHERE SOPInstanceUID = ?",
 			into(instances),
 			use(queries["objectUID"]);
@@ -391,14 +390,125 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 
 	std::map<std::string, std::string> queries;	
 	decode_query(querystring, queries);	
-	if(queries["requestType"] != "WADO")
+	
+
+	// check for Accept = application / dicom + json
+	
+	std::vector<PatientStudy> patient_studies_list;
+	try
 	{
-		content = "Not a WADO request";
-		*response << std::string("HTTP/1.1 400 Bad Request\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		Poco::Data::Session dbconnection(config::getConnectionString());
+
+		Poco::Data::Statement patientstudiesselect(dbconnection);
+		patientstudiesselect << "SELECT id,"
+			"StudyInstanceUID,"
+			"StudyID,"
+			"AccessionNumber,"
+			"PatientName,"
+			"PatientID,"
+			"StudyDate,"
+			"ModalitiesInStudy,"
+			"StudyDescription,"
+			"PatientSex,"
+			"PatientBirthDate,"
+			"ReferringPhysicianName,"
+			"createdAt,updatedAt"
+			" FROM patient_studies",
+			into(patient_studies_list);
+
+		int parameters = 0;
+
+		if (queries.find("PatientName") != queries.end())
+		{
+			std::string sqlcommand;
+			(parameters == 0) ? (sqlcommand = " WHERE ") : (sqlcommand = " AND ");
+			sqlcommand += "PatientName LIKE ?";
+			patientstudiesselect << sqlcommand, bind("%" + queries["PatientName"] + "%");
+			parameters++;
+		}
+
+		if (queries.find("PatientID") != queries.end())
+		{
+			std::string sqlcommand;
+			(parameters == 0) ? (sqlcommand = " WHERE ") : (sqlcommand = " AND ");
+			sqlcommand += "PatientID LIKE ?";
+			patientstudiesselect << sqlcommand, bind("%" + queries["PatientID"] + "%");
+			parameters++;
+		}
+
+		if (queries.find("StudyDate") != queries.end())
+		{
+			Poco::DateTime d;
+			int t;
+			if (Poco::DateTimeParser::tryParse(queries["StudyDate"], d, t))
+			{
+				Poco::DateTimeFormatter format;
+				std::string sqlcommand;
+				(parameters == 0) ? (sqlcommand = " WHERE ") : (sqlcommand = " AND ");
+				sqlcommand += "StudyDate BETWEEN (? AND ?)";
+				patientstudiesselect << sqlcommand, bind(format.format(d, "%Y%m%d 0:0:0")), bind(format.format(d, "%Y%m%d 23:59:59"));
+				parameters++;
+			}
+		}
+
+		if (queries.find("StudyInstanceUID") != queries.end())
+		{
+			std::string sqlcommand;
+			(parameters == 0) ? (sqlcommand = " WHERE ") : (sqlcommand = " AND ");
+			sqlcommand += "StudyInstanceUID = ?";
+			patientstudiesselect << sqlcommand, bind(queries["StudyInstanceUID"]);
+			parameters++;
+		}
+
+		if (parameters > 0)
+		{
+			patientstudiesselect.execute();
+		}
+		else
+		{
+			// don't perform search
+		}
+
+		
+		/*if (patient_studies_list.size() == 0)
+		{
+			content = "Unable to find study";
+			*response << std::string("HTTP/1.1 204 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+			return;
+		}*/
+
+		boost::property_tree::ptree pt;
+		
+		boost::property_tree::ptree children;
+
+		for (int i = 0; i < patient_studies_list.size(); i++)
+		{
+			boost::property_tree::ptree child;
+			child.add("StudyInstanceUID", patient_studies_list[i].StudyInstanceUID);
+			child.add("PatientName", patient_studies_list[i].PatientName);
+			child.add("PatientID", patient_studies_list[i].PatientID);
+			child.add("StudyDate", ToJSON(patient_studies_list[i].StudyDate));
+			child.add("ModalitiesInStudy", patient_studies_list[i].ModalitiesInStudy);
+			child.add("StudyDescription", patient_studies_list[i].StudyDescription);
+			child.add("PatientSex", patient_studies_list[i].PatientSex);
+			child.add("PatientBirthDate", ToJSON(patient_studies_list[i].PatientBirthDate));
+			children.push_back(std::make_pair("", child));
+		}
+		
+		pt.add_child("result", children);		
+
+		std::ostringstream buf;
+		boost::property_tree::json_parser::write_json(buf, pt, true);
+		std::string content = buf.str();
+		*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		return;
 	}
-
-	*response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+	catch (Poco::Data::DataException &e)
+	{
+		content = "Database Error";
+		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+	}		
 }
 
 
@@ -406,7 +516,7 @@ void HttpServer::decode_query(const std::string &content, std::map<std::string, 
 {
 	// split into a map
 	std::vector<std::string> pairs;
-// 	boost::split(pairs, content, boost::is_any_of("&"), boost::token_compress_on);
+ 	boost::split(pairs, content, boost::is_any_of("&"), boost::token_compress_on);
 
 	for(int i = 0; i < pairs.size(); i++)
 	{
