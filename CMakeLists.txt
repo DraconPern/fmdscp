@@ -70,6 +70,7 @@ set(fmdscp_HEADERS
 	src/cloudclient.h
 	src/cloudappender.h
 	src/sender.h
+	src/destinations_controller.h
 )
 
 set(fmdscp_SRCS
@@ -90,6 +91,7 @@ set(fmdscp_SRCS
 	src/cloudclient.cpp
 	src/cloudappender.cpp
 	src/sender.cpp
+	src/destinations_controller.cpp
 )
 
 if(WIN32)

@@ -31,12 +31,21 @@
 #include "poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
-HttpServer::HttpServer(std::function< void(void) > shutdownCallback) :
+HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient &cloudclient) :
 	SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10),
-	shutdownCallback(shutdownCallback)
+	shutdownCallback(shutdownCallback),
+	cloudclient(cloudclient),
+	destinations_controller(cloudclient)
 {
 	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
 	resource["^/wado\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO, this, _1, _2);
+
+	resource["^/api/destinations"]["GET"] = boost::bind(&destinations_controller::api_destinations_list, &destinations_controller, _1, _2);
+	resource["^/api/destinations"]["POST"] = boost::bind(&destinations_controller::api_destinations_create, &destinations_controller, _1, _2);
+	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["POST"] = boost::bind(&destinations_controller::api_destinations_update, &destinations_controller, _1, _2);
+	resource["^/api/destinations/([0123456789abcdef\\-]+)/delete"]["POST"] = boost::bind(&destinations_controller::api_destinations_delete, &destinations_controller, _1, _2);
+
+	//resource["^/api/study/send"]["POST"] = boost::bind(&HttpServer::sendstudy, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
 	resource["^/api/shutdown"]["POST"] = boost::bind(&HttpServer::Shutdown, this, _1, _2);
 	default_resource["GET"] = boost::bind(&HttpServer::NotFound, this, _1, _2);
@@ -179,6 +188,7 @@ void HttpServer::WADO(std::shared_ptr<HttpServer::Response> response, std::share
 	{
 		content = "Database Error";		
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
 	}
 
@@ -440,13 +450,13 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 		{
 			Poco::DateTime d;
 			int t;
-			if (Poco::DateTimeParser::tryParse(queries["StudyDate"], d, t))
+			if (Poco::DateTimeParser::tryParse("%Y-%n-%e", queries["StudyDate"], d, t))
 			{
 				Poco::DateTimeFormatter format;
 				std::string sqlcommand;
 				(parameters == 0) ? (sqlcommand = " WHERE ") : (sqlcommand = " AND ");
-				sqlcommand += "StudyDate BETWEEN (? AND ?)";
-				patientstudiesselect << sqlcommand, bind(format.format(d, "%Y%m%d 0:0:0")), bind(format.format(d, "%Y%m%d 23:59:59"));
+				sqlcommand += "StudyDate BETWEEN ? AND ?";
+				patientstudiesselect << sqlcommand, bind(format.format(d, "%Y-%m-%d 0:0:0")), bind(format.format(d, "%Y-%m-%d 23:59:59"));
 				parameters++;
 			}
 		}
@@ -477,9 +487,7 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 			return;
 		}*/
 
-		boost::property_tree::ptree pt;
-		
-		boost::property_tree::ptree children;
+		boost::property_tree::ptree pt, children;
 
 		for (int i = 0; i < patient_studies_list.size(); i++)
 		{
@@ -507,68 +515,7 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 	{
 		content = "Database Error";
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
 	}		
-}
-
-
-void HttpServer::decode_query(const std::string &content, std::map<std::string, std::string> &nvp)
-{
-	// split into a map
-	std::vector<std::string> pairs;
- 	boost::split(pairs, content, boost::is_any_of("&"), boost::token_compress_on);
-
-	for(int i = 0; i < pairs.size(); i++)
-	{
-		std::vector<std::string> namevalue;
-		boost::split(namevalue, pairs[i], boost::is_any_of("="), boost::token_compress_on);
-
-		if(namevalue.size() != 2)
-			continue;
-
-		std::string name, value;
-		url_decode(namevalue[0], name);
-		url_decode(namevalue[1], value);
-
-		nvp[name] = value;
-	}
-}
-
-bool HttpServer::url_decode(const std::string& in, std::string& out)
-{
-	out.clear();
-	out.reserve(in.size());
-	for (std::size_t i = 0; i < in.size(); ++i)
-	{
-		if (in[i] == '%')
-		{
-			if (i + 3 <= in.size())
-			{
-				int value = 0;
-				std::istringstream is(in.substr(i + 1, 2));
-				if (is >> std::hex >> value)
-				{
-					out += static_cast<char>(value);
-					i += 2;
-				}
-				else
-				{
-					return false;
-				}
-			}
-			else
-			{
-				return false;
-			}
-		}
-		else if (in[i] == '+')
-		{
-			out += ' ';
-		}
-		else
-		{
-			out += in[i];
-		}
-	}
-	return true;
 }

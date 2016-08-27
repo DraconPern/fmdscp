@@ -234,15 +234,9 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 
 			dfile.getDataset()->findAndGetOFString(DCM_PatientID, textbuf);
 			patientstudy.PatientID = textbuf.c_str();
-
-			datebuf = getDate(dfile.getDataset(), DCM_StudyDate);
-			timebuf = getTime(dfile.getDataset(), DCM_StudyTime);
-			// use DCM_TimezoneOffsetFromUTC ?
-			if(datebuf.isValid() && timebuf.isValid()) 
-			{			
-				patientstudy.StudyDate.assign(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay(), timebuf.getHour(), timebuf.getMinute(), timebuf.getSecond());
-			}
-
+			
+			getDateTime(dfile.getDataset(), DCM_StudyDate, DCM_StudyTime, patientstudy.StudyDate);
+			
 			// handle modality list...
 			std::string modalitiesinstudy = patientstudy.ModalitiesInStudy;
 			std::set<std::string> modalityarray;
@@ -258,9 +252,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			dfile.getDataset()->findAndGetOFString(DCM_PatientSex, textbuf);
 			patientstudy.PatientSex = textbuf.c_str();
 
-			datebuf = getDate(dfile.getDataset(), DCM_PatientBirthDate);
-			if(datebuf.isValid()) 
-				patientstudy.PatientBirthDate.assign(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay());
+			getDateTime(dfile.getDataset(), DCM_PatientBirthDate, DCM_PatientBirthTime, patientstudy.PatientBirthDate);
 
 			dfile.getDataset()->findAndGetOFString(DCM_ReferringPhysicianName, textbuf);
 			patientstudy.ReferringPhysicianName = textbuf.c_str();
@@ -268,7 +260,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			patientstudy.updated_at = Poco::DateTime();
 
 			if(patientstudy.id != 0)
-			{				
+			{
 				Poco::Data::Statement update(dbconnection);
 				update << "UPDATE patient_studies SET "
 					"id = ?,"
@@ -337,14 +329,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			dfile.getDataset()->findAndGetSint32(DCM_SeriesNumber, numberbuf);
 			series.SeriesNumber = numberbuf;
 
-			datebuf = getDate(dfile.getDataset(), DCM_SeriesDate);
-			timebuf = getTime(dfile.getDataset(), DCM_SeriesTime);
-			// use DCM_TimezoneOffsetFromUTC ?
-			if(datebuf.isValid() && timebuf.isValid()) 
-			{
-				series.SeriesDate.assign(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay(), timebuf.getHour(), timebuf.getMinute(), timebuf.getSecond());
-				
-			}
+			getDateTime(dfile.getDataset(), DCM_SeriesDate, DCM_SeriesTime, series.SeriesDate);
 			
 			series.updated_at = Poco::DateTime();
 

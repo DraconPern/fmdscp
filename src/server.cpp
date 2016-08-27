@@ -7,7 +7,7 @@
 #include "cloudappender.h"
 
 server::server(boost::function< void(void) > shutdownCallback) :
-	httpserver(shutdownCallback),
+	httpserver(shutdownCallback, cloudclient),
 	cloudclient(shutdownCallback)
 {
 	// configure logging
@@ -46,7 +46,7 @@ server::~server()
 void server::run_async()
 {	
 	// connect to cloud
-	// cloudclient.connect("http://localhost:8090");
+	cloudclient.connect("http://localhost:8090");
 
 	// add scp
 	threads.create_thread(boost::bind(&MyDcmSCPPool::listen, &storageSCP));
