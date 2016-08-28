@@ -76,6 +76,62 @@ void destinations_controller::api_destinations_list(std::shared_ptr<SimpleWeb::S
 }
 
 
+void destinations_controller::api_destinations_get(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
+{
+	std::string content;
+	std::string idstr = request->path_match[1];
+
+	std::vector<Destination> destination_list;
+	try
+	{
+		int id = boost::lexical_cast<int>(idstr);
+
+		Poco::Data::Session dbconnection(config::getConnectionString());
+
+		Poco::Data::Statement stselect(dbconnection);
+		stselect << "SELECT id,"
+			"name,"
+			"destinationhost,"
+			"destinationport,"
+			"destinationAE,"
+			"sourceAE,"
+			"createdAt,updatedAt"
+			" FROM destinations WHERE id = ?",
+			into(destination_list),
+			use(id);
+		stselect.execute();
+
+		boost::property_tree::ptree pt, children;
+
+		for (int i = 0; i < destination_list.size(); i++)
+		{
+			boost::property_tree::ptree child;
+			child.add("id", destination_list[i].id);
+			child.add("name", destination_list[i].name);
+			child.add("destinationhost", destination_list[i].destinationhost);
+			child.add("destinationport", destination_list[i].destinationport);
+			child.add("destinationAE", destination_list[i].destinationAE);
+			child.add("sourceAE", destination_list[i].sourceAE);
+			children.push_back(std::make_pair("", child));
+		}
+
+		pt.add_child("result", children);
+
+		std::ostringstream buf;
+		boost::property_tree::json_parser::write_json(buf, pt, true);
+		std::string content = buf.str();
+		*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+	}
+	catch (Poco::Data::DataException &e)
+	{
+		content = "Database Error";
+		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		cloudclient.sendlog(std::string("dberror"), e.displayText());
+		return;
+	}
+}
+
 void destinations_controller::api_destinations_create(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
 {
 	std::string content = request->content.string();	
@@ -130,10 +186,9 @@ void destinations_controller::api_destinations_create(std::shared_ptr<SimpleWeb:
 	}
 }
 
-
-
 void destinations_controller::api_destinations_update(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
 {
+	std::string idstr = request->path_match[1];
 	std::string content = request->content.string();
 
 	std::map<std::string, std::string> queries;
@@ -143,12 +198,8 @@ void destinations_controller::api_destinations_update(std::shared_ptr<SimpleWeb:
 	{
 		Poco::Data::Session dbconnection(config::getConnectionString());
 
-		int id = 0;
-
-		if (queries.find("id") != queries.end())
-			id = boost::lexical_cast<int>(queries["id"]);
-		// else
-
+		int id = boost::lexical_cast<int>(idstr);
+		
 		std::vector<Destination> destination_list;
 		Poco::Data::Statement stselect(dbconnection);
 		stselect << "SELECT id,"

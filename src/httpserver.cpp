@@ -42,6 +42,7 @@ HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient
 
 	resource["^/api/destinations"]["GET"] = boost::bind(&destinations_controller::api_destinations_list, &destinations_controller, _1, _2);
 	resource["^/api/destinations"]["POST"] = boost::bind(&destinations_controller::api_destinations_create, &destinations_controller, _1, _2);
+	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["GET"] = boost::bind(&destinations_controller::api_destinations_get, &destinations_controller, _1, _2);
 	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["POST"] = boost::bind(&destinations_controller::api_destinations_update, &destinations_controller, _1, _2);
 	resource["^/api/destinations/([0123456789abcdef\\-]+)/delete"]["POST"] = boost::bind(&destinations_controller::api_destinations_delete, &destinations_controller, _1, _2);
 
