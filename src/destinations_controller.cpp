@@ -24,9 +24,7 @@ destinations_controller::destinations_controller(CloudClient &cloudclient) :
 }
 
 void destinations_controller::api_destinations_list(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
-{
-	std::string content;
-	
+{		
 	std::vector<Destination> destination_list;
 	try
 	{
@@ -58,7 +56,7 @@ void destinations_controller::api_destinations_list(std::shared_ptr<SimpleWeb::S
 			children.push_back(std::make_pair("", child));
 		}
 
-		pt.add_child("result", children);
+		pt.add_child("destinations", children);
 
 		std::ostringstream buf;
 		boost::property_tree::json_parser::write_json(buf, pt, true);
@@ -68,7 +66,7 @@ void destinations_controller::api_destinations_list(std::shared_ptr<SimpleWeb::S
 	}
 	catch (Poco::Data::DataException &e)
 	{
-		content = "Database Error";
+		std::string content = "Database Error";
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
@@ -77,8 +75,7 @@ void destinations_controller::api_destinations_list(std::shared_ptr<SimpleWeb::S
 
 
 void destinations_controller::api_destinations_get(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
-{
-	std::string content;
+{	
 	std::string idstr = request->path_match[1];
 
 	std::vector<Destination> destination_list;
@@ -101,31 +98,36 @@ void destinations_controller::api_destinations_get(std::shared_ptr<SimpleWeb::Se
 			use(id);
 		stselect.execute();
 
-		boost::property_tree::ptree pt, children;
-
-		for (int i = 0; i < destination_list.size(); i++)
-		{
+		if (destination_list.size() >= 1)
+		{	
+			boost::property_tree::ptree pt;
+		
 			boost::property_tree::ptree child;
-			child.add("id", destination_list[i].id);
-			child.add("name", destination_list[i].name);
-			child.add("destinationhost", destination_list[i].destinationhost);
-			child.add("destinationport", destination_list[i].destinationport);
-			child.add("destinationAE", destination_list[i].destinationAE);
-			child.add("sourceAE", destination_list[i].sourceAE);
-			children.push_back(std::make_pair("", child));
+			child.add("id", destination_list[0].id);
+			child.add("name", destination_list[0].name);
+			child.add("destinationhost", destination_list[0].destinationhost);
+			child.add("destinationport", destination_list[0].destinationport);
+			child.add("destinationAE", destination_list[0].destinationAE);
+			child.add("sourceAE", destination_list[0].sourceAE);
+			
+			pt.add_child("destination", child);
+
+			std::ostringstream buf;
+			boost::property_tree::json_parser::write_json(buf, pt, true);
+			std::string content = buf.str();
+			*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+			return;
 		}
-
-		pt.add_child("result", children);
-
-		std::ostringstream buf;
-		boost::property_tree::json_parser::write_json(buf, pt, true);
-		std::string content = buf.str();
-		*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
-		return;
+		else
+		{
+			std::string content = "Destination not found";
+			*response << std::string("HTTP/1.1 404 Not found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+			return;
+		}
 	}
 	catch (Poco::Data::DataException &e)
 	{
-		content = "Database Error";
+		std::string content = "Database Error";
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
@@ -133,11 +135,9 @@ void destinations_controller::api_destinations_get(std::shared_ptr<SimpleWeb::Se
 }
 
 void destinations_controller::api_destinations_create(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
-{
-	std::string content = request->content.string();	
-
+{	
 	std::map<std::string, std::string> queries;
-	decode_query(content, queries);
+	decode_query(request->content.string(), queries);
 
 	try
 	{		
@@ -179,7 +179,7 @@ void destinations_controller::api_destinations_create(std::shared_ptr<SimpleWeb:
 	}
 	catch (Poco::Data::DataException &e)
 	{
-		content = "Database Error";
+		std::string content = "Database Error";
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
@@ -189,10 +189,9 @@ void destinations_controller::api_destinations_create(std::shared_ptr<SimpleWeb:
 void destinations_controller::api_destinations_update(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
 {
 	std::string idstr = request->path_match[1];
-	std::string content = request->content.string();
-
+	
 	std::map<std::string, std::string> queries;
-	decode_query(content, queries);
+	decode_query(request->content.string(), queries);
 
 	try
 	{
@@ -217,7 +216,7 @@ void destinations_controller::api_destinations_update(std::shared_ptr<SimpleWeb:
 
 		if (destination_list.size() == 0)
 		{
-			content = "item not found";
+			std::string content = "item not found";
 			*response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 			return;
 		}
@@ -265,7 +264,7 @@ void destinations_controller::api_destinations_update(std::shared_ptr<SimpleWeb:
 	}
 	catch (Poco::Data::DataException &e)
 	{
-		content = "Database Error";
+		std::string content = "Database Error";
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
@@ -273,8 +272,7 @@ void destinations_controller::api_destinations_update(std::shared_ptr<SimpleWeb:
 }
 
 void destinations_controller::api_destinations_delete(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
-{
-	std::string content;
+{	
 	std::string querystring = request->path_match[1];
 
 	std::map<std::string, std::string> queries;
@@ -305,7 +303,7 @@ void destinations_controller::api_destinations_delete(std::shared_ptr<SimpleWeb:
 	}
 	catch (Poco::Data::DataException &e)
 	{
-		content = "Database Error";
+		std::string content = "Database Error";
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;

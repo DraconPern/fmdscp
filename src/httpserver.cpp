@@ -504,7 +504,7 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 			children.push_back(std::make_pair("", child));
 		}
 		
-		pt.add_child("result", children);		
+		pt.add_child("studies", children);		
 
 		std::ostringstream buf;
 		boost::property_tree::json_parser::write_json(buf, pt, true);
