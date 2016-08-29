@@ -35,16 +35,18 @@ HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient
 	SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10),
 	shutdownCallback(shutdownCallback),
 	cloudclient(cloudclient),
-	destinations_controller(cloudclient)
+	destinations_controller(cloudclient, resource)
 {
 	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
 	resource["^/wado\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO, this, _1, _2);
 
+	/*
 	resource["^/api/destinations"]["GET"] = boost::bind(&destinations_controller::api_destinations_list, &destinations_controller, _1, _2);
 	resource["^/api/destinations"]["POST"] = boost::bind(&destinations_controller::api_destinations_create, &destinations_controller, _1, _2);
 	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["GET"] = boost::bind(&destinations_controller::api_destinations_get, &destinations_controller, _1, _2);
 	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["POST"] = boost::bind(&destinations_controller::api_destinations_update, &destinations_controller, _1, _2);
 	resource["^/api/destinations/([0123456789abcdef\\-]+)/delete"]["POST"] = boost::bind(&destinations_controller::api_destinations_delete, &destinations_controller, _1, _2);
+	*/
 
 	//resource["^/api/study/send"]["POST"] = boost::bind(&HttpServer::sendstudy, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
