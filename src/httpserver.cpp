@@ -5,9 +5,14 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/lexical_cast.hpp>
 #include <codecvt>
 #include "model.h"
 #include "util.h"
+
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -39,16 +44,8 @@ HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient
 {
 	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
 	resource["^/wado\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO, this, _1, _2);
-
-	/*
-	resource["^/api/destinations"]["GET"] = boost::bind(&destinations_controller::api_destinations_list, &destinations_controller, _1, _2);
-	resource["^/api/destinations"]["POST"] = boost::bind(&destinations_controller::api_destinations_create, &destinations_controller, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["GET"] = boost::bind(&destinations_controller::api_destinations_get, &destinations_controller, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["POST"] = boost::bind(&destinations_controller::api_destinations_update, &destinations_controller, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)/delete"]["POST"] = boost::bind(&destinations_controller::api_destinations_delete, &destinations_controller, _1, _2);
-	*/
-
-	//resource["^/api/study/send"]["POST"] = boost::bind(&HttpServer::sendstudy, this, _1, _2);
+	
+	resource["^/api/study/send"]["POST"] = boost::bind(&HttpServer::SendStudy, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
 	resource["^/api/shutdown"]["POST"] = boost::bind(&HttpServer::Shutdown, this, _1, _2);
 	default_resource["GET"] = boost::bind(&HttpServer::NotFound, this, _1, _2);
@@ -398,13 +395,11 @@ bool SendAsHTML(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 
 void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
 {
-	std::string content;
 	std::string querystring = request->path_match[1];
 
 	std::map<std::string, std::string> queries;	
 	decode_query(querystring, queries);	
 	
-
 	// check for Accept = application / dicom + json
 	
 	std::vector<PatientStudy> patient_studies_list;
@@ -516,9 +511,97 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 	}
 	catch (Poco::Data::DataException &e)
 	{
-		content = "Database Error";
+		std::string content = "Database Error";
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
 	}		
+}
+
+void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
+{
+	std::map<std::string, std::string> queries;
+	decode_query(request->content.string(), queries);
+
+	if (queries.find("StudyInstanceUID") == queries.end() || queries.find("destination") == queries.end())
+	{
+		std::string content = "Missing parameters";
+		*response << std::string("HTTP/1.1 400 Bad Request\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+	}
+	
+	std::string studyinstanceuid = queries["StudyInstanceUID"];
+	std::string destinationid = queries["destination"];
+
+	try
+	{
+		std::vector<PatientStudy> patient_studies_list;
+
+		Poco::Data::Session dbconnection(config::getConnectionString());
+
+		Poco::Data::Statement patientstudiesselect(dbconnection);
+		patientstudiesselect << "SELECT id,"
+			"StudyInstanceUID,"
+			"StudyID,"
+			"AccessionNumber,"
+			"PatientName,"
+			"PatientID,"
+			"StudyDate,"
+			"ModalitiesInStudy,"
+			"StudyDescription,"
+			"PatientSex,"
+			"PatientBirthDate,"
+			"ReferringPhysicianName,"
+			"createdAt,updatedAt"
+			" FROM patient_studies WHERE StudyInstanceUID = ?",
+			into(patient_studies_list), 
+			use(studyinstanceuid);
+
+		if (patient_studies_list.size() != 1)
+		{
+			std::string content = "Study not found";
+			*response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;			
+			return;
+		}
+
+		OutgoingSession out_session;
+		boost::uuids::basic_random_generator<boost::mt19937> gen;
+		boost::uuids::uuid u = gen();		
+		out_session.uuid = boost::lexical_cast<std::string>(u);
+		out_session.queued = 1;
+		out_session.StudyInstanceUID = studyinstanceuid;
+		out_session.PatientID = patient_studies_list[0].PatientID;
+		out_session.PatientName = patient_studies_list[0].PatientName;
+		out_session.destination_id = boost::lexical_cast<int>(destinationid);
+		out_session.status = "Queued";
+		out_session.created_at = Poco::DateTime();
+		out_session.updated_at = Poco::DateTime();
+		
+		Poco::Data::Statement insert(dbconnection);
+		insert << "INSERT INTO outgoing_sessions (id, uuid, queued, StudyInstanceUID, PatientID, PatientName, destination_id, status, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			use(out_session);
+		insert.execute();
+
+		dbconnection << "SELECT LAST_INSERT_ID()", into(out_session.id), now;
+
+		boost::property_tree::ptree pt, children;
+
+		std::ostringstream str;
+		str << out_session.id;
+		pt.add("result", str.str());
+
+		std::ostringstream buf;
+		boost::property_tree::json_parser::write_json(buf, pt, true);
+		std::string content = buf.str();
+		*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+
+	}
+	catch (Poco::Data::DataException &e)
+	{
+		std::string content = "Database Error";
+		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		cloudclient.sendlog(std::string("dberror"), e.displayText());
+		return;
+	}
 }
