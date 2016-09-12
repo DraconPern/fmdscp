@@ -41,9 +41,10 @@ HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient
 	shutdownCallback(shutdownCallback),
 	cloudclient(cloudclient),
 	destinations_controller(cloudclient, resource)
-{
-	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
-	resource["^/wado\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO, this, _1, _2);
+{			
+	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO_URI, this, _1, _2);
+	resource["^/api/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
+	resource["^/api/studies/([0123456789\\.]+)"]["GET"] = boost::bind(&HttpServer::StudyInfo, this, _1, _2);
 	
 	resource["^/api/study/send"]["POST"] = boost::bind(&HttpServer::SendStudy, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
@@ -89,7 +90,7 @@ bool SendAsPDF(DcmFileFormat &dfile, HttpServer::Response& response, std::string
 bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid);
 bool SendAsHTML(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid);
 
-void HttpServer::WADO(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
+void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
 {	
 
 	std::string content;
@@ -518,21 +519,10 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 	}		
 }
 
-void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
+void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
 {
-	std::map<std::string, std::string> queries;
-	decode_query(request->content.string(), queries);
-
-	if (queries.find("StudyInstanceUID") == queries.end() || queries.find("destination") == queries.end())
-	{
-		std::string content = "Missing parameters";
-		*response << std::string("HTTP/1.1 400 Bad Request\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
-		return;
-	}
+	std::string studyinstanceuid = request->path_match[1];
 	
-	std::string studyinstanceuid = queries["StudyInstanceUID"];
-	std::string destinationid = queries["destination"];
-
 	try
 	{
 		std::vector<PatientStudy> patient_studies_list;
@@ -557,6 +547,7 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 			into(patient_studies_list), 
 			use(studyinstanceuid);
 
+		patientstudiesselect.execute();
 		if (patient_studies_list.size() != 1)
 		{
 			std::string content = "Study not found";
@@ -564,9 +555,116 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 			return;
 		}
 
+		std::vector<Series> series_list;
+		Poco::Data::Statement seriesselect(dbconnection);
+		seriesselect << "SELECT id,"
+			"SeriesInstanceUID,"
+			"Modality,"
+			"SeriesDescription,"
+			"SeriesNumber,"
+			"SeriesDate,"
+			"patient_study_id,"
+			"createdAt,updatedAt"
+			" FROM series WHERE patient_study_id = ?",
+			into(series_list),
+			use(patient_studies_list[0].id);
+
+		seriesselect.execute();
+
+		boost::property_tree::ptree pt, children;
+
+		for (int i = 0; i < 1; i++)
+		{
+			boost::property_tree::ptree child;
+			child.add("StudyInstanceUID", patient_studies_list[i].StudyInstanceUID);
+			child.add("PatientName", patient_studies_list[i].PatientName);
+			child.add("PatientID", patient_studies_list[i].PatientID);
+			child.add("StudyDate", ToJSON(patient_studies_list[i].StudyDate));
+			child.add("ModalitiesInStudy", patient_studies_list[i].ModalitiesInStudy);
+			child.add("StudyDescription", patient_studies_list[i].StudyDescription);
+			child.add("PatientSex", patient_studies_list[i].PatientSex);
+			child.add("PatientBirthDate", ToJSON(patient_studies_list[i].PatientBirthDate));
+			pt.add_child("study", child);
+		}
+
+		for (int i = 0; i < series_list.size(); i++)
+		{
+			boost::property_tree::ptree child;
+			child.add("SeriesInstanceUID", series_list[i].SeriesInstanceUID);
+			child.add("Modality", series_list[i].Modality);
+			child.add("SeriesDescription", series_list[i].SeriesDescription);
+			child.add("SeriesNumber", series_list[i].SeriesNumber);
+			child.add("SeriesDate", ToJSON(series_list[i].SeriesDate));
+			children.push_back(std::make_pair("", child));
+		}
+
+		pt.add_child("series", children);
+
+		std::ostringstream buf;
+		boost::property_tree::json_parser::write_json(buf, pt, true);
+		std::string content = buf.str();
+		*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+
+	}
+	catch (Poco::Data::DataException &e)
+	{
+		std::string content = "Database Error";
+		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		cloudclient.sendlog(std::string("dberror"), e.displayText());
+		return;
+	}
+}
+
+void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
+{
+	std::map<std::string, std::string> queries;
+	decode_query(request->content.string(), queries);
+
+	if (queries.find("StudyInstanceUID") == queries.end() || queries.find("destination") == queries.end())
+	{
+		std::string content = "Missing parameters";
+		*response << std::string("HTTP/1.1 400 Bad Request\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+	}
+
+	std::string studyinstanceuid = queries["StudyInstanceUID"];
+	std::string destinationid = queries["destination"];
+
+	try
+	{
+		std::vector<PatientStudy> patient_studies_list;
+
+		Poco::Data::Session dbconnection(config::getConnectionString());
+
+		Poco::Data::Statement patientstudiesselect(dbconnection);
+		patientstudiesselect << "SELECT id,"
+			"StudyInstanceUID,"
+			"StudyID,"
+			"AccessionNumber,"
+			"PatientName,"
+			"PatientID,"
+			"StudyDate,"
+			"ModalitiesInStudy,"
+			"StudyDescription,"
+			"PatientSex,"
+			"PatientBirthDate,"
+			"ReferringPhysicianName,"
+			"createdAt,updatedAt"
+			" FROM patient_studies WHERE StudyInstanceUID = ?",
+			into(patient_studies_list),
+			use(studyinstanceuid);
+
+		if (patient_studies_list.size() != 1)
+		{
+			std::string content = "Study not found";
+			*response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+			return;
+		}
+
 		OutgoingSession out_session;
 		boost::uuids::basic_random_generator<boost::mt19937> gen;
-		boost::uuids::uuid u = gen();		
+		boost::uuids::uuid u = gen();
 		out_session.uuid = boost::lexical_cast<std::string>(u);
 		out_session.queued = 1;
 		out_session.StudyInstanceUID = studyinstanceuid;
@@ -576,7 +674,7 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 		out_session.status = "Queued";
 		out_session.created_at = Poco::DateTime();
 		out_session.updated_at = Poco::DateTime();
-		
+
 		Poco::Data::Statement insert(dbconnection);
 		insert << "INSERT INTO outgoing_sessions (id, uuid, queued, StudyInstanceUID, PatientID, PatientName, destination_id, status, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			use(out_session);
