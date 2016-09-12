@@ -45,6 +45,7 @@ HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient
 	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO_URI, this, _1, _2);
 	resource["^/api/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
 	resource["^/api/studies/([0123456789\\.]+)"]["GET"] = boost::bind(&HttpServer::StudyInfo, this, _1, _2);
+	resource["^/image\\?(.+)$"]["GET"] = boost::bind(&HttpServer::GetImage, this, _1, _2);
 	
 	resource["^/api/study/send"]["POST"] = boost::bind(&HttpServer::SendStudy, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
@@ -87,7 +88,7 @@ void HttpServer::NotAcceptable(std::shared_ptr<HttpServer::Response> response, s
 
 bool SendAsDICOM(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid);
 bool SendAsPDF(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid);
-bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid);
+bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid, int width);
 bool SendAsHTML(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid);
 
 void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
@@ -110,6 +111,13 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 		content = "Required fields studyUID, seriesUID, or objectUID missing.";
 		*response << std::string("HTTP/1.1 400 Bad Request\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		return;
+	}
+
+	int width = -1;
+
+	if (queries.find("width") != queries.end())
+	{
+		width = boost::lexical_cast<int>(queries["width"]);
 	}
 
 	std::vector<PatientStudy> patient_studies_list;
@@ -230,7 +238,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 		else if(sopclass.find("1.2.840.10008.5.1.4.1.1.88") != std::string::npos)
 			ok = SendAsHTML(dfile, *response, instances[0].SOPInstanceUID);
 		else
-			ok = SendAsJPEG(dfile, *response, instances[0].SOPInstanceUID);
+			ok = SendAsJPEG(dfile, *response, instances[0].SOPInstanceUID, width);
 
 		if(!ok)
 			SendAsDICOM(dfile, *response, instances[0].SOPInstanceUID);
@@ -251,7 +259,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 	}
 	else if(contenttype == "image/jpeg")
 	{
-		if(!SendAsJPEG(dfile, *response, instances[0].SOPInstanceUID))
+		if (!SendAsJPEG(dfile, *response, instances[0].SOPInstanceUID, width))
 			NotAcceptable(response, request);
 	}
 	else if(contenttype == "text/html")
@@ -304,8 +312,8 @@ bool SendAsDICOM(DcmFileFormat &dfile, HttpServer::Response& response, std::stri
 	return true;
 }
 
-bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid)
-{		
+bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid, int width)
+{
 	boost::filesystem::path newpath = boost::filesystem::unique_path();
 
 	DiJPEGPlugin plugin;
@@ -315,24 +323,38 @@ bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 	DicomImage di(dfile.getDataset(), EXS_Unknown);
 
 	di.getFirstFrame();
-	di.showAllOverlays();			
+	di.showAllOverlays();
 	if (di.isMonochrome())
 	{
-		if(di.getWindowCount())
+		if (di.getWindowCount())
 			di.setWindow(0);
 		else
 			di.setHistogramWindow();
 	}
 
+	DicomImage *imagetouse = &di;
+	DicomImage *scaledimage = NULL;
+
+	if (width != -1)
+	{
+		scaledimage = di.createScaledImage((unsigned long)width);
+		imagetouse = scaledimage;
+	}
+
 #ifdef _WIN32
 	// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
-	int result = di.writePluginFormat(&plugin, newpath.string(std::codecvt_utf8<boost::filesystem::path::value_type>()).c_str());
+	int result = imagetouse->writePluginFormat(&plugin, newpath.string(std::codecvt_utf8<boost::filesystem::path::value_type>()).c_str());
 #else
-	int result = di.writePluginFormat(&plugin, newpath.c_str());
+	int result = imagetouse->writePluginFormat(&plugin, newpath.c_str());
 #endif					
+
+	if (scaledimage)
+		delete scaledimage;
 
 	if(result == 0)
 		return false;	
+
+
 
 	try
 	{
@@ -544,61 +566,86 @@ void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::
 			"ReferringPhysicianName,"
 			"createdAt,updatedAt"
 			" FROM patient_studies WHERE StudyInstanceUID = ?",
-			into(patient_studies_list), 
+			into(patient_studies_list),
 			use(studyinstanceuid);
 
 		patientstudiesselect.execute();
 		if (patient_studies_list.size() != 1)
 		{
 			std::string content = "Study not found";
-			*response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;			
+			*response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 			return;
 		}
 
-		std::vector<Series> series_list;
-		Poco::Data::Statement seriesselect(dbconnection);
-		seriesselect << "SELECT id,"
-			"SeriesInstanceUID,"
-			"Modality,"
-			"SeriesDescription,"
-			"SeriesNumber,"
-			"SeriesDate,"
-			"patient_study_id,"
-			"createdAt,updatedAt"
-			" FROM series WHERE patient_study_id = ?",
-			into(series_list),
-			use(patient_studies_list[0].id);
-
-		seriesselect.execute();
-
-		boost::property_tree::ptree pt, children;
+		boost::property_tree::ptree pt;
 
 		for (int i = 0; i < 1; i++)
 		{
-			boost::property_tree::ptree child;
-			child.add("StudyInstanceUID", patient_studies_list[i].StudyInstanceUID);
-			child.add("PatientName", patient_studies_list[i].PatientName);
-			child.add("PatientID", patient_studies_list[i].PatientID);
-			child.add("StudyDate", ToJSON(patient_studies_list[i].StudyDate));
-			child.add("ModalitiesInStudy", patient_studies_list[i].ModalitiesInStudy);
-			child.add("StudyDescription", patient_studies_list[i].StudyDescription);
-			child.add("PatientSex", patient_studies_list[i].PatientSex);
-			child.add("PatientBirthDate", ToJSON(patient_studies_list[i].PatientBirthDate));
-			pt.add_child("study", child);
-		}
+			boost::property_tree::ptree studyitem;
+			studyitem.add("StudyInstanceUID", patient_studies_list[i].StudyInstanceUID);
+			studyitem.add("PatientName", patient_studies_list[i].PatientName);
+			studyitem.add("PatientID", patient_studies_list[i].PatientID);
+			studyitem.add("StudyDate", ToJSON(patient_studies_list[i].StudyDate));
+			studyitem.add("ModalitiesInStudy", patient_studies_list[i].ModalitiesInStudy);
+			studyitem.add("StudyDescription", patient_studies_list[i].StudyDescription);
+			studyitem.add("PatientSex", patient_studies_list[i].PatientSex);
+			studyitem.add("PatientBirthDate", ToJSON(patient_studies_list[i].PatientBirthDate));
 
-		for (int i = 0; i < series_list.size(); i++)
-		{
-			boost::property_tree::ptree child;
-			child.add("SeriesInstanceUID", series_list[i].SeriesInstanceUID);
-			child.add("Modality", series_list[i].Modality);
-			child.add("SeriesDescription", series_list[i].SeriesDescription);
-			child.add("SeriesNumber", series_list[i].SeriesNumber);
-			child.add("SeriesDate", ToJSON(series_list[i].SeriesDate));
-			children.push_back(std::make_pair("", child));
-		}
+			std::vector<Series> series_list;
+			Poco::Data::Statement seriesselect(dbconnection);
+			seriesselect << "SELECT id,"
+				"SeriesInstanceUID,"
+				"Modality,"
+				"SeriesDescription,"
+				"SeriesNumber,"
+				"SeriesDate,"
+				"patient_study_id,"
+				"createdAt,updatedAt"
+				" FROM series WHERE patient_study_id = ?",
+				into(series_list),
+				use(patient_studies_list[i].id);
 
-		pt.add_child("series", children);
+			seriesselect.execute();			
+
+			boost::property_tree::ptree seriesarray;
+			for (int i = 0; i < series_list.size(); i++)
+			{
+				boost::property_tree::ptree seriesitem;
+				seriesitem.add("SeriesInstanceUID", series_list[i].SeriesInstanceUID);
+				seriesitem.add("Modality", series_list[i].Modality);
+				seriesitem.add("SeriesDescription", series_list[i].SeriesDescription);
+				seriesitem.add("SeriesNumber", series_list[i].SeriesNumber);
+				seriesitem.add("SeriesDate", ToJSON(series_list[i].SeriesDate));
+				
+				std::vector<Instance> instance_list;
+				Poco::Data::Statement instanceselect(dbconnection);
+				instanceselect << "SELECT id,"
+					"SOPInstanceUID,"
+					"InstanceNumber,"
+					"series_id,"
+					"createdAt,updatedAt"
+					" FROM instances WHERE series_id = ?",
+					into(instance_list),
+					use(series_list[i].id);
+
+				instanceselect.execute();
+
+				boost::property_tree::ptree imagesarray;
+				for (int j = 0; j < instance_list.size(); j++)
+				{					
+					boost::property_tree::ptree imageitem;
+					imageitem.put("", instance_list[j].SOPInstanceUID);
+					imagesarray.push_back(std::make_pair("", imageitem));
+				}
+
+				seriesitem.add_child("SOPInstanceUIDs", imagesarray);
+				seriesarray.push_back(std::make_pair("", seriesitem));
+			}
+
+			studyitem.add_child("series", seriesarray);
+
+			pt.add_child("study", studyitem);
+		}		
 
 		std::ostringstream buf;
 		boost::property_tree::json_parser::write_json(buf, pt, true);
@@ -702,4 +749,64 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
 	}
+}
+
+void HttpServer::GetImage(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
+{
+
+	std::string content;
+	std::string querystring = request->path_match[1];
+
+	std::map<std::string, std::string> queries;
+	decode_query(querystring, queries);
+
+	if (queries.find("sopuid") == queries.end())
+	{
+		content = "Required fields sopuid missing.";
+		*response << std::string("HTTP/1.1 400 Bad Request\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+	}
+
+	std::vector<Instance> instances;
+	try
+	{
+
+		Poco::Data::Session dbconnection(config::getConnectionString());
+
+		Poco::Data::Statement instanceselect(dbconnection);
+		instanceselect << "SELECT id,"
+			"SOPInstanceUID,"
+			"InstanceNumber,"
+			"series_id,"
+			"createdAt,updatedAt"
+			" FROM instances WHERE SOPInstanceUID = ?",
+			into(instances),
+			use(queries["sopuid"]);
+
+		instanceselect.execute();
+		if (instances.size() == 0)
+		{
+			content = "Unable to find instance";
+			*response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+			return;
+		}
+
+		if (instances.size() > 1)
+		{
+			content = "More than one instance";
+			*response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+			return;
+		}
+
+
+	}
+	catch (Poco::Data::DataException &e)
+	{
+		content = "Database Error";
+		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		cloudclient.sendlog(std::string("dberror"), e.displayText());
+		return;
+	}
+
+
 }
