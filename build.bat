@@ -10,7 +10,7 @@ SET CL=/MP
 SET GENERATOR="Visual Studio 12 Win64"
 
 cd %DEVSPACE%
-git clone --branch=master https://github.com/madler/zlib.git
+git clone --branch=master --single-branch --depth=1 https://github.com/madler/zlib.git
 cd zlib
 git pull
 mkdir build-%TYPE%
@@ -45,7 +45,7 @@ msbuild /maxcpucount:8 /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
-git clone --branch=openjpeg-2.1 --depth 1 https://github.com/uclouvain/openjpeg.git
+git clone --branch=openjpeg-2.1 --single-branch --depth 1 https://github.com/uclouvain/openjpeg.git
 cd openjpeg
 git pull
 mkdir build-%TYPE%
@@ -66,7 +66,7 @@ if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
 wget -c http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.zip
-if NOT EXIST boost_1_61_0 unzip -n boost_1_61_0.zip
+if NOT EXIST boost_1_61_0 unzip -q -o boost_1_61_0.zip
 cd boost_1_61_0
 call bootstrap
 SET COMMONb2Flag=toolset=msvc-12.0 address-model=64 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 stage
@@ -86,7 +86,7 @@ if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
 
 cd %DEVSPACE%
-git clone https://github.com/awslabs/aws-sdk-cpp.git
+git clone --single-branch --depth=1 https://github.com/awslabs/aws-sdk-cpp.git
 cd aws-sdk-cpp
 git pull
 mkdir build-%TYPE%
@@ -97,7 +97,7 @@ msbuild /maxcpucount:8 /p:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
-git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch
+git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch --depth=1
 cd poco
 mkdir build-%TYPE%
 cd build-%TYPE%
@@ -106,7 +106,7 @@ msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
-git clone --recurse-submodules https://github.com/socketio/socket.io-client-cpp.git
+git clone --recurse-submodules --depth=1 https://github.com/socketio/socket.io-client-cpp.git
 cd socket.io-client-cpp
 powershell "gci . CMakeLists.txt | ForEach { (Get-Content $_ | ForEach {$_ -replace 'Boost_USE_STATIC_RUNTIME OFF', 'Boost_USE_STATIC_RUNTIME ON'}) | Set-Content $_ }"
 mkdir build-%TYPE%
