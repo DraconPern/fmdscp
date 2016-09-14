@@ -47,7 +47,7 @@ HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient
 	resource["^/api/studies/([0123456789\\.]+)"]["GET"] = boost::bind(&HttpServer::StudyInfo, this, _1, _2);
 	resource["^/image\\?(.+)$"]["GET"] = boost::bind(&HttpServer::GetImage, this, _1, _2);
 	
-	resource["^/api/study/send"]["POST"] = boost::bind(&HttpServer::SendStudy, this, _1, _2);
+	resource["^/api/studies/([0123456789\\.]+)/send"]["POST"] = boost::bind(&HttpServer::SendStudy, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
 	resource["^/api/shutdown"]["POST"] = boost::bind(&HttpServer::Shutdown, this, _1, _2);
 	default_resource["GET"] = boost::bind(&HttpServer::NotFound, this, _1, _2);
@@ -675,7 +675,7 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 		return;
 	}
 
-	std::string studyinstanceuid = queries["StudyInstanceUID"];
+	std::string studyinstanceuid = request->path_match[1];	
 	std::string destinationid = queries["destination"];
 
 	try

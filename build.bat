@@ -109,6 +109,8 @@ cd %DEVSPACE%
 git clone --recurse-submodules --depth=1 https://github.com/socketio/socket.io-client-cpp.git
 cd socket.io-client-cpp
 powershell "gci . CMakeLists.txt | ForEach { (Get-Content $_ | ForEach {$_ -replace 'Boost_USE_STATIC_RUNTIME OFF', 'Boost_USE_STATIC_RUNTIME ON'}) | Set-Content $_ }"
+REM remove problematic line
+powershell "gci . CMakeLists.txt | ForEach { (Get-Content $_ | ForEach {$_ -replace 'install\(FILES \${Boost_LIBRARIES\}', 'install(FILES ${Boost_LIBRARIES_DISABLE}'}) | Set-Content $_ }"
 mkdir build-%TYPE%
 cd build-%TYPE%
 cmake .. -G %GENERATOR% -DCMAKE_BUILD_TYPE=%TYPE% -DBOOST_ROOT=%DEVSPACE%\boost_1_61_0 -DBOOST_VER="" -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od"
