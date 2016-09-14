@@ -52,7 +52,7 @@ void Sender::SetFileList(const naturalpathmap &instances)
 void Sender::SetStatus(std::string msg)
 {
 	Poco::Data::Session dbconnection(config::getConnectionString());
-	dbconnection << "UPDATE outgoing_sessions SET status = ?, updated_at = NOW() WHERE uuid = ?", use(msg), boost::uuids::to_string(uuid), now;
+	dbconnection << "UPDATE outgoing_sessions SET status = ?, updatedAt = NOW() WHERE uuid = ?", use(msg), use(boost::uuids::to_string(uuid)), now;
 }
 
 void Sender::DoSendAsync()
@@ -212,6 +212,7 @@ int Sender::SendABatch()
 			itr++;
 		}
 		
+		SetStatus(boost::lexical_cast<std::string>(totalfiles - instances.size()) + " of " + boost::lexical_cast<std::string>(totalfiles)+" sent");
 
 		DCMNET_INFO("\n");
 	}
