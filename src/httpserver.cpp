@@ -371,6 +371,9 @@ bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 			std::ostreambuf_iterator<char> begin_dest(response); 
 			std::copy(begin_source, end_source, begin_dest);
 		}		
+
+		boost::system::error_code ecode;
+		boost::filesystem::remove(newpath, ecode);
 	}
 	catch(...)
 	{		
@@ -668,7 +671,7 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 	std::map<std::string, std::string> queries;
 	decode_query(request->content.string(), queries);
 
-	if (queries.find("StudyInstanceUID") == queries.end() || queries.find("destination") == queries.end())
+	if (queries.find("destination") == queries.end())
 	{
 		std::string content = "Missing parameters";
 		*response << std::string("HTTP/1.1 400 Bad Request\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
@@ -702,6 +705,7 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 			into(patient_studies_list),
 			use(studyinstanceuid);
 
+		patientstudiesselect.execute();
 		if (patient_studies_list.size() != 1)
 		{
 			std::string content = "Study not found";
@@ -732,7 +736,7 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 		boost::property_tree::ptree pt, children;
 
 		std::ostringstream str;
-		str << out_session.id;
+		str << out_session.uuid;
 		pt.add("result", str.str());
 
 		std::ostringstream buf;

@@ -44,7 +44,7 @@ bool SenderService::getQueued(OutgoingSession &outgoingsession)
 
 		if (sessions.size() > 0)
 		{
-			dbconnection << "UPDATE outgoing_sessions SET queued = 0 WHERE id = :id AND queued = 1", sessions[0].id, now;
+			dbconnection << "UPDATE outgoing_sessions SET queued = 0 WHERE id = ? AND queued = 1", use(sessions[0].id), now;
 			int rowcount = 0;
 			dbconnection << "SELECT ROW_COUNT()", into(rowcount), now;
 
@@ -161,7 +161,7 @@ bool SenderService::findDestination(int id, Destination &destination)
 		dbconnection << "SELECT id,"
 			"name, destinationhost, destinationport, destinationAE, sourceAE,"
 			"createdAt,updatedAt"
-			" FROM destinations WHERE id = :id LIMIT 1",
+			" FROM destinations WHERE id = ? LIMIT 1",
 			into(dests),
 			use(id), now;
 
@@ -184,34 +184,74 @@ bool SenderService::GetFilesToSend(std::string studyinstanceuid, naturalpathmap 
 	{
 		// open the db
 		Poco::Data::Session dbconnection(config::getConnectionString());
-		std::vector<PatientStudy> studies;
-		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = :StudyInstanceUID LIMIT 1", into(studies),
-			use(studyinstanceuid), now;
-		if (studies.size() <= 0)
+
+		std::vector<PatientStudy> patient_studies_list;
+
+		Poco::Data::Statement patientstudiesselect(dbconnection);
+		patientstudiesselect << "SELECT id,"
+			"StudyInstanceUID,"
+			"StudyID,"
+			"AccessionNumber,"
+			"PatientName,"
+			"PatientID,"
+			"StudyDate,"
+			"ModalitiesInStudy,"
+			"StudyDescription,"
+			"PatientSex,"
+			"PatientBirthDate,"
+			"ReferringPhysicianName,"
+			"createdAt,updatedAt"
+			" FROM patient_studies WHERE StudyInstanceUID = ?",
+			into(patient_studies_list),
+			use(studyinstanceuid);
+
+		patientstudiesselect.execute();
+		
+		if (patient_studies_list.size() <= 0)
 		{
 			throw std::exception();
 		}
 
 		std::vector<Series> series_list;
-		dbconnection << "SELECT * FROM series WHERE StudyInstanceUID = :StudyInstanceUID", into(series_list), use(studyinstanceuid), now;
+		Poco::Data::Statement seriesselect(dbconnection);
+		seriesselect << "SELECT id,"
+			"SeriesInstanceUID,"
+			"Modality,"
+			"SeriesDescription,"
+			"SeriesNumber,"
+			"SeriesDate,"
+			"patient_study_id,"
+			"createdAt,updatedAt"
+			" FROM series WHERE patient_study_id = ?",
+			into(series_list),
+			use(patient_studies_list[0].id);
 
+		seriesselect.execute();
 		for (std::vector<Series>::iterator itr = series_list.begin(); itr != series_list.end(); itr++)
-		{
-			std::string seriesinstanceuid = (*itr).SeriesInstanceUID;
-			std::vector<Instance> instances;
-			dbconnection << "SELECT * FROM instances WHERE SeriesInstanceUID = :SeriesInstanceUID", into(instances), use(seriesinstanceuid), now;
+		{						
+			std::vector<Instance> instance_list;
+			Poco::Data::Statement instanceselect(dbconnection);
+			instanceselect << "SELECT id,"
+				"SOPInstanceUID,"
+				"InstanceNumber,"
+				"series_id,"
+				"createdAt,updatedAt"
+				" FROM instances WHERE series_id = ?",
+				into(instance_list),
+				use(itr->id);
+
+			instanceselect.execute();
 
 			boost::filesystem::path serieslocation;
 			serieslocation = config::getStoragePath();
 			serieslocation /= studyinstanceuid;
-			serieslocation /= seriesinstanceuid;
+			serieslocation /= itr->SeriesInstanceUID;
 
-			for (std::vector<Instance>::iterator itr2 = instances.begin(); itr2 != instances.end(); itr2++)
+			for (std::vector<Instance>::iterator itr2 = instance_list.begin(); itr2 != instance_list.end(); itr2++)
 			{
 				boost::filesystem::path filename = serieslocation;
 				filename /= (*itr2).SOPInstanceUID + ".dcm";
-				result.insert(std::pair<std::string, boost::filesystem::path>((*itr2).SOPInstanceUID, filename));
-				itr2++;
+				result.insert(std::pair<std::string, boost::filesystem::path>((*itr2).SOPInstanceUID, filename));				
 			}
 		}
 	}
