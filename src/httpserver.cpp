@@ -48,6 +48,7 @@ HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient
 	resource["^/image\\?(.+)$"]["GET"] = boost::bind(&HttpServer::GetImage, this, _1, _2);
 	
 	resource["^/api/studies/([0123456789\\.]+)/send"]["POST"] = boost::bind(&HttpServer::SendStudy, this, _1, _2);
+	resource["^/api/outsessions"]["GET"] = boost::bind(&HttpServer::GetOutSessions, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
 	resource["^/api/shutdown"]["POST"] = boost::bind(&HttpServer::Shutdown, this, _1, _2);
 	default_resource["GET"] = boost::bind(&HttpServer::NotFound, this, _1, _2);
@@ -813,4 +814,59 @@ void HttpServer::GetImage(std::shared_ptr<HttpServer::Response> response, std::s
 	}
 
 
+}
+
+void HttpServer::GetOutSessions(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
+{
+	try
+	{
+		Poco::Data::Session dbconnection(config::getConnectionString());
+
+		std::vector<OutgoingSession> out_sessions;
+		Poco::Data::Statement outsessionsselect(dbconnection);
+		outsessionsselect << "SELECT id,"
+			"uuid,"
+			"queued,"
+			"StudyInstanceUID,"
+			"PatientID,"
+			"PatientName,"
+			"destination_id,"
+			"status,"			
+			"createdAt,updatedAt"
+			" FROM outgoing_sessions",
+			into(out_sessions);
+
+		outsessionsselect.execute();
+		
+		boost::property_tree::ptree pt, children;
+
+		for (int i = 0; i < out_sessions.size(); i++)
+		{
+			boost::property_tree::ptree child;
+			child.add("id", out_sessions[i].id);
+			child.add("uuid", out_sessions[i].uuid);
+			child.add("StudyInstanceUID", out_sessions[i].StudyInstanceUID);
+			child.add("PatientID", out_sessions[i].PatientID);
+			child.add("PatientName", out_sessions[i].PatientName);
+			child.add("status", out_sessions[i].status);
+			child.add("updated_at", ToJSON(out_sessions[i].updated_at));
+			children.push_back(std::make_pair("", child));
+		}
+
+		pt.add_child("sessions", children);
+		
+		std::ostringstream buf;
+		boost::property_tree::json_parser::write_json(buf, pt, true);
+		std::string content = buf.str();
+		*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+
+	}
+	catch (Poco::Data::DataException &e)
+	{
+		std::string content = "Database Error";
+		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		cloudclient.sendlog(std::string("dberror"), e.displayText());
+		return;
+	}
 }

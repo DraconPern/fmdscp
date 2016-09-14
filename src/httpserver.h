@@ -22,6 +22,8 @@ public:
 	void StudyInfo(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 	void GetImage(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 
+	void GetOutSessions(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
+
 protected:	
 	std::function< void(void) > shutdownCallback;
 	CloudClient &cloudclient;
