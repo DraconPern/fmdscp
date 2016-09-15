@@ -837,19 +837,40 @@ void HttpServer::GetOutSessions(std::shared_ptr<HttpServer::Response> response, 
 			into(out_sessions);
 
 		outsessionsselect.execute();
-		
+
+		std::vector<Destination> destination_list;
+		Poco::Data::Statement stselect(dbconnection);
+		stselect << "SELECT id,"
+			"name,"
+			"destinationhost,"
+			"destinationport,"
+			"destinationAE,"
+			"sourceAE,"
+			"createdAt,updatedAt"
+			" FROM destinations",
+			into(destination_list);
+		stselect.execute();
+				
 		boost::property_tree::ptree pt, children;
 
 		for (int i = 0; i < out_sessions.size(); i++)
 		{
+			int destination_id = out_sessions[i].destination_id;
+			auto it = find_if(destination_list.begin(), destination_list.end(), [&destination_id](const Destination& obj) {return obj.id == destination_id; });
+
 			boost::property_tree::ptree child;
 			child.add("id", out_sessions[i].id);
 			child.add("uuid", out_sessions[i].uuid);
 			child.add("StudyInstanceUID", out_sessions[i].StudyInstanceUID);
 			child.add("PatientID", out_sessions[i].PatientID);
 			child.add("PatientName", out_sessions[i].PatientName);
+			child.add("destination_id", out_sessions[i].destination_id);
+			if (it != destination_list.end())
+				child.add("destination_name", it->name);
+			else
+				child.add("destination_name", "");
 			child.add("status", out_sessions[i].status);
-			child.add("updated_at", ToJSON(out_sessions[i].updated_at));
+			child.add("updatedAt", ToJSON(out_sessions[i].updated_at));
 			children.push_back(std::make_pair("", child));
 		}
 

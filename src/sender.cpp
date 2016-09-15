@@ -52,7 +52,7 @@ void Sender::SetFileList(const naturalpathmap &instances)
 void Sender::SetStatus(std::string msg)
 {
 	Poco::Data::Session dbconnection(config::getConnectionString());
-	dbconnection << "UPDATE outgoing_sessions SET status = ?, updatedAt = NOW() WHERE uuid = ?", use(msg), use(boost::uuids::to_string(uuid)), now;
+	dbconnection << "UPDATE outgoing_sessions SET status = ?, updatedAt = ? WHERE uuid = ?", use(msg), use(Poco::DateTime()), use(boost::uuids::to_string(uuid)), now;
 }
 
 void Sender::DoSendAsync()
