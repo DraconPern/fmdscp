@@ -833,7 +833,7 @@ void HttpServer::GetOutSessions(std::shared_ptr<HttpServer::Response> response, 
 			"destination_id,"
 			"status,"			
 			"createdAt,updatedAt"
-			" FROM outgoing_sessions ORDER BY updatedAt DESC LIMIT 100",
+			" FROM outgoing_sessions ORDER BY createdAt DESC LIMIT 100",
 			into(out_sessions);
 
 		outsessionsselect.execute();
