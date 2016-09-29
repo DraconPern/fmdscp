@@ -3,6 +3,8 @@
 
 #include "sio_client.h"
 #include <boost/function.hpp>
+#include "Poco/DateTime.h"
+#include "model.h"
 
 using namespace sio;
 
@@ -16,6 +18,7 @@ public:
 	void stop();
 
 	void sendlog(std::string &context, std::string &message);
+	void send_updateoutsessionitem(OutgoingSession &outgoingsession, std::string &destination_name);
 
 	// Initiate sending to cloud.  cloud will ask for chunks from us with OnUpload
 	void StartUpload_dicom(/* some metadata about what we are going to upload, including total size */);

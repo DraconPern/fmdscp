@@ -22,7 +22,8 @@ using namespace Poco::Data::Keywords;
 #define UNICODE 1
 #endif
 
-SenderService::SenderService()
+SenderService::SenderService(CloudClient &cloudclient) :
+	cloudclient(cloudclient)
 {
 	shutdownEvent = false;
 }
@@ -81,7 +82,9 @@ void SenderService::run_internal()
 				DCMNET_INFO(" to " << destination.destinationhost << ":" << destination.destinationport <<
 					" destinationAE = " << destination.destinationAE << " sourceAE = " << destination.sourceAE);
 
-				boost::shared_ptr<Sender> sender(new Sender(boost::lexical_cast<boost::uuids::uuid>(outgoingsession.uuid)));
+				cloudclient.send_updateoutsessionitem(outgoingsession, destination.name);
+
+				boost::shared_ptr<Sender> sender(new Sender(boost::lexical_cast<boost::uuids::uuid>(outgoingsession.uuid), cloudclient));
 				sender->Initialize(destination);
 
 				naturalpathmap files;

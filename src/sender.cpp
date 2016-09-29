@@ -27,7 +27,8 @@ using namespace Poco::Data::Keywords;
 #endif
 
 
-Sender::Sender(boost::uuids::uuid uuid)
+Sender::Sender(boost::uuids::uuid uuid, CloudClient &cloudclient) :
+	cloudclient(cloudclient)
 {			
 	this->uuid = uuid;
 
@@ -52,7 +53,37 @@ void Sender::SetFileList(const naturalpathmap &instances)
 void Sender::SetStatus(std::string msg)
 {
 	Poco::Data::Session dbconnection(config::getConnectionString());
-	dbconnection << "UPDATE outgoing_sessions SET status = ?, updatedAt = ? WHERE uuid = ?", use(msg), use(Poco::DateTime()), use(boost::uuids::to_string(uuid)), now;
+	Poco::DateTime rightnow;
+
+	std::string uuidstring = boost::uuids::to_string(uuid);
+	
+	std::vector<OutgoingSession> out_sessions;
+	Poco::Data::Statement outsessionsselect(dbconnection);
+	outsessionsselect << "SELECT id,"
+		"uuid,"
+		"queued,"
+		"StudyInstanceUID,"
+		"PatientID,"
+		"PatientName,"
+		"destination_id,"
+		"status,"
+		"createdAt,updatedAt"
+		" FROM outgoing_sessions WHERE uuid = ?",
+		into(out_sessions), use(uuidstring);
+	 
+	outsessionsselect.execute();
+
+	if (out_sessions.size() == 1)
+	{
+		out_sessions[0].status = msg;
+		out_sessions[0].updated_at = rightnow;
+
+		Poco::Data::Statement update(dbconnection);
+		update << "UPDATE outgoing_sessions SET status = ?, updatedAt = ? WHERE uuid = ?", use(msg), use(rightnow), use(out_sessions[0].uuid);
+		update.execute();
+
+		cloudclient.send_updateoutsessionitem(out_sessions[0], destination.name);
+	}
 }
 
 void Sender::DoSendAsync()

@@ -6,10 +6,12 @@
 #include "sender.h"
 #include <map>
 
+#include "cloudclient.h"
+
 class SenderService
 {
 public:
-	SenderService();	
+	SenderService(CloudClient &cloudclient);
 	void run();
 	void run_internal();
 	void stop();
@@ -25,6 +27,8 @@ protected:
 
 	typedef std::list<boost::shared_ptr<Sender> > sharedptrlist;
 	sharedptrlist senders;
+
+	CloudClient &cloudclient;
 };
 
 #endif

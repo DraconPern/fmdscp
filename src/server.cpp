@@ -8,6 +8,7 @@
 
 server::server(boost::function< void(void) > shutdownCallback) :
 	httpserver(shutdownCallback, cloudclient),
+	senderService(cloudclient),
 	cloudclient(shutdownCallback)
 {
 	// configure logging
@@ -46,7 +47,7 @@ server::~server()
 void server::run_async()
 {	
 	// connect to cloud
-	cloudclient.connect("http://localhost:8090");
+	cloudclient.connect("http://localhost:3000");
 
 	// add scp
 	threads.create_thread(boost::bind(&MyDcmSCPPool::listen, &storageSCP));

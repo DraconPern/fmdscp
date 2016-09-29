@@ -9,6 +9,8 @@
 #include <boost/thread.hpp>
 #include "model.h"
 
+#include "cloudclient.h"
+
 // typedef std::set<boost::filesystem::path, doj::alphanum_less<boost::filesystem::path> > naturalset;
 typedef std::map<std::string, boost::filesystem::path, doj::alphanum_less<std::string> > naturalpathmap;
 
@@ -16,7 +18,7 @@ class Sender
 {
 
 public:
-	Sender(boost::uuids::uuid uuid);
+	Sender(boost::uuids::uuid uuid, CloudClient &cloudclient);
 	~Sender(void);
 
 	void Initialize(Destination &destination);
@@ -55,6 +57,8 @@ protected:
 
 	typedef std::map<std::string, std::set<std::string> > mapset;
 	mapset sopclassuidtransfersyntax;
+
+	CloudClient &cloudclient;
 };
 
 
