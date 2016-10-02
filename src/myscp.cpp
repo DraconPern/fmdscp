@@ -26,8 +26,8 @@
 #endif
 
 
-MySCP::MySCP()
-	: DcmThreadSCP()
+MySCP::MySCP(CloudClient &cloudclient)
+	: DcmThreadSCP(), cloudclient(cloudclient)
 {
 	// do per association initialization	
 }
@@ -224,7 +224,7 @@ OFCondition MySCP::handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage,
 {
 	OFCondition status = EC_IllegalParameter;
 
-	MoveHandler handler(getAETitle().c_str(), getPeerAETitle().c_str());
+	MoveHandler handler(getAETitle().c_str(), getPeerAETitle().c_str(), uuid_, cloudclient);
 	status = DIMSE_moveProvider(assoc_, presID, &reqMessage, MoveHandler::MoveCallback, &handler, getDIMSEBlockingMode(), getDIMSETimeout());
 
 	return status;
@@ -259,7 +259,7 @@ OFCondition MyDcmSCPPool::MySCPWorker::workerListen(T_ASC_Association* const ass
 	return cond;
 }
 
-MyDcmSCPPool::MyDcmSCPPool() : DcmBaseSCPPool()
+MyDcmSCPPool::MyDcmSCPPool(CloudClient &cloudclient) : cloudclient(cloudclient)
 {
 	setMaxThreads(50);
 	getConfig().setConnectionBlockingMode(DUL_NOBLOCK);

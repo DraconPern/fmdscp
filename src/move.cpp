@@ -35,15 +35,83 @@ void MoveHandler::MoveCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_M
 	handler->MoveCallback(cancelled, request, requestIdentifiers, responseCount, response, statusDetail, responseIdentifiers);
 }
 
-MoveHandler::MoveHandler(std::string aetitle, std::string peeraetitle)
-{
-	this->aetitle = aetitle;
-	this->peeraetitle = peeraetitle;
-	net = NULL;
-	assoc = NULL;
+MoveHandler::MoveHandler(std::string aetitle, std::string peeraetitle, boost::uuids::uuid uuid, CloudClient &cloudclient) :
+	aetitle(aetitle), peeraetitle(peeraetitle), uuid(uuid), cloudclient(cloudclient)
+{	
 	nCompleted = nFailed = nWarning = 0;
 }
 
+// copy of Sender::Initialize
+void MoveHandler::Initialize(Destination &destination)
+{
+	this->destination = destination;
+}
+
+// copy of Sender::SetFileList
+void MoveHandler::SetFileList(const naturalpathmap &instances)
+{
+	this->instances = instances;
+	totalfiles = instances.size();
+}
+
+void MoveHandler::SetStatus(std::string msg)
+{
+	Poco::Data::Session dbconnection(config::getConnectionString());
+	Poco::DateTime rightnow;
+
+	std::string uuidstring = boost::uuids::to_string(uuid);
+
+	std::vector<OutgoingSession> out_sessions;
+	Poco::Data::Statement outsessionsselect(dbconnection);
+	outsessionsselect << "SELECT id,"
+		"uuid,"
+		"queued,"
+		"StudyInstanceUID,"
+		"PatientID,"
+		"PatientName,"
+		"destination_id,"
+		"status,"
+		"createdAt,updatedAt"
+		" FROM outgoing_sessions WHERE uuid = ?",
+		into(out_sessions), use(uuidstring);
+
+	outsessionsselect.execute();
+
+	if (out_sessions.size() == 1)
+	{
+		out_sessions[0].status = msg;
+		out_sessions[0].updated_at = rightnow;
+
+		Poco::Data::Statement update(dbconnection);
+		update << "UPDATE outgoing_sessions SET status = ?, updatedAt = ? WHERE uuid = ?", use(msg), use(rightnow), use(out_sessions[0].uuid);
+		update.execute();
+
+		cloudclient.send_updateoutsessionitem(out_sessions[0], destination.name);
+	}
+}
+
+void MoveHandler::CreateOutgoingSession(std::string StudyInstanceUID, std::string PatientID, std::string PatientName)
+{
+	Poco::Data::Session dbconnection(config::getConnectionString());	
+	
+	OutgoingSession out_session;	
+	out_session.uuid = boost::lexical_cast<std::string>(uuid);
+	out_session.queued = 0;
+	out_session.StudyInstanceUID = StudyInstanceUID;
+	out_session.PatientID = PatientID;
+	out_session.PatientName = PatientName;
+	out_session.destination_id = boost::lexical_cast<int>(destination.id);	
+	out_session.status = "Starting...";
+	out_session.created_at = Poco::DateTime();
+	out_session.updated_at = Poco::DateTime();
+
+	Poco::Data::Statement insert(dbconnection);
+	insert << "INSERT INTO outgoing_sessions (id, uuid, queued, StudyInstanceUID, PatientID, PatientName, destination_id, status, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		use(out_session);
+	insert.execute();
+
+	dbconnection << "SELECT LAST_INSERT_ID()", into(out_session.id), now;
+}
 
 void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_MoveRSP *response, DcmDataset **statusDetail, DcmDataset **responseIdentifiers)
 {
@@ -59,57 +127,50 @@ void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmD
 		log << "Move Destination: " << request->MoveDestination;
 		DCMNET_INFO(log.str());
 
-
-		OFString studyuid;
-		requestIdentifiers->findAndGetOFString(DCM_StudyInstanceUID, studyuid);		
-		if(studyuid.size() > 0)
-		{			
-			if(GetFilesToSend(studyuid.c_str(), instances))
-			{								
-				DCMNET_INFO("Number of files to send: " << instances.size());
-
-				if (instances.size() > 0)
-				{
-					// scan the files for sop class
-					scanFiles();
-
-					dimseStatus = STATUS_Pending;
-				}
-				else
-					dimseStatus = STATUS_Success;									
-			}
-			else
-				dimseStatus = STATUS_MOVE_Failed_UnableToProcess;
-		}
-		else		
-			dimseStatus = STATUS_MOVE_Failed_IdentifierDoesNotMatchSOPClass;
-
-		if(dimseStatus == STATUS_Pending)
+		try
 		{
-			// get the destination
-			Destination destination;
+			OFString studyuid;
+			requestIdentifiers->findAndGetOFString(DCM_StudyInstanceUID, studyuid);
+			if (studyuid.size() <= 0)
+				throw STATUS_MOVE_Failed_IdentifierDoesNotMatchSOPClass;
+
+			std::string PatientID, PatientName;
+			if (!GetFilesToSend(studyuid.c_str(), instances, PatientID, PatientName))
+				throw STATUS_MOVE_Failed_UnableToProcess;
+
+			totalfiles = instances.size();
+			DCMNET_INFO("Number of files to send: " << instances.size());
+
+			if (instances.size() <= 0)
+				throw STATUS_Success;
+
+			// scan the files for sop class and syntax
+			scanFiles();
+
+			// get the destination			
 			destination.destinationAE = request->MoveDestination;
-			if(mapMoveDestination(destination.destinationAE, destination))
-			{							
-				DCMNET_INFO("Destination: " << destination.destinationhost << ":" << destination.destinationport
-				 << " Destination AE: " << destination.destinationAE << " Source AE: " << destination.sourceAE);
-				
-				// start the sending association
-				if(buildSubAssociation(request, destination).good())
-				{
-					dimseStatus = STATUS_Pending;
-				}
-				else
-				{
-					// failed to build association, must fail move
-					// dimseStatus = failAllSubOperations();
-            
-					dimseStatus = STATUS_MOVE_Refused_OutOfResourcesSubOperations;				
-				}
+			if (!findDestination(destination.destinationAE, destination))
+				throw STATUS_MOVE_Failed_MoveDestinationUnknown;
+			
+			CreateOutgoingSession(studyuid.c_str(), PatientID, PatientName);
+
+			DCMNET_INFO("Destination: " << destination.destinationhost << ":" << destination.destinationport
+				<< " Destination AE: " << destination.destinationAE << " Source AE: " << destination.sourceAE);
+
+			// start the sending association				
+			if (buildSubAssociation(request, destination).bad())
+			{
+				// dimseStatus = failAllSubOperations();
+				throw STATUS_MOVE_Refused_OutOfResourcesSubOperations;
 			}
-			else
-				dimseStatus = STATUS_MOVE_Failed_MoveDestinationUnknown;			
+						
+			dimseStatus = STATUS_Pending;
 		}
+		catch (int thrown_dimseStatus)
+		{
+			dimseStatus = thrown_dimseStatus;
+		}
+		
 	}	//  responseCount == 1
 
 	if (cancelled && dimseStatus == STATUS_Pending)
@@ -120,13 +181,13 @@ void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmD
 	// no errors, let's send one image
 	if(dimseStatus == STATUS_Pending)
 	{
-		dimseStatus = moveNextImage();
+		dimseStatus = moveNextImage(request->MessageID);
 	}
 
 	// no more images?
     if (dimseStatus != STATUS_Pending)
-    {        
-        closeSubAssociation();
+    {   
+		scu.releaseAssociation();        
      
         if (nFailed > 0 || nWarning > 0)
         {
@@ -171,39 +232,83 @@ void MoveHandler::addFailedUIDInstance(const char *sopInstance)
     }
 }
 
-bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalpathmap &result)
+bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalpathmap &result, std::string &PatientName, std::string &PatientID)
 {
 	try
-	{				
+	{
 		// open the db
 		Poco::Data::Session dbconnection(config::getConnectionString());
-		std::vector<PatientStudy> studies;
-		dbconnection << "SELECT * FROM patient_studies WHERE StudyInstanceUID = ? LIMIT 1", into(studies),
-			use(studyinstanceuid), now;
-		if(studies.size() <= 0)
-		{			
+
+		std::vector<PatientStudy> patient_studies_list;
+
+		Poco::Data::Statement patientstudiesselect(dbconnection);
+		patientstudiesselect << "SELECT id,"
+			"StudyInstanceUID,"
+			"StudyID,"
+			"AccessionNumber,"
+			"PatientName,"
+			"PatientID,"
+			"StudyDate,"
+			"ModalitiesInStudy,"
+			"StudyDescription,"
+			"PatientSex,"
+			"PatientBirthDate,"
+			"ReferringPhysicianName,"
+			"createdAt,updatedAt"
+			" FROM patient_studies WHERE StudyInstanceUID = ?",
+			into(patient_studies_list),
+			use(studyinstanceuid);
+
+		patientstudiesselect.execute();
+
+		if (patient_studies_list.size() <= 0)
+		{
 			throw std::exception();
 		}
-		
+
+		PatientID = patient_studies_list[0].PatientID;
+		PatientName = patient_studies_list[0].PatientName;
+
 		std::vector<Series> series_list;
-		dbconnection << "SELECT * FROM series WHERE patient_study_id = ?", into(series_list), use(studies[0].id), now;
-		
-		for(std::vector<Series>::iterator itr = series_list.begin(); itr != series_list.end(); itr++)
+		Poco::Data::Statement seriesselect(dbconnection);
+		seriesselect << "SELECT id,"
+			"SeriesInstanceUID,"
+			"Modality,"
+			"SeriesDescription,"
+			"SeriesNumber,"
+			"SeriesDate,"
+			"patient_study_id,"
+			"createdAt,updatedAt"
+			" FROM series WHERE patient_study_id = ?",
+			into(series_list),
+			use(patient_studies_list[0].id);
+
+		seriesselect.execute();
+		for (std::vector<Series>::iterator itr = series_list.begin(); itr != series_list.end(); itr++)
 		{
-			std::string seriesinstanceuid = (*itr).SeriesInstanceUID;
-			std::vector<Instance> instances;
-			dbconnection << "SELECT * FROM instances WHERE series_id = ?", into(instances), use((*itr).id), now;
-					
+			std::vector<Instance> instance_list;
+			Poco::Data::Statement instanceselect(dbconnection);
+			instanceselect << "SELECT id,"
+				"SOPInstanceUID,"
+				"InstanceNumber,"
+				"series_id,"
+				"createdAt,updatedAt"
+				" FROM instances WHERE series_id = ?",
+				into(instance_list),
+				use(itr->id);
+
+			instanceselect.execute();
+
 			boost::filesystem::path serieslocation;
 			serieslocation = config::getStoragePath();
 			serieslocation /= studyinstanceuid;
-			serieslocation /= seriesinstanceuid;
+			serieslocation /= itr->SeriesInstanceUID;
 
-			for(std::vector<Instance>::iterator itr2 = instances.begin(); itr2 != instances.end(); itr2++)			
+			for (std::vector<Instance>::iterator itr2 = instance_list.begin(); itr2 != instance_list.end(); itr2++)
 			{
 				boost::filesystem::path filename = serieslocation;
 				filename /= (*itr2).SOPInstanceUID + ".dcm";
-				result.insert(std::pair<std::string, boost::filesystem::path>((*itr2).SOPInstanceUID, filename));				
+				result.insert(std::pair<std::string, boost::filesystem::path>((*itr2).SOPInstanceUID, filename));
 			}
 		}
 	}
@@ -215,23 +320,27 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalpathmap &r
 	return true;
 }
 
-bool MoveHandler::mapMoveDestination(std::string destinationAE, Destination &destination)
+bool MoveHandler::findDestination(std::string destinationAE, Destination &destination)
 {
 	try
 	{
 		Poco::Data::Session dbconnection(config::getConnectionString());
-		
-		Poco::Data::Statement destinationsselect(dbconnection);
-		destinationsselect << "SELECT * FROM destinations WHERE destinationAE = ? LIMIT 1",
-			into(destination),
-			use(destinationAE);
 
-		if(destinationsselect.execute())
+		std::vector<Destination> dests;
+		dbconnection << "SELECT id,"
+			"name, destinationhost, destinationport, destinationAE, sourceAE,"
+			"createdAt,updatedAt"
+			" FROM destinations WHERE destinationAE = ? LIMIT 1",
+			into(dests),
+			use(destinationAE), now;
+
+		if (dests.size() > 0)
 		{
+			destination = dests[0];
 			return true;
 		}
 	}
-	catch(...)
+	catch (...)
 	{
 
 	}
@@ -242,131 +351,48 @@ OFCondition MoveHandler::buildSubAssociation(T_DIMSE_C_MoveRQ *request, Destinat
 {
 	OFCondition cond;
 
-	try
+	scu.setVerbosePCMode(true);
+	scu.setAETitle(destination.sourceAE.c_str());
+	scu.setPeerHostName(destination.destinationhost.c_str());
+	scu.setPeerPort(destination.destinationport);
+	scu.setPeerAETitle(destination.destinationAE.c_str());
+	scu.setACSETimeout(30);
+	scu.setDIMSETimeout(60);
+	scu.setDatasetConversionMode(true);
+
+	OFList<OFString> defaulttransfersyntax;
+	defaulttransfersyntax.push_back(UID_LittleEndianExplicitTransferSyntax);
+
+	// for every class..
+	for (mapset::iterator it = sopclassuidtransfersyntax.begin(); it != sopclassuidtransfersyntax.end(); it++)
 	{
-		T_ASC_Parameters *params = NULL;
-
-		int acse_timeout = 20;
-		cond = ASC_initializeNetwork(NET_REQUESTOR, 0, acse_timeout, &net);
-		if (cond.bad())
-		{		
-			OFString tempStr;
-			DCMNET_ERROR(DimseCondition::dump(tempStr, cond));
-			throw std::runtime_error("ASC_initializeNetwork");
-		}
-
-		cond = ASC_createAssociationParameters(&params, ASC_DEFAULTMAXPDU);
-		if (cond.bad())
-		{		
-			OFString tempStr;
-			DCMNET_ERROR(DimseCondition::dump(tempStr, cond));
-			throw std::runtime_error("ASC_createAssociationParameters");
-		}
-
-		ASC_setAPTitles(params, destination.sourceAE.c_str(), destination.destinationAE.c_str(), NULL);	
-
-		DIC_NODENAME localHost;
-		gethostname(localHost, DIC_NODENAME_LEN);
-		std::stringstream peerHost;
-		peerHost << destination.destinationhost << ":" << destination.destinationport;
-		ASC_setPresentationAddresses(params, localHost, peerHost.str().c_str());
-
-		// add presentation contexts				
-		cond = addStoragePresentationContexts(params, sopClassUIDList);
-		if (cond.bad())
+		// make list of what's in the file, and propose it first.  default proposed as a seperate context
+		OFList<OFString> transfersyntax;
+		for (std::set<std::string>::iterator it2 = it->second.begin(); it2 != it->second.end(); it2++)
 		{
-			OFString tempStr;
-			DCMNET_ERROR(DimseCondition::dump(tempStr, cond));
-			throw std::runtime_error("addStoragePresentationContexts");
+			if (*it2 != UID_LittleEndianExplicitTransferSyntax)
+				transfersyntax.push_back(it2->c_str());
 		}
 
-		DCMNET_INFO("Requesting Association.");
+		if (transfersyntax.size() > 0)
+			scu.addPresentationContext(it->first.c_str(), transfersyntax);
 
-		cond = ASC_requestAssociation(net, params, &assoc);
-		if (cond.bad())
-		{
-			if (cond == DUL_ASSOCIATIONREJECTED)
-			{				
-				T_ASC_RejectParameters rej;
-				ASC_getRejectParameters(params, &rej);
-				std::stringstream msg;
-				msg << "Association Rejected:\n";
-				ASC_printRejectParameters(msg, &rej);
-				DCMNET_ERROR(msg.str());
-				throw std::runtime_error("ASC_requestAssociation");
-			}
-			else
-			{
-				DCMNET_ERROR("Association Request Failed:\n");			
-				OFString tempStr;
-				DCMNET_ERROR(DimseCondition::dump(tempStr, cond));
-				throw std::runtime_error("ASC_requestAssociation");
-			}
-		}
-
-		// display the presentation contexts which have been accepted/refused	
-		std::stringstream msg;
-		msg << "Association Parameters Negotiated:\n";
-		ASC_dumpParameters(params, msg);
-		DCMNET_INFO(msg.str());
-
-		/* count the presentation contexts which have been accepted by the SCP */
-		/* If there are none, finish the execution */
-		if (ASC_countAcceptedPresentationContexts(params) == 0)
-		{
-			DCMNET_ERROR("No Acceptable Presentation Contexts\n");
-			throw new std::runtime_error("ASC_countAcceptedPresentationContexts");
-		}
+		// propose the default UID_LittleEndianExplicitTransferSyntax
+		scu.addPresentationContext(it->first.c_str(), defaulttransfersyntax);
 	}
-	catch(...)
-	{
+	
+	cond = scu.initNetwork();
+	if (cond.bad())
+		return cond;
 
-	}
-
+	cond = scu.negotiateAssociation();
+	if (cond.bad())
+		return cond;
+	
 	return cond;
 }
 
-OFCondition MoveHandler::closeSubAssociation()
-{
-    OFCondition cond = EC_Normal;    
-	
-    if (assoc != NULL)
-    {        
-        cond = ASC_releaseAssociation(assoc);
-        if (cond.bad())
-        {
-			DCMNET_ERROR("Sub-Association Release Failed:");			
-            OFString tempStr;
-			DCMNET_ERROR(DimseCondition::dump(tempStr, cond));			
-
-        }
-        cond = ASC_dropAssociation(assoc);
-        if (cond.bad())
-        {
-            DCMNET_ERROR("Sub-Association Drop Failed:");
-            OFString tempStr;
-			DCMNET_ERROR(DimseCondition::dump(tempStr, cond));			
-        }
-        cond = ASC_destroyAssociation(&assoc);
-        if (cond.bad())
-        {
-            DCMNET_ERROR("Sub-Association Destroy Failed:");
-            OFString tempStr;
-			DCMNET_ERROR(DimseCondition::dump(tempStr, cond));			
-        }
-        
-		assoc = NULL;
-    }
-
-	if(net != NULL)
-		ASC_dropNetwork(&net);
-
-	net = NULL;
-
-    return cond;
-}
-
-DIC_US MoveHandler::moveNextImage()
+DIC_US MoveHandler::moveNextImage(Uint16 moveOriginatorMsgID)
 {
     OFCondition cond = EC_Normal;    
 
@@ -378,105 +404,62 @@ DIC_US MoveHandler::moveNextImage()
     
 	boost::filesystem::path filename = instances.begin()->second;
 	instances.erase(instances.begin());
-	
-	std::stringstream msg;
-#ifdef _WIN32
-	// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
-	msg << "Sending file: " << filename.string(std::codecvt_utf8<boost::filesystem::path::value_type>());
-#else
-	msg << "Sending file: " << filename.string();
-#endif
-	DCMNET_INFO(msg.str());
 
-	DcmFileFormat dfile;
-	cond = dfile.loadFile(filename.c_str());
-	if(cond.bad())
+	Uint16 rspStatusCode;
+
+	{
+		std::stringstream msg;
+		msg << "Sending file: " << filename;
+		DCMNET_INFO(msg.str());	
+	}
+
+	// load file
+	DcmFileFormat dcmff;
+	cond = dcmff.loadFile(filename.c_str());
+	if (cond.bad())
 	{
 		nFailed++;
-
-		OFString tempStr;
-		DCMNET_ERROR(DimseCondition::dump(tempStr, cond));		
-
 		return STATUS_Pending;
 	}
 
-	OFString studyuid, seriesuid, sopuid, sopclassuid;
-	dfile.getDataset()->findAndGetOFString(DCM_StudyInstanceUID, studyuid);
-	dfile.getDataset()->findAndGetOFString(DCM_SeriesInstanceUID, seriesuid);
-	dfile.getDataset()->findAndGetOFString(DCM_SOPInstanceUID, sopuid);
-	dfile.getDataset()->findAndGetOFString(DCM_SOPClassUID, sopclassuid);	
+	// do some precheck of the transfer syntax
+	DcmXfer fileTransfer(dcmff.getDataset()->getOriginalXfer());
+	OFString sopclassuid;
+	dcmff.getDataset()->findAndGetOFString(DCM_SOPClassUID, sopclassuid);
 
-	DcmXfer filexfer(dfile.getDataset()->getOriginalXfer());
-    T_ASC_PresentationContextID presId = ASC_findAcceptedPresentationContextID(assoc, sopclassuid.c_str(), filexfer.getXferID());
-	if (presId == 0)
 	{
-		addFailedUIDInstance(sopuid.c_str());
-		return STATUS_Pending;
-    }
-
-	// convert to what they want
-	T_ASC_PresentationContext pc;
-	ASC_findAcceptedPresentationContext(assoc->params, presId, &pc);
-	DcmXfer netTransfer(pc.acceptedTransferSyntax);
-
-	dfile.getDataset()->chooseRepresentation(netTransfer.getXfer(), NULL);
-
-	T_DIMSE_C_StoreRQ req;
-    T_DIMSE_C_StoreRSP rsp;
-
-	req.MessageID = assoc->nextMsgID++;;
-    strcpy(req.AffectedSOPClassUID, sopclassuid.c_str());
-    strcpy(req.AffectedSOPInstanceUID, sopuid.c_str());
-    req.DataSetType = DIMSE_DATASET_PRESENT;
-    req.Priority = DIMSE_PRIORITY_MEDIUM;
-    req.opts = (O_STORE_MOVEORIGINATORAETITLE | O_STORE_MOVEORIGINATORID);
-    strcpy(req.MoveOriginatorApplicationEntityTitle, peeraetitle.c_str());
-    req.MoveOriginatorID = 0;	
+		std::stringstream msg;
+		msg << "File encoding: " << fileTransfer.getXferName();
+		DCMNET_INFO(msg.str());
+	}
 	
-	DcmDataset *stDetail = NULL;
-	cond = DIMSE_storeUser(assoc, presId, &req,
-                           NULL, dfile.getDataset(), moveSubOpProgressCallback, this,
-                           DIMSE_NONBLOCKING, 60,
-                           &rsp, &stDetail);
+	// out found.. change to 
+	T_ASC_PresentationContextID pid = scu.findAnyPresentationContextID(sopclassuid, fileTransfer.getXferID());
 
+	cond = scu.sendSTORERequest(pid, "", dcmff.getDataset(), rspStatusCode, peeraetitle.c_str(), moveOriginatorMsgID);
+		
 	if (cond.good())
-    {
-        DCMNET_INFO("Move SCP: Received Store SCU RSP [Status=" << DU_cstoreStatusString(rsp.DimseStatus) << "]");
+    {               				                
+        nCompleted++;
         
-        if (rsp.DimseStatus == STATUS_Success)
-        {            
-            nCompleted++;
-        }
-        else if ((rsp.DimseStatus & 0xf000) == 0xb000)
-        {            
-            nWarning++;
-            DCMNET_INFO("Move SCP: Store Waring: Response Status: " << DU_cstoreStatusString(rsp.DimseStatus));
-        }
-        else
-        {
-            nFailed++;
-            addFailedUIDInstance(sopuid.c_str());
-            
-            DCMNET_ERROR("Move SCP: Store Failed: Response Status: " << DU_cstoreStatusString(rsp.DimseStatus));            
-        }
+		if ((rspStatusCode & 0xf000) == 0xb000)        
+            nWarning++;        
     }
     else
     {
         nFailed++;
+		OFString sopuid;
+		dcmff.getDataset()->findAndGetOFString(DCM_SOPInstanceUID, sopuid);
         addFailedUIDInstance(sopuid.c_str());
-        DCMNET_ERROR("Move SCP: storeSCU: Store Request Failed:");
+        DCMNET_ERROR("Move SCP: Store Request Failed:");
         OFString tempStr;
 		DCMNET_ERROR(DimseCondition::dump(tempStr, cond));
     }
+	
+	SetStatus(boost::lexical_cast<std::string>(totalfiles - instances.size()) + " of " + boost::lexical_cast<std::string>(totalfiles)+" sent");
 
-    if (stDetail != NULL)
-    {
-        log << "  Status Detail:\n";
-        stDetail->print(log);
-        DCMNET_INFO(log.str());
-        delete stDetail;
-    }
-    
+	DCMNET_INFO("\n");
+
     return STATUS_Pending;
 }
 
@@ -487,142 +470,36 @@ void MoveHandler::scanFiles()
 		scanFile(itr->second);	
 }
 
+// copy of Sender::scanFile
 bool MoveHandler::scanFile(boost::filesystem::path currentFilename)
-{	
+{
+
 	DcmFileFormat dfile;
-	OFCondition cond = dfile.loadFile(currentFilename.c_str());
-	if (cond.bad())
-	{		
-		DCMNET_ERROR("cannot access file, ignoring: " << currentFilename);
+	if (dfile.loadFile(currentFilename.c_str()).bad())
+	{
+		std::stringstream msg;
+		msg << "cannot access file, ignoring: " << currentFilename << std::endl;
+		DCMNET_INFO(msg.str());
 		return true;
 	}
 
-	char sopClassUID[128];
-	char sopInstanceUID[128];
+	DcmXfer filexfer(dfile.getDataset()->getOriginalXfer());
+	OFString transfersyntax = filexfer.getXferID();
 
-	if (!DU_findSOPClassAndInstanceInDataSet(dfile.getDataset(), sopClassUID, sopInstanceUID))
-	{					
-		DCMNET_ERROR("missing SOP class (or instance) in file, ignoring: " << currentFilename);
+	OFString sopclassuid;
+	if (dfile.getDataset()->findAndGetOFString(DCM_SOPClassUID, sopclassuid).bad())
+	{
+		std::stringstream msg;
+		msg << "missing SOP class in file, ignoring: " << currentFilename << std::endl;
+		DCMNET_INFO(msg.str());
 		return false;
 	}
 
-	if (!dcmIsaStorageSOPClassUID(sopClassUID))
-	{				
-		DCMNET_ERROR("unknown storage sop class in file, ignoring: " << currentFilename << " : " << sopClassUID);
-		return false;
-	}
-
-	sopClassUIDList.push_back(sopClassUID);	
+	sopclassuidtransfersyntax[sopclassuid.c_str()].insert(transfersyntax.c_str());
 
 	return true;
 }
 
-static bool
-	isaListMember(OFList<OFString>& lst, OFString& s)
-{	
-	bool found = false;
-
-	for(OFListIterator(OFString) itr = lst.begin(); itr != lst.end() && !found; itr++)
-	{
-		found = (s == *itr);	
-	}
-
-	return found;
-}
-
-static OFCondition
-	addPresentationContext(T_ASC_Parameters *params,
-	int presentationContextId, const OFString& abstractSyntax,
-	const OFString& transferSyntax,
-	T_ASC_SC_ROLE proposedRole = ASC_SC_ROLE_DEFAULT)
-{
-	const char* c_p = transferSyntax.c_str();
-	OFCondition cond = ASC_addPresentationContext(params, presentationContextId,
-		abstractSyntax.c_str(), &c_p, 1, proposedRole);
-	return cond;
-}
-
-static OFCondition
-	addPresentationContext(T_ASC_Parameters *params,
-	int presentationContextId, const OFString& abstractSyntax,
-	const OFList<OFString>& transferSyntaxList,
-	T_ASC_SC_ROLE proposedRole = ASC_SC_ROLE_DEFAULT)
-{
-	// create an array of supported/possible transfer syntaxes
-	const char** transferSyntaxes = new const char*[transferSyntaxList.size()];
-	int transferSyntaxCount = 0;
-	OFListConstIterator(OFString) s_cur = transferSyntaxList.begin();
-	OFListConstIterator(OFString) s_end = transferSyntaxList.end();
-	while (s_cur != s_end)
-	{
-		transferSyntaxes[transferSyntaxCount++] = (*s_cur).c_str();
-		++s_cur;
-	}
-
-	OFCondition cond = ASC_addPresentationContext(params, presentationContextId,
-		abstractSyntax.c_str(), transferSyntaxes, transferSyntaxCount, proposedRole);
-
-	delete[] transferSyntaxes;
-	return cond;
-}
-
-OFCondition MoveHandler::addStoragePresentationContexts(T_ASC_Parameters *params, OFList<OFString>& sopClasses)
-{		
-	OFList<OFString> preferredTransferSyntaxes;
-	preferredTransferSyntaxes.push_back(UID_JPEGLSLosslessTransferSyntax);	
-	preferredTransferSyntaxes.push_back(UID_JPEG2000LosslessOnlyTransferSyntax);
-	preferredTransferSyntaxes.push_back(UID_JPEGProcess14SV1TransferSyntax);
-		
-	OFList<OFString> fallbackSyntaxes;	
-	fallbackSyntaxes.push_back(UID_LittleEndianExplicitTransferSyntax);	
-	fallbackSyntaxes.push_back(UID_LittleEndianImplicitTransferSyntax);		
-	
-	OFListIterator(OFString) s_cur, s_end;
-
-	// thin out the sop classes to remove any duplicates.
-	OFList<OFString> sops;
-	s_cur = sopClasses.begin();
-	s_end = sopClasses.end();
-	while (s_cur != s_end)
-	{
-		if (!isaListMember(sops, *s_cur))
-		{
-			sops.push_back(*s_cur);
-		}
-		++s_cur;
-	}
-		
-	// add a presentations context for each sop class x transfer syntax pair
-	OFCondition cond = EC_Normal;
-	int pid = 1; // presentation context id
-	s_cur = sops.begin();
-	s_end = sops.end();
-	while (s_cur != s_end && cond.good())
-	{
-		if (pid > 255)
-		{
-			DCMNET_ERROR("Too many presentation contexts");
-			return ASC_BADPRESENTATIONCONTEXTID;
-		}
-
-		// created a list of transfer syntaxes combined from the preferred and fallback syntaxes
-		OFList<OFString> combinedSyntaxes(fallbackSyntaxes);
-		OFListIterator(OFString) s_cur2 = preferredTransferSyntaxes.begin();
-		OFListIterator(OFString) s_end2 = preferredTransferSyntaxes.end();		
-		while (s_cur2 != s_end2)
-		{
-			combinedSyntaxes.push_front(*s_cur2);			
-			++s_cur2;
-		}
-
-		cond = addPresentationContext(params, pid, *s_cur, combinedSyntaxes);
-		pid += 2;   /* only odd presentation context id's */
-		
-		++s_cur;
-	}
-
-	return cond;
-}
 
 
 void MoveHandler::moveSubOpProgressCallback(void *callbackData, T_DIMSE_StoreProgress *progress, T_DIMSE_C_StoreRQ * req)

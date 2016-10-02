@@ -105,10 +105,12 @@ void Sender::DoSendThread(void *obj)
 
 void Sender::DoSend()
 {	
-	std::stringstream msg;
-	msg << "Sending to " << destination.destinationhost << ":" << destination.destinationport <<
-		" destinationAE = " << destination.destinationAE << " sourceAE = " << destination.sourceAE;
-	DCMNET_INFO(msg.str());
+	{
+		std::stringstream msg;
+		msg << "Sending to " << destination.destinationhost << ":" << destination.destinationport <<
+			" destinationAE = " << destination.destinationAE << " sourceAE = " << destination.sourceAE;
+		DCMNET_INFO(msg.str());
+	}
 	
 	DCMNET_INFO("Starting...");
 	DCMNET_INFO("Loading files...");
@@ -213,10 +215,11 @@ int Sender::SendABatch()
 
 		Uint16 status;
 
-		std::stringstream msg;
-		msg << "Sending file: " << itr->second << "\n";
-		DCMNET_INFO(msg.str());
-		
+		{
+			std::stringstream msg;
+			msg << "Sending file: " << itr->second;
+			DCMNET_INFO(msg.str());
+		}
 
 		// load file
 		DcmFileFormat dcmff;
@@ -227,9 +230,12 @@ int Sender::SendABatch()
 		OFString sopclassuid;
 		dcmff.getDataset()->findAndGetOFString(DCM_SOPClassUID, sopclassuid);
 
-		msg << "File encoding: " << fileTransfer.getXferName() << "\n";
-		DCMNET_INFO(msg.str());
-
+		{
+			std::stringstream msg;
+			msg << "File encoding: " << fileTransfer.getXferName();
+			DCMNET_INFO(msg.str());
+		}
+		
 		// out found.. change to 
 		T_ASC_PresentationContextID pid = scu.findAnyPresentationContextID(sopclassuid, fileTransfer.getXferID());
 
@@ -259,7 +265,7 @@ bool Sender::scanFile(boost::filesystem::path currentFilename)
 	if(dfile.loadFile(currentFilename.c_str()).bad())
 	{
 		std::stringstream msg;
-		msg << "cannot access file, ignoring: " << currentFilename << std::endl;
+		msg << "cannot access file, ignoring: " << currentFilename;
 		DCMNET_INFO(msg.str());
 		return true;
 	}
@@ -271,7 +277,7 @@ bool Sender::scanFile(boost::filesystem::path currentFilename)
 	if(dfile.getDataset()->findAndGetOFString(DCM_SOPClassUID, sopclassuid).bad())
 	{	
 		std::stringstream msg;
-		msg << "missing SOP class in file, ignoring: " << currentFilename << std::endl;
+		msg << "missing SOP class in file, ignoring: " << currentFilename;
 		DCMNET_INFO(msg.str());
 		return false;
 	}

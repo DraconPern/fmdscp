@@ -9,6 +9,7 @@
 server::server(boost::function< void(void) > shutdownCallback) :
 	httpserver(shutdownCallback, cloudclient),
 	senderService(cloudclient),
+	storageSCP(cloudclient),
 	cloudclient(shutdownCallback)
 {
 	// configure logging
