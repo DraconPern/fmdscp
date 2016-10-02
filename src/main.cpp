@@ -53,13 +53,11 @@ protected:
 	void initialize(Application& self)
 	{
 		loadConfiguration(); // load default configuration files, if present
-		ServerApplication::initialize(self);
-		logger().information("starting up");
+		ServerApplication::initialize(self);		
 	}
 
 	void uninitialize()
 	{
-		logger().information("shutting down");
 		ServerApplication::uninitialize();
 	}
 
@@ -86,12 +84,18 @@ protected:
 		HelpFormatter helpFormatter(options());
 		helpFormatter.setCommand(commandName());
 		helpFormatter.setUsage("OPTIONS");
-		helpFormatter.setHeader("A sample server application that demonstrates some of the features of the Util::ServerApplication class.");
+		helpFormatter.setHeader("fmdscp DICOM server");
 		helpFormatter.format(std::cout);
 	}
 
 	int main(const ArgVec& args)
-	{	
+	{
+		if (args.size() > 0)
+		{
+			displayHelp();
+			return Application::EXIT_OK;
+		}
+
 		if (!_helpRequested)
 		{			
 			Aws::SDKOptions options;
