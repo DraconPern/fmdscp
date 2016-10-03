@@ -111,8 +111,9 @@ void Sender::DoSend()
 			" destinationAE = " << destination.destinationAE << " sourceAE = " << destination.sourceAE;
 		DCMNET_INFO(msg.str());
 	}
-	
-	DCMNET_INFO("Starting...");
+
+	SetStatus("starting");
+	DCMNET_INFO("Starting...");	
 	DCMNET_INFO("Loading files...");
 
 	// Scan the files for info to be used later
@@ -136,7 +137,10 @@ void Sender::DoSend()
 		// only do a sleep if there's more to send, we didn't send anything out, and we still want to retry
 		if (unsentcountafter > 0 && unsentcountbefore == unsentcountafter && retry < 10000)
 		{
-			retry++;			
+			retry++;
+
+			SetStatus("waiting 5 mins before retry. " + boost::lexical_cast<std::string>(totalfiles - instances.size()) + " of " + boost::lexical_cast<std::string>(totalfiles)+" sent");
+
 			DCMNET_INFO("Waiting 5 mins before retry");
 
 			// sleep loop with cancel check, 5 minutes
