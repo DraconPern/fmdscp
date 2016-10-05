@@ -7,7 +7,15 @@ SET TYPE=Debug
 SET BUILD_DIR=%CD%
 SET DEVSPACE=%CD%
 SET CL=/MP
+
+IF "%2"=="32" (
+SET GENERATOR="Visual Studio 12"
+SET OPENSSLFLAG=VC-WIN32
+) ELSE (
 SET GENERATOR="Visual Studio 12 Win64"
+SET OPENSSLFLAG=VC-WIN64A
+SET BOOSTADDRESSMODEL=address-model=64
+)
 
 cd %DEVSPACE%
 git clone --branch=master --single-branch --depth=1 https://github.com/madler/zlib.git
@@ -26,9 +34,13 @@ git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable -
 cd openssl
 SET OLDPATH=%PATH%
 rem SET PATH=C:\Perl\bin;%PATH%
-IF "%TYPE%" == "Release" perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Release VC-WIN32
-IF "%TYPE%" == "Debug"   perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Debug debug-VC-WIN32
+IF "%TYPE%" == "Release" perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Release %OPENSSLFLAG%
+IF "%TYPE%" == "Debug"   perl Configure -D_CRT_SECURE_NO_WARNINGS=1 no-asm --prefix=%DEVSPACE%\openssl\Debug debug-%OPENSSLFLAG%
+IF "%2"=="32" (
 call ms\do_ms.bat
+) ELSE (
+call ms\do_win64a.bat
+)
 nmake -f ms\nt.mak install
 SET OPENSSL_ROOT_DIR=%DEVSPACE%\openssl\%TYPE%
 SET PATH=%OLDPATH%
@@ -69,7 +81,7 @@ wget -c http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0
 if NOT EXIST boost_1_61_0 unzip -q -o boost_1_61_0.zip
 cd boost_1_61_0
 call bootstrap
-SET COMMONb2Flag=toolset=msvc-12.0 address-model=64 asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 stage
+SET COMMONb2Flag=toolset=msvc-12.0 %BOOSTADDRESSMODEL% asmflags=\safeseh runtime-link=static define=_BIND_TO_CURRENT_VCLIBS_VERSION=1 -j 4 stage
 SET BOOSTmodules=--with-atomic --with-thread --with-filesystem --with-system --with-date_time --with-regex --with-context --with-coroutine --with-chrono --with-random
 IF "%TYPE%" == "Release" b2 %COMMONb2Flag% %BOOSTmodules% release
 IF "%TYPE%" == "Debug"   b2 %COMMONb2Flag% %BOOSTmodules% debug
