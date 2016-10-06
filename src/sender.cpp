@@ -246,12 +246,24 @@ int Sender::SendABatch()
 		cond = scu.sendSTORERequest(pid, "", dcmff.getDataset(), status);
 		if (cond.good())
 			instances.erase(itr++);
-		else if (cond == DUL_PEERABORTEDASSOCIATION)
-			return 1;
-		else			// some error? keep going
+		else if ((cond == NET_EC_InvalidSOPClassUID) ||
+			(cond == NET_EC_UnknownStorageSOPClass) ||
+			(cond == NET_EC_InvalidSOPInstanceUID) ||
+			(cond == NET_EC_InvalidTransferSyntaxUID) ||
+			(cond == NET_EC_UnknownTransferSyntax) ||
+			(cond == NET_EC_NoPresentationContextsDefined) ||
+			(cond == NET_EC_NoAcceptablePresentationContexts) ||
+			(cond == NET_EC_NoSOPInstancesToSend) ||
+			(cond == NET_EC_NoSuchSOPInstance) ||
+			(cond == NET_EC_InvalidDatasetPointer) ||
+			(cond == NET_EC_AlreadyConnected) ||
+			(cond == NET_EC_InsufficientPortPrivileges))
 		{
+			// keep going for instance related errors
 			itr++;
 		}
+		else
+			return 1;
 		
 		SetStatus(boost::lexical_cast<std::string>(totalfiles - instances.size()) + " of " + boost::lexical_cast<std::string>(totalfiles)+" sent");
 
