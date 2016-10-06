@@ -85,6 +85,7 @@ void CloudClient::send_updateoutsessionitem(OutgoingSession &outgoingsession, st
 	o->get_map()["destination_id"] = string_message::create(boost::lexical_cast<std::string>(outgoingsession.destination_id));
 	o->get_map()["destination_name"] = string_message::create(destination_name);
 	o->get_map()["updatedAt"] = string_message::create(ToJSON(outgoingsession.updated_at));
+	o->get_map()["createdAt"] = string_message::create(ToJSON(outgoingsession.created_at));
 	o->get_map()["status"] = string_message::create(outgoingsession.status);
 
 	socket()->emit("updateoutsessionitem", o);

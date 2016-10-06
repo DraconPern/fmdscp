@@ -871,6 +871,7 @@ void HttpServer::GetOutSessions(std::shared_ptr<HttpServer::Response> response, 
 				child.add("destination_name", "");
 			child.add("status", out_sessions[i].status);
 			child.add("updatedAt", ToJSON(out_sessions[i].updated_at));
+			child.add("createdAt", ToJSON(out_sessions[i].created_at));
 			children.push_back(std::make_pair("", child));
 		}
 
