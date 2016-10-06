@@ -269,9 +269,9 @@ MyDcmSCPPool::MyDcmSCPPool(CloudClient &cloudclient) : cloudclient(cloudclient)
 	getConfig().setACSETimeout(1);
 
 	getConfig().setHostLookupEnabled(true);
-	getConfig().setAETitle("FMDSCP");	
+	getConfig().setAETitle("FMDSCP");
 	
-	getConfig().setPort(104);
+	getConfig().setPort(config::getDICOMListeningPort());
 
 }
 

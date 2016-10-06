@@ -52,6 +52,13 @@ boost::filesystem::path config::getStoragePath()
 	return Path::expand(p);
 }
 
+int config::getDICOMListeningPort()
+{
+	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
+
+	return pConf->getInt("DICOMListeningPort", 104);
+}
+
 void config::registerCodecs()
 {
 	DJDecoderRegistration::registerCodecs();
