@@ -7,7 +7,7 @@
 #include "cloudappender.h"
 
 server::server(boost::function< void(void) > shutdownCallback) :
-	httpserver(shutdownCallback, cloudclient),
+	httpserver(shutdownCallback, cloudclient, senderService),
 	senderService(cloudclient),
 	storageSCP(cloudclient),
 	cloudclient(shutdownCallback)

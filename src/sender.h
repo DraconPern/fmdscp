@@ -30,6 +30,8 @@ public:
 
 	void Cancel();
 	bool IsDone();
+
+	bool isUUID(std::string uuid);
 		
 protected:
 	boost::uuids::uuid uuid;

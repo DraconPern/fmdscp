@@ -13,14 +13,15 @@ class SenderService
 public:
 	SenderService(CloudClient &cloudclient);
 	void run();
-	void run_internal();
 	void stop();
-	bool shouldShutdown();
-	
+	bool cancelSend(std::string uuid);
+
+protected:
+	void run_internal();
 	bool getQueued(OutgoingSession &outgoingsession);
 	bool findDestination(int id, Destination &destination);
 	bool GetFilesToSend(std::string studyinstanceuid, naturalpathmap &result);
-protected:
+	bool shouldShutdown();
 
 	boost::mutex mutex;
 	bool shutdownEvent;

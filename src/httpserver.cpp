@@ -36,10 +36,11 @@
 #include "poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
-HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient &cloudclient) :
+HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice) :
 	SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10),
 	shutdownCallback(shutdownCallback),
 	cloudclient(cloudclient),
+	senderservice(senderservice),
 	destinations_controller(cloudclient, resource)
 {			
 	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO_URI, this, _1, _2);
@@ -48,6 +49,7 @@ HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient
 	resource["^/image\\?(.+)$"]["GET"] = boost::bind(&HttpServer::GetImage, this, _1, _2);
 	
 	resource["^/api/studies/([0123456789\\.]+)/send"]["POST"] = boost::bind(&HttpServer::SendStudy, this, _1, _2);
+	resource["^/api/outsessions/cancel"]["POST"] = boost::bind(&HttpServer::CancelSend, this, _1, _2);
 	resource["^/api/outsessions"]["GET"] = boost::bind(&HttpServer::GetOutSessions, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
 	resource["^/api/shutdown"]["POST"] = boost::bind(&HttpServer::Shutdown, this, _1, _2);
@@ -754,6 +756,29 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
 	}
+}
+
+void HttpServer::CancelSend(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
+{
+	std::map<std::string, std::string> queries;
+	decode_query(request->content.string(), queries);
+
+	if (queries.find("uuid") == queries.end())
+	{
+		std::string content = "Missing parameters";
+		*response << std::string("HTTP/1.1 400 Bad Request\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+	}
+
+	if (!senderservice.cancelSend(queries["uuid"]))
+	{
+		std::string content = "can't find session";
+		*response << std::string("HTTP/1.1 404 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		return;
+	}
+
+	std::string content = "Canceling send";
+	*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 }
 
 void HttpServer::GetImage(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)

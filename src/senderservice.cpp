@@ -265,3 +265,20 @@ bool SenderService::GetFilesToSend(std::string studyinstanceuid, naturalpathmap 
 
 	return true;
 }
+
+bool SenderService::cancelSend(std::string uuid)
+{
+	
+	sharedptrlist::iterator itr = senders.begin();
+	while (itr != senders.end())
+	{
+		if (itr->get()->isUUID(uuid))
+		{
+			itr->get()->Cancel();			
+			return true;
+		}
+		itr++;
+	}
+
+	return false;
+}

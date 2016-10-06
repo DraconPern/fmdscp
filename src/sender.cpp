@@ -163,6 +163,12 @@ void Sender::DoSend()
 		}
 	}
 	while (!IsCanceled() && unsentcountafter > 0 && retry < 10000);	 
+
+	if (IsCanceled())
+	{
+		SetStatus("Canceled");
+		DCMNET_INFO("Canceled");
+	}
 }
 
 // 
@@ -327,3 +333,8 @@ void Sender::SetDone(bool state)
 	doneEvent = state;
 }
 
+bool Sender::isUUID(std::string uuid)
+{
+	std::string uuidstring = boost::uuids::to_string(this->uuid);
+	return uuid == uuidstring;
+}
