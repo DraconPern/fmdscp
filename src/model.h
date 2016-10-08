@@ -24,6 +24,7 @@ public:
 	std::string PatientSex;
 	Poco::DateTime PatientBirthDate;
 	std::string ReferringPhysicianName;
+	int NumberOfStudyRelatedInstances;
 	Poco::DateTime created_at;
 	Poco::DateTime updated_at;
 };
@@ -122,13 +123,14 @@ namespace Poco {
 				TypeHandler<std::string>::bind(pos++, obj.PatientSex, pBinder, dir);
 				TypeHandler<DateTime>::bind(pos++, obj.PatientBirthDate, pBinder, dir);
 				TypeHandler<std::string>::bind(pos++, obj.ReferringPhysicianName, pBinder, dir);
+				TypeHandler<int>::bind(pos++, obj.NumberOfStudyRelatedInstances, pBinder, dir);
 				TypeHandler<DateTime>::bind(pos++, obj.created_at, pBinder, dir);
 				TypeHandler<DateTime>::bind(pos++, obj.updated_at, pBinder, dir);
 			}
 
 			static std::size_t size()
 			{
-				return 14;
+				return 15;
 			}
 
 			static void prepare(std::size_t pos, const PatientStudy& obj, AbstractPreparator::Ptr pPrepare)
@@ -146,6 +148,7 @@ namespace Poco {
 				TypeHandler<std::string>::prepare(pos++, obj.PatientSex, pPrepare);
 				TypeHandler<Poco::DateTime>::prepare(pos++, obj.PatientBirthDate, pPrepare);
 				TypeHandler<std::string>::prepare(pos++, obj.ReferringPhysicianName, pPrepare);
+				TypeHandler<int>::prepare(pos++, obj.NumberOfStudyRelatedInstances, pPrepare);
 				TypeHandler<Poco::DateTime>::prepare(pos++, obj.created_at, pPrepare);
 				TypeHandler<Poco::DateTime>::prepare(pos++, obj.updated_at, pPrepare);
 			}
@@ -166,6 +169,7 @@ namespace Poco {
 				TypeHandler<std::string>::extract(pos++, obj.PatientSex, defVal.PatientSex, pExt);
 				TypeHandler<Poco::DateTime>::extract(pos++, obj.PatientBirthDate, defVal.PatientBirthDate, pExt);
 				TypeHandler<std::string>::extract(pos++, obj.ReferringPhysicianName, defVal.ReferringPhysicianName, pExt);
+				TypeHandler<int>::extract(pos++, obj.NumberOfStudyRelatedInstances, defVal.NumberOfStudyRelatedInstances, pExt);
 				TypeHandler<Poco::DateTime>::extract(pos++, obj.created_at, defVal.created_at, pExt);
 				TypeHandler<Poco::DateTime>::extract(pos++, obj.updated_at, defVal.updated_at, pExt);
 			}

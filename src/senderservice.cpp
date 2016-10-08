@@ -203,6 +203,7 @@ bool SenderService::GetFilesToSend(std::string studyinstanceuid, naturalpathmap 
 			"PatientSex,"
 			"PatientBirthDate,"
 			"ReferringPhysicianName,"
+			"NumberOfStudyRelatedInstances,"
 			"createdAt,updatedAt"
 			" FROM patient_studies WHERE StudyInstanceUID = ?",
 			into(patient_studies_list),

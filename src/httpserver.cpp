@@ -144,6 +144,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 			"PatientSex,"
 			"PatientBirthDate,"
 			"ReferringPhysicianName,"
+			"NumberOfStudyRelatedInstances,"
 			"createdAt,updatedAt"
 			" FROM patient_studies WHERE StudyInstanceUID = ?",
 			into(patient_studies_list),
@@ -449,6 +450,7 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 			"PatientSex,"
 			"PatientBirthDate,"
 			"ReferringPhysicianName,"
+			"NumberOfStudyRelatedInstances,"
 			"createdAt,updatedAt"
 			" FROM patient_studies",
 			into(patient_studies_list);
@@ -527,6 +529,7 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 			child.add("StudyDescription", patient_studies_list[i].StudyDescription);
 			child.add("PatientSex", patient_studies_list[i].PatientSex);
 			child.add("PatientBirthDate", ToJSON(patient_studies_list[i].PatientBirthDate));
+			child.add("NumberOfStudyRelatedInstances", patient_studies_list[i].NumberOfStudyRelatedInstances);
 			children.push_back(std::make_pair("", child));
 		}
 		
@@ -570,6 +573,7 @@ void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::
 			"PatientSex,"
 			"PatientBirthDate,"
 			"ReferringPhysicianName,"
+			"NumberOfStudyRelatedInstances,"
 			"createdAt,updatedAt"
 			" FROM patient_studies WHERE StudyInstanceUID = ?",
 			into(patient_studies_list),
@@ -596,6 +600,7 @@ void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::
 			studyitem.add("StudyDescription", patient_studies_list[i].StudyDescription);
 			studyitem.add("PatientSex", patient_studies_list[i].PatientSex);
 			studyitem.add("PatientBirthDate", ToJSON(patient_studies_list[i].PatientBirthDate));
+			studyitem.add("NumberOfStudyRelatedInstances", patient_studies_list[i].NumberOfStudyRelatedInstances);
 
 			std::vector<Series> series_list;
 			Poco::Data::Statement seriesselect(dbconnection);
@@ -703,6 +708,7 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 			"PatientSex,"
 			"PatientBirthDate,"
 			"ReferringPhysicianName,"
+			"NumberOfStudyRelatedInstances,"
 			"createdAt,updatedAt"
 			" FROM patient_studies WHERE StudyInstanceUID = ?",
 			into(patient_studies_list),

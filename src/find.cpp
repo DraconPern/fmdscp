@@ -385,7 +385,8 @@ DIC_US FindHandler::FindStudyLevel(DcmDataset *requestIdentifiers, DcmDataset **
 		blah(patientstudy.PatientSex, DCM_PatientSex, requestIdentifiers, *responseIdentifiers);
 		blah(patientstudy.PatientBirthDate, DCM_PatientBirthDate, requestIdentifiers, *responseIdentifiers);
 		blah(patientstudy.ReferringPhysicianName, DCM_ReferringPhysicianName, requestIdentifiers, *responseIdentifiers);
-
+		blah(patientstudy.NumberOfStudyRelatedInstances, DCM_NumberOfStudyRelatedInstances, requestIdentifiers, *responseIdentifiers);
+		
 		// add non conforming field for PACSSCAN
 		/*
 		int pos = -1;

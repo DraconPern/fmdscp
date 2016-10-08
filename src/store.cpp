@@ -200,6 +200,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"PatientSex,"
 				"PatientBirthDate,"
 				"ReferringPhysicianName,"
+				"NumberOfStudyRelatedInstances,"
 				"createdAt,updatedAt"
 				" FROM patient_studies WHERE StudyInstanceUID = ?",
 				into(patientstudies),
@@ -251,6 +252,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			dfile.getDataset()->findAndGetOFString(DCM_ReferringPhysicianName, textbuf);
 			patientstudy.ReferringPhysicianName = textbuf.c_str();
 
+			patientstudy.NumberOfStudyRelatedInstances = 0;
+
 			patientstudy.updated_at = Poco::DateTime();
 
 			if(patientstudy.id != 0)
@@ -269,6 +272,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 					"PatientSex = ?,"
 					"PatientBirthDate = ?,"
 					"ReferringPhysicianName = ?,"
+					"NumberOfStudyRelatedInstances = ?,"
 					"createdAt = ?, updatedAt = ?"
 					" WHERE id = ?",
 					use(patientstudy),
@@ -280,7 +284,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				patientstudy.created_at = Poco::DateTime();
 
 				Poco::Data::Statement insert(dbconnection);
-				insert << "INSERT INTO patient_studies (id, StudyInstanceUID, StudyID, AccessionNumber, PatientName, PatientID, StudyDate, ModalitiesInStudy, StudyDescription, PatientSex, PatientBirthDate, ReferringPhysicianName, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				insert << "INSERT INTO patient_studies (id, StudyInstanceUID, StudyID, AccessionNumber, PatientName, PatientID, StudyDate, ModalitiesInStudy, StudyDescription, PatientSex, PatientBirthDate, ReferringPhysicianName, NumberOfStudyRelatedInstances, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 					use(patientstudy);
 				insert.execute();
 
