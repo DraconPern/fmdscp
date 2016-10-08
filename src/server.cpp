@@ -56,7 +56,7 @@ void server::run_async()
 	// add sender
 	threads.create_thread(boost::bind(&SenderService::run, &senderService));
 
-	httpserver.start();
+	threads.create_thread(boost::bind(&HttpServer::start, &httpserver));
 }
 
 void server::stop()

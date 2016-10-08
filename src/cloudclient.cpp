@@ -12,7 +12,7 @@ CloudClient::CloudClient(boost::function< void(void) > shutdownCallback) :
 {		
 	set_reconnect_delay(5);
 
-	set_socket_open_listener(std::bind(&CloudClient::OnConnection, this));
+	set_socket_open_listener(boost::bind(&CloudClient::OnConnection, this));
 	socket()->on("send", (sio::socket::event_listener_aux) boost::bind(&CloudClient::OnSend, this, _1, _2, _3, _4));
 	socket()->on("shutdown", (sio::socket::event_listener) boost::bind(&CloudClient::OnShutdown, this, _1));
 

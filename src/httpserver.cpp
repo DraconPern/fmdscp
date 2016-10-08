@@ -36,7 +36,7 @@
 #include "poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
-HttpServer::HttpServer(std::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice) :
+HttpServer::HttpServer(boost::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice) :
 	SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10),
 	shutdownCallback(shutdownCallback),
 	cloudclient(cloudclient),

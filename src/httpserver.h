@@ -2,7 +2,7 @@
 #define __HTTPSERVER_H__
 
 #include "server_http.hpp"
-#include <functional>
+#include <boost/function.hpp>
 #include "cloudclient.h"
 #include "senderservice.h"
 #include "destinations_controller.h"
@@ -10,7 +10,7 @@
 class HttpServer : public SimpleWeb::Server<SimpleWeb::HTTP>
 {
 public:
-	HttpServer(std::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice);
+	HttpServer(boost::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice);
 	
 	void Version(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 	void Shutdown(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
@@ -26,7 +26,7 @@ public:
 	void GetOutSessions(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 
 protected:	
-	std::function< void(void) > shutdownCallback;
+	boost::function< void(void) > shutdownCallback;
 	CloudClient &cloudclient;
 	destinations_controller destinations_controller;
 	SenderService &senderservice;

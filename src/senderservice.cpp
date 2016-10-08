@@ -117,22 +117,22 @@ void SenderService::run_internal()
 		}
 	}
 
-	// exiting, signal senders
-	sharedptrlist::iterator itr = senders.begin();
-	while (itr != senders.end())
+	// wait for all senders to be done, signal senders to cancel if they are not
+	while (senders.size() > 0)
 	{
-		if ((*itr)->IsDone())
-			senders.erase(itr++);
-		else
+		sharedptrlist::iterator itr = senders.begin();
+		while (itr != senders.end())
 		{
-			(*itr)->Cancel();
-			itr++;
+			if ((*itr)->IsDone())
+				senders.erase(itr++);
+			else
+			{
+				(*itr)->Cancel();
+				itr++;
+			}
 		}
+		Sleep(200);
 	}
-
-	// wait... 
-	// eh...
-
 }
 
 void SenderService::run()
