@@ -92,6 +92,7 @@ set(fmdscp_SRCS
 	src/cloudappender.cpp
 	src/sender.cpp
 	src/destinations_controller.cpp
+	src/jwtpp.cpp
 )
 
 if(WIN32)
@@ -130,7 +131,7 @@ TARGET_LINK_LIBRARIES(fmdscp
   debug PocoUtild optimized PocoUtil
   debug PocoXMLd optimized PocoXML
   ${MYSQL_LIBRARIES}
-# ${OPENSSL_LIBRARIES}
+ ${OPENSSL_LIBRARIES}
 	${OS_SPECIFIC_LIBS}
 	sioclient
 	sioclient_tls
