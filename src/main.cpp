@@ -29,6 +29,7 @@
 #define UNICODE 1
 #endif
 
+#include <boost/asio/ssl/detail/openssl_init.hpp>
 
 // Visual Leak Detector
 #if defined(_WIN32) && defined(_DEBUG) // && !defined(_WIN64)
@@ -98,6 +99,8 @@ protected:
 
 		if (!_helpRequested)
 		{			
+			boost::asio::ssl::detail::openssl_init<> _openssl_init;
+
 			Aws::SDKOptions options;
 			options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
 			Aws::InitAPI(options);
