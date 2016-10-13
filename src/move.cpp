@@ -254,6 +254,7 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalpathmap &r
 			"PatientSex,"
 			"PatientBirthDate,"
 			"ReferringPhysicianName,"
+			"NumberOfStudyRelatedInstances,"
 			"createdAt,updatedAt"
 			" FROM patient_studies WHERE StudyInstanceUID = ?",
 			into(patient_studies_list),
