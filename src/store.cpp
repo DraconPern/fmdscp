@@ -416,6 +416,32 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 
 			dbconnection << "SELECT LAST_INSERT_ID()", into(series.id), now;
 		}		
+		
+		// count number of instances for the study
+		Poco::Data::Statement countinstances(dbconnection);
+
+		countinstances << "SELECT count(*) FROM instances join patient_studies where StudyInstanceUID = ?", into(patientstudy.NumberOfStudyRelatedInstances), use(patientstudy.StudyInstanceUID), now;
+
+		Poco::Data::Statement update(dbconnection);
+		update << "UPDATE patient_studies SET "
+			"id = ?,"
+			"StudyInstanceUID = ?,"
+			"StudyID = ?,"
+			"AccessionNumber = ?,"
+			"PatientName = ?,"
+			"PatientID = ?,"
+			"StudyDate = ?,"
+			"ModalitiesInStudy = ?,"
+			"StudyDescription = ?,"
+			"PatientSex = ?,"
+			"PatientBirthDate = ?,"
+			"ReferringPhysicianName = ?,"
+			"NumberOfStudyRelatedInstances = ?,"
+			"createdAt = ?, updatedAt = ?"
+			" WHERE id = ?",
+			use(patientstudy),
+			use(patientstudy.id);
+		update.execute();
 	}
 	catch(Poco::Data::DataException &e)
 	{

@@ -66,6 +66,8 @@ const DICOM_SQLMapping PatientStudyLevelMapping [] = {
 	{ DCM_StudyDescription,			             "StudyDescription", dt_string, true},
 	{ DCM_PatientBirthDate,                      "PatientBirthDate", dt_date, false},
 	{ DCM_PatientSex,                            "PatientSex", dt_string, false},
+	{ DCM_PatientBirthDate,                      "PatientBirthDate", dt_date, false},
+	{ DCM_NumberOfStudyRelatedInstances,         "NumberOfStudyRelatedInstances", dt_integer, false },
 	{ DCM_CommandGroupLength, NULL, dt_string, false}
 };
 
