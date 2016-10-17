@@ -105,6 +105,8 @@ protected:
 			options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
 			Aws::InitAPI(options);
 
+			boost::filesystem::path::codecvt();  // ensure VC++ does not race during initialization.
+
 			server s(boost::bind(ServerApplication::terminate));
 			s.run_async();
 			
