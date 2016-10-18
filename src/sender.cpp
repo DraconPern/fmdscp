@@ -27,8 +27,8 @@ using namespace Poco::Data::Keywords;
 #endif
 
 
-Sender::Sender(boost::uuids::uuid uuid, CloudClient &cloudclient) :
-	cloudclient(cloudclient)
+Sender::Sender(boost::uuids::uuid uuid, CloudClient &cloudclient, DBPool &dbpool) :
+	cloudclient(cloudclient), dbpool(dbpool)
 {			
 	this->uuid = uuid;
 
@@ -52,7 +52,7 @@ void Sender::SetFileList(const naturalpathmap &instances)
 
 void Sender::SetStatus(std::string msg)
 {
-	Poco::Data::Session dbconnection(config::getConnectionString());
+	Poco::Data::Session dbconnection(dbpool.get());
 	Poco::DateTime rightnow;
 
 	std::string uuidstring = boost::uuids::to_string(uuid);

@@ -36,12 +36,13 @@
 #include "poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
-HttpServer::HttpServer(boost::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice) :
+HttpServer::HttpServer(boost::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice, DBPool &dbpool) :
 	SimpleWeb::Server<SimpleWeb::HTTP>(8080, 10),
 	shutdownCallback(shutdownCallback),
 	cloudclient(cloudclient),
 	senderservice(senderservice),
-	destinations_controller(cloudclient, resource)
+	dbpool(dbpool),
+	destinations_controller(cloudclient, dbpool, resource)
 {			
 	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO_URI, this, _1, _2);
 	resource["^/api/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
@@ -129,7 +130,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 	try
 	{
 
-		Poco::Data::Session dbconnection(config::getConnectionString());	
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement patientstudiesselect(dbconnection);
 		patientstudiesselect << "SELECT id,"
@@ -435,7 +436,7 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 	std::vector<PatientStudy> patient_studies_list;
 	try
 	{
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement patientstudiesselect(dbconnection);
 		patientstudiesselect << "SELECT id,"
@@ -558,7 +559,7 @@ void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::
 	{
 		std::vector<PatientStudy> patient_studies_list;
 
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement patientstudiesselect(dbconnection);
 		patientstudiesselect << "SELECT id,"
@@ -693,7 +694,7 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 	{
 		std::vector<PatientStudy> patient_studies_list;
 
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement patientstudiesselect(dbconnection);
 		patientstudiesselect << "SELECT id,"
@@ -807,7 +808,7 @@ void HttpServer::GetImage(std::shared_ptr<HttpServer::Response> response, std::s
 	try
 	{
 
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement instanceselect(dbconnection);
 		instanceselect << "SELECT id,"
@@ -851,7 +852,7 @@ void HttpServer::GetOutSessions(std::shared_ptr<HttpServer::Response> response, 
 {
 	try
 	{
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		std::vector<OutgoingSession> out_sessions;
 		Poco::Data::Statement outsessionsselect(dbconnection);

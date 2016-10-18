@@ -7,9 +7,9 @@
 #include "cloudappender.h"
 
 server::server(boost::function< void(void) > shutdownCallback) :
-	httpserver(shutdownCallback, cloudclient, senderService),
-	senderService(cloudclient),
-	storageSCP(cloudclient),
+	httpserver(shutdownCallback, cloudclient, senderService, dbpool),
+	senderService(cloudclient, dbpool),
+	storageSCP(cloudclient, dbpool),
 	cloudclient(shutdownCallback)
 {
 	// configure logging

@@ -11,6 +11,8 @@
 #include "httpserver.h"
 #include "cloudclient.h"
 
+#include "dbpool.h"
+
 class server
 {
 public:
@@ -34,6 +36,8 @@ protected:
 	HttpServer httpserver;
 
 	CloudClient cloudclient;
+
+	DBPool dbpool;
 };
 
 #endif // __SERVER_H__

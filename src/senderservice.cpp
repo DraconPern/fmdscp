@@ -22,8 +22,8 @@ using namespace Poco::Data::Keywords;
 #define UNICODE 1
 #endif
 
-SenderService::SenderService(CloudClient &cloudclient) :
-	cloudclient(cloudclient)
+SenderService::SenderService(CloudClient &cloudclient, DBPool &dbpool) :
+cloudclient(cloudclient), dbpool(dbpool)
 {
 	shutdownEvent = false;
 }
@@ -32,7 +32,7 @@ bool SenderService::getQueued(OutgoingSession &outgoingsession)
 {
 	try
 	{
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement queueselect(dbconnection);
 		std::vector<OutgoingSession> sessions;
@@ -84,7 +84,7 @@ void SenderService::run_internal()
 
 				cloudclient.send_updateoutsessionitem(outgoingsession, destination.name);
 
-				boost::shared_ptr<Sender> sender(new Sender(boost::lexical_cast<boost::uuids::uuid>(outgoingsession.uuid), cloudclient));
+				boost::shared_ptr<Sender> sender(new Sender(boost::lexical_cast<boost::uuids::uuid>(outgoingsession.uuid), cloudclient, dbpool));
 				sender->Initialize(destination);
 
 				naturalpathmap files;
@@ -158,7 +158,7 @@ bool SenderService::findDestination(int id, Destination &destination)
 {
 	try
 	{
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		std::vector<Destination> dests;
 		dbconnection << "SELECT id,"
@@ -186,7 +186,7 @@ bool SenderService::GetFilesToSend(std::string studyinstanceuid, naturalpathmap 
 	try
 	{
 		// open the db
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		std::vector<PatientStudy> patient_studies_list;
 

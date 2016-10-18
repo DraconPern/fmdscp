@@ -5,12 +5,13 @@
 #include <boost/function.hpp>
 #include "cloudclient.h"
 #include "senderservice.h"
+#include "dbpool.h"
 #include "destinations_controller.h"
 
 class HttpServer : public SimpleWeb::Server<SimpleWeb::HTTP>
 {
 public:
-	HttpServer(boost::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice);
+	HttpServer(boost::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice, DBPool &dbpool);
 	
 	void Version(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
 	void Shutdown(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request);
@@ -30,6 +31,7 @@ protected:
 	CloudClient &cloudclient;
 	destinations_controller destinations_controller;
 	SenderService &senderservice;
+	DBPool &dbpool;
 };
 
 #endif

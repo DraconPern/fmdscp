@@ -22,11 +22,12 @@
 
 #include "model.h"
 #include "sender.h"
+#include "dbpool.h"
 
 class MoveHandler
 {
 public:
-	MoveHandler(std::string aetitle, std::string peeraetitle, boost::uuids::uuid uuid, CloudClient &cloudclient);
+	MoveHandler(std::string aetitle, std::string peeraetitle, boost::uuids::uuid uuid, CloudClient &cloudclient, DBPool &dbpool);
 	static void MoveCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_MoveRSP *response, DcmDataset **statusDetail, DcmDataset **responseIdentifiers);
 protected:
 	void Initialize(Destination &destination);
@@ -66,6 +67,7 @@ protected:
 
 	boost::uuids::uuid uuid;
 	CloudClient &cloudclient;
+	DBPool &dbpool;
 };
 
 #endif

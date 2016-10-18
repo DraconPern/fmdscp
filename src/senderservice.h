@@ -7,11 +7,12 @@
 #include <map>
 
 #include "cloudclient.h"
+#include "dbpool.h"
 
 class SenderService
 {
 public:
-	SenderService(CloudClient &cloudclient);
+	SenderService(CloudClient &cloudclient, DBPool &dbpool);
 	void run();
 	void stop();
 	bool cancelSend(std::string uuid);
@@ -30,6 +31,7 @@ protected:
 	sharedptrlist senders;
 
 	CloudClient &cloudclient;
+	DBPool &dbpool;
 };
 
 #endif

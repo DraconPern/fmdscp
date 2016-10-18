@@ -35,8 +35,8 @@ void MoveHandler::MoveCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_M
 	handler->MoveCallback(cancelled, request, requestIdentifiers, responseCount, response, statusDetail, responseIdentifiers);
 }
 
-MoveHandler::MoveHandler(std::string aetitle, std::string peeraetitle, boost::uuids::uuid uuid, CloudClient &cloudclient) :
-	aetitle(aetitle), peeraetitle(peeraetitle), uuid(uuid), cloudclient(cloudclient)
+MoveHandler::MoveHandler(std::string aetitle, std::string peeraetitle, boost::uuids::uuid uuid, CloudClient &cloudclient, DBPool &dbpool) :
+aetitle(aetitle), peeraetitle(peeraetitle), uuid(uuid), cloudclient(cloudclient), dbpool(dbpool)
 {	
 	nCompleted = nFailed = nWarning = 0;
 }

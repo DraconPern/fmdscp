@@ -36,9 +36,9 @@ void FindHandler::FindCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_F
 	handler->FindCallback(cancelled, request, requestIdentifiers, responseCount, response, responseIdentifiers, statusDetail);
 }
 
-FindHandler::FindHandler(std::string aetitle)
+FindHandler::FindHandler(std::string aetitle, DBPool &dbpool) : aetitle(aetitle), dbpool(dbpool)
 {	
-	this->aetitle = aetitle;
+	
 }
 
 
@@ -115,7 +115,7 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 		try
 		{
 			// open the db
-			Poco::Data::Session dbconnection(config::getConnectionString());		
+			Poco::Data::Session dbconnection(dbpool.get());
 			Poco::Data::Statement st(dbconnection);						
 
 			// storage of parameters since they must exist until all result are returned

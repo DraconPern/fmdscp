@@ -20,13 +20,14 @@
 #endif
 
 #include "model.h"
+#include "dbpool.h"
 
 typedef enum { patientstudyroot, seriesroot, instanceroot } QueryLevel;
 
 class FindHandler
 {
 public:
-	FindHandler(std::string aetitle);
+	FindHandler(std::string aetitle, DBPool &dbpool);
 	static void FindCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail);
 protected:
 	void FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail);
@@ -46,6 +47,8 @@ protected:
 	std::vector<Series >::iterator series_itr;
 	std::vector<Instance > instances;	
 	std::vector<Instance >::iterator instances_itr;
+
+	DBPool &dbpool;
 };
 
 #endif

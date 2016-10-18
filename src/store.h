@@ -3,6 +3,7 @@
 
 #include <winsock2.h>	// include winsock2 before network includes
 #include <boost/filesystem.hpp>
+#include "dbpool.h"
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
 #ifdef _UNICODE
@@ -22,9 +23,12 @@ class StoreHandler
 {
 
 public:	
+	StoreHandler(DBPool &dbpool) : dbpool(dbpool) {};
 	OFCondition handleSTORERequest(boost::filesystem::path filename);
 	bool AddDICOMFileInfoToDatabase(boost::filesystem::path filename);
 	OFCondition UploadToS3(boost::filesystem::path filename, std::string sopuid, std::string seriesuid, std::string studyuid);
+protected:
+	DBPool &dbpool;
 };
 
 #endif

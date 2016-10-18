@@ -71,6 +71,7 @@ set(fmdscp_HEADERS
 	src/cloudappender.h
 	src/sender.h
 	src/destinations_controller.h
+	src/dbpool.h
 )
 
 set(fmdscp_SRCS

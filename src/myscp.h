@@ -22,6 +22,7 @@
 
 #include <boost/uuid/uuid.hpp>            // uuid class
 #include "cloudclient.h"
+#include "dbpool.h"
 
 /// The class that provides the 
 class MySCP : public DcmThreadSCP
@@ -31,7 +32,7 @@ public:
 
 	/** Constructor. Initializes internal member variables.
 	*/
-	MySCP(CloudClient &cloudclient);
+	MySCP(CloudClient &cloudclient, DBPool &dbpool);
 
 	/** Virtual destructor, frees internal memory.
 	*/
@@ -54,6 +55,7 @@ protected:
 
 	boost::uuids::uuid uuid_;
 	CloudClient &cloudclient;
+	DBPool &dbpool;
 	T_ASC_Association *assoc_;	//copy of the association
 };
 
@@ -65,7 +67,7 @@ public:
 
     /** Default construct a DcmSCPPool object.
      */
-	MyDcmSCPPool(CloudClient &cloudclient);
+	MyDcmSCPPool(CloudClient &cloudclient, DBPool &dbpool);
 
 	virtual OFCondition listen();
 
@@ -79,9 +81,9 @@ private:
         /** Construct a SCPWorker for being used by the given DcmSCPPool.
          *  @param pool the DcmSCPPool object this Worker belongs to.
          */
-        MySCPWorker(MyDcmSCPPool& pool, CloudClient &cloudclient)
+        MySCPWorker(MyDcmSCPPool& pool, CloudClient &cloudclient, DBPool &dbpool)
           : DcmBaseSCPPool::DcmBaseSCPWorker(pool)
-		  , MySCP(cloudclient)
+		  , MySCP(cloudclient, dbpool)
         {			
         }
 
@@ -109,10 +111,11 @@ private:
      */
     virtual DcmBaseSCPPool::DcmBaseSCPWorker* createSCPWorker()
     {		
-        return new MySCPWorker(*this, cloudclient);
+        return new MySCPWorker(*this, cloudclient, dbpool);
     }
 
 	CloudClient &cloudclient;
+	DBPool &dbpool;
 };
 
 #endif // MYSCP_H

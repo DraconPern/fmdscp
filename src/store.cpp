@@ -184,7 +184,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	try
 	{
 
-		Poco::Data::Session dbconnection(config::getConnectionString());				
+		Poco::Data::Session dbconnection(dbpool.get());
 			
 			std::vector<PatientStudy> patientstudies;
 			Poco::Data::Statement patientstudiesselect(dbconnection);

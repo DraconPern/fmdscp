@@ -26,8 +26,8 @@
 #endif
 
 
-MySCP::MySCP(CloudClient &cloudclient)
-	: DcmThreadSCP(), cloudclient(cloudclient)
+MySCP::MySCP(CloudClient &cloudclient, DBPool &dbpool)
+	: DcmThreadSCP(), cloudclient(cloudclient), dbpool(dbpool)
 {
 	// do per association initialization	
 }
@@ -190,7 +190,7 @@ OFCondition MySCP::handleSTORERequest(T_DIMSE_C_StoreRQ &reqMessage,
 		if (status.good())
 		{
 			// call the notification handler
-			StoreHandler storehandler;
+			StoreHandler storehandler(dbpool);
 			status = storehandler.handleSTORERequest(filename);
 			rspStatusCode = STATUS_Success;
 		}
@@ -213,7 +213,7 @@ OFCondition MySCP::handleFINDRequest(T_DIMSE_C_FindRQ &reqMessage,
 {
 	OFCondition status = EC_IllegalParameter;
 
-	FindHandler handler(getAETitle().c_str());
+	FindHandler handler(getAETitle().c_str(), dbpool);
 	status = DIMSE_findProvider(assoc_, presID, &reqMessage, FindHandler::FindCallback, &handler, getDIMSEBlockingMode(), getDIMSETimeout());
 
 	return status;
@@ -224,7 +224,7 @@ OFCondition MySCP::handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage,
 {
 	OFCondition status = EC_IllegalParameter;
 
-	MoveHandler handler(getAETitle().c_str(), getPeerAETitle().c_str(), uuid_, cloudclient);
+	MoveHandler handler(getAETitle().c_str(), getPeerAETitle().c_str(), uuid_, cloudclient, dbpool);
 	status = DIMSE_moveProvider(assoc_, presID, &reqMessage, MoveHandler::MoveCallback, &handler, getDIMSEBlockingMode(), getDIMSETimeout());
 
 	return status;
@@ -259,7 +259,7 @@ OFCondition MyDcmSCPPool::MySCPWorker::workerListen(T_ASC_Association* const ass
 	return cond;
 }
 
-MyDcmSCPPool::MyDcmSCPPool(CloudClient &cloudclient) : cloudclient(cloudclient)
+MyDcmSCPPool::MyDcmSCPPool(CloudClient &cloudclient, DBPool &dbpool) : cloudclient(cloudclient), dbpool(dbpool)
 {
 	setMaxThreads(50);
 	getConfig().setConnectionBlockingMode(DUL_NOBLOCK);

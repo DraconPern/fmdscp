@@ -13,9 +13,9 @@
 #include "poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
-destinations_controller::destinations_controller(CloudClient &cloudclient, std::unordered_map<std::string, std::unordered_map<std::string,
+destinations_controller::destinations_controller(CloudClient &cloudclient, DBPool &dbpool, std::unordered_map<std::string, std::unordered_map<std::string,
 	std::function<void(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response>, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request>)> > > &resource) :
-	cloudclient(cloudclient)
+	cloudclient(cloudclient), dbpool(dbpool)
 {
 	resource["^/api/destinations"]["GET"] = boost::bind(&destinations_controller::api_destinations_list, this, _1, _2);
 	resource["^/api/destinations"]["POST"] = boost::bind(&destinations_controller::api_destinations_create, this, _1, _2);
@@ -29,7 +29,7 @@ void destinations_controller::api_destinations_list(std::shared_ptr<SimpleWeb::S
 	std::vector<Destination> destination_list;
 	try
 	{
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement stselect(dbconnection);
 		stselect << "SELECT id,"
@@ -84,7 +84,7 @@ void destinations_controller::api_destinations_get(std::shared_ptr<SimpleWeb::Se
 	{
 		int id = boost::lexical_cast<int>(idstr);
 
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement stselect(dbconnection);
 		stselect << "SELECT id,"
@@ -157,7 +157,7 @@ void destinations_controller::api_destinations_create(std::shared_ptr<SimpleWeb:
 		dest.created_at = Poco::DateTime();
 		dest.updated_at = Poco::DateTime();
 
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement insert(dbconnection);
 		insert << "INSERT INTO destinations (id, name, destinationhost, destinationport, destinationAE, sourceAE, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
@@ -196,7 +196,7 @@ void destinations_controller::api_destinations_update(std::shared_ptr<SimpleWeb:
 
 	try
 	{
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		int id = boost::lexical_cast<int>(idstr);
 		
@@ -285,7 +285,7 @@ void destinations_controller::api_destinations_delete(std::shared_ptr<SimpleWeb:
 		if (queries.find("id") != queries.end())
 			dest.id = boost::lexical_cast<int>(queries["id"]);
 
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		Poco::Data::Statement stdelete(dbconnection);
 		stdelete << "DELETE FROM destinations WHERE id = ?",
