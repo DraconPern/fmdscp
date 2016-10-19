@@ -88,28 +88,23 @@ std::string config::getConnectionString()
 {
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
 
-	return pConf->getString("ConnectionString", "mysql:///host=mysql;port=3306;user=root;password=root;db=test");
+	return pConf->getString("ConnectionString", "host=mysql;port=3306;user=root;password=root;db=test");
 }
 
-void config::createDBPool()
-{
-	//_pool = new SessionPool("MySQL", getConnectionString());
-}
-
-bool config::test(std::string &errormsg)
+bool config::test(std::string &errormsg, DBPool &dbpool)
 {
 	bool result = true;
 
 	try
 	{
 		// test database connection
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 	}	
 	catch(std::exception &e)
 	{
 		errormsg = "database connection not working: ";
 		errormsg += e.what();
-		errormsg += ", try MySQL:///host=<host>;port=3306;user=root;password=<password>;db=pacsdb_dev";
+		errormsg += ", try host=<host>;port=3306;user=root;password=<password>;db=pacsdb_dev";
 		result = false;
 	}
 

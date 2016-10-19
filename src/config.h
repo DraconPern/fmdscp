@@ -2,6 +2,7 @@
 #define CONFIG_H
 
 #include <boost/filesystem.hpp>
+#include "dbpool.h"
 
 class config
 {
@@ -12,12 +13,9 @@ public:
 	static int getDICOMListeningPort();
 	static void registerCodecs();
 	static void deregisterCodecs();
-	static std::string getConnectionString();
-	static void createDBPool();
-	// static Poco::Data::SessionPool &getDBPool();
-	static bool test(std::string &errormsg);
-protected:
-	// static Poco::AutoPtr<SessionPool> _pool;
+	static std::string getConnectionString();		
+	static bool test(std::string &errormsg, DBPool &dbpool);
+
 };
 
 #endif // CONFIG_H

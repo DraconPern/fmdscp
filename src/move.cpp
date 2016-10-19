@@ -56,7 +56,7 @@ void MoveHandler::SetFileList(const naturalpathmap &instances)
 
 void MoveHandler::SetStatus(std::string msg)
 {
-	Poco::Data::Session dbconnection(config::getConnectionString());
+	Poco::Data::Session dbconnection(dbpool.get());
 	Poco::DateTime rightnow;
 
 	std::string uuidstring = boost::uuids::to_string(uuid);
@@ -92,7 +92,7 @@ void MoveHandler::SetStatus(std::string msg)
 
 void MoveHandler::CreateOutgoingSession(std::string StudyInstanceUID, std::string PatientID, std::string PatientName)
 {
-	Poco::Data::Session dbconnection(config::getConnectionString());	
+	Poco::Data::Session dbconnection(dbpool.get());
 	
 	OutgoingSession out_session;	
 	out_session.uuid = boost::lexical_cast<std::string>(uuid);
@@ -237,7 +237,7 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalpathmap &r
 	try
 	{
 		// open the db
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		std::vector<PatientStudy> patient_studies_list;
 
@@ -325,7 +325,7 @@ bool MoveHandler::findDestination(std::string destinationAE, Destination &destin
 {
 	try
 	{
-		Poco::Data::Session dbconnection(config::getConnectionString());
+		Poco::Data::Session dbconnection(dbpool.get());
 
 		std::vector<Destination> dests;
 		dbconnection << "SELECT id,"

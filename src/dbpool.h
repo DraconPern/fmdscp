@@ -8,7 +8,7 @@ class DBPool : public Poco::Data::SessionPool
 public:
 	DBPool();
 
-	// Poco::Data::Session get() { return Poco::Data::Session(config::getConnectionString()); };
+	// Poco::Data::Session get() { return Poco::Data::Session("mysql", config::getConnectionString()); };
 	Poco::Data::Session get() { return Poco::Data::SessionPool::get(); };
 };
 

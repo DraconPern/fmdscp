@@ -20,15 +20,15 @@ server::server(boost::function< void(void) > shutdownCallback) :
 	my_log.addAppender(logfile);
 	my_log.addAppender(cloud);
 
+	OFLog::configure(OFLogger::OFF_LOG_LEVEL);
+
 	// do server wide init	
 	Poco::Data::MySQL::Connector::registerConnector();
 
 	config::registerCodecs();
-
-	config::createDBPool();
-
+	
 	std::string errormsg;
-	if(!config::test(errormsg))
+	if(!config::test(errormsg, dbpool))
 	{		
 		DCMNET_ERROR(errormsg);
 		DCMNET_INFO("Exiting");

@@ -80,7 +80,7 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	msg << "Saving file: " << newpath.string();
 #endif
 	DCMNET_INFO(msg.str());
-
+	
 	dfile.getDataset()->chooseRepresentation(EXS_JPEGLSLossless, NULL);
 	if (dfile.getDataset()->canWriteXfer(EXS_JPEGLSLossless))
 	{
@@ -92,7 +92,8 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	}
 	else
 	{
-		boost::filesystem::copy(filename, newpath);
+		boost::system::error_code ec;
+		boost::filesystem::copy(filename, newpath, ec);
 
 		DCMNET_INFO("Copied");
 	}
