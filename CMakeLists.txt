@@ -9,15 +9,19 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
 SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-
 add_definitions(-DFMDSCP_VERSION="${VERSION}")
 
 #VC++ stuff
-#add_definitions(-D_WIN32_WINNT=0x0502)
-add_definitions(-D_UNICODE)
-add_definitions(-D_BIND_TO_CURRENT_VCLIBS_VERSION=1)
+if(WIN32)
+	#VC++ stuff
+	add_definitions(-D_WIN32_WINNT=0x0501)
+	add_definitions(-DWIN32_LEAN_AND_MEAN)
+	add_definitions(-D_UNICODE)
+	add_definitions(-D_BIND_TO_CURRENT_VCLIBS_VERSION=1)
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT /Zi")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd -DDEBUG")
+	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_release} /DEBUG")
+endif()
 
 set(Boost_USE_STATIC_LIBS        ON)
 set(Boost_USE_MULTITHREADED      ON)
@@ -94,12 +98,9 @@ set(fmdscp_SRCS
 	src/sender.cpp
 	src/destinations_controller.cpp
 	src/jwtpp.cpp
+	src/dbpool.cpp
 )
 
-if(WIN32)
-#  set(fmdscp_SRCS ${fmdscp_SRCS} src/win/dovo.rc)
-	add_definitions(-D_WIN32_WINNT=0x0501)
-endif(WIN32)
 
 ADD_EXECUTABLE(fmdscp MACOSX_BUNDLE ${fmdscp_SRCS})
 
