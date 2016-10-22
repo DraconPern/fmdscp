@@ -2,20 +2,17 @@ cmake_minimum_required(VERSION 2.8)
 
 project(fmdscp)
 
-set(VERSION "1.1.0")
+set(VERSION "1.1.1")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
-
 add_definitions(-DFMDSCP_VERSION="${VERSION}")
 
-#VC++ stuff
+set (CMAKE_CXX_STANDARD 11)
+
 if(WIN32)
 	#VC++ stuff
 	add_definitions(-D_WIN32_WINNT=0x0501)
-	add_definitions(-DWIN32_LEAN_AND_MEAN)
 	add_definitions(-D_UNICODE)
 	add_definitions(-D_BIND_TO_CURRENT_VCLIBS_VERSION=1)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT /Zi")
@@ -28,14 +25,14 @@ set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME     ON)
 find_package(Boost REQUIRED thread filesystem system random)
 
-#enable dcmtk filename to have wide version, only affects WIN32.  http://utf8everywhere.org/
-add_definitions(-DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1)
-find_package(dcmtk REQUIRED CONFIG HINTS ${DCMTK_DIR})
+if(WIN32)
+	#enable dcmtk filename to have wide version, only affects WIN32.  http://utf8everywhere.org/
+	add_definitions(-DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1)
+endif(WIN32)
+find_package(DCMTK REQUIRED CONFIG HINTS ${DCMTK_DIR})
 
 #include zlib
 find_package(zlib REQUIRED ${ZLIB_ROOT})
-
-find_package(openssl REQUIRED)
 
 #include openjpeg
 find_package(openjpeg HINTS ${OPENJPEG})
@@ -52,6 +49,8 @@ SET(poco_DIR ${POCO}/lib/cmake/Poco)
 find_package(poco REQUIRED HINTS ${POCO})
 add_definitions(-DPOCO_STATIC)
 add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
+
+find_package(openssl REQUIRED)
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/Simple-Web-Server ${CMAKE_SOURCE_DIR}/Simple-WebSocket-Server ${CMAKE_SOURCE_DIR}/sqlite3 ${Boost_INCLUDE_DIRS} ${FMJPEG2K_INCLUDE_DIRS} ${DCMTK_INCLUDE_DIRS} ${MYSQL_INCLUDE_DIR} ${POCO}/include ${ZLIB_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR} ${SOCKETIO}/build/include ${AWS}/include ${VLD}/include)
 LINK_DIRECTORIES(${FMJPEG2K}/lib ${Boost_LIBRARY_DIRS} ${OPENJPEG}/lib ${POCO}/lib ${MYSQL_LIB_DIR} ${SOCKETIO}/build/lib/${CMAKE_BUILD_TYPE} ${AWS}/lib ${VLD}/lib/Win64)
@@ -101,6 +100,17 @@ set(fmdscp_SRCS
 	src/dbpool.cpp
 )
 
+if(WIN32)
+  set(fmdscp_SRCS ${fmdscp_SRCS} src/win/version.rc)
+
+  string(REPLACE "." "," VER_FILEVERSION ${VERSION})
+
+  add_definitions(-DVER_FILEVERSION=${VER_FILEVERSION})
+  add_definitions(-DVER_FILEVERSION_STR="${VERSION}")
+  add_definitions(-DVER_PRODUCTVERSION=${VER_FILEVERSION})
+  add_definitions(-DVER_PRODUCTVERSION_STR="${VERSION}")
+
+endif()
 
 ADD_EXECUTABLE(fmdscp MACOSX_BUNDLE ${fmdscp_SRCS})
 
@@ -120,6 +130,7 @@ TARGET_LINK_LIBRARIES(fmdscp
 	${FMJPEG2K_LIBRARIES}
 	${OPENJPEG_LIBRARIES}
 	${ZLIB_LIBRARIES}
+	${LIBICONV_LIBRARIES}
 	${DCMTK_LIBRARIES}
 	${Boost_LIBRARIES}
 	${Poco_LIBRARIES}
@@ -133,7 +144,7 @@ TARGET_LINK_LIBRARIES(fmdscp
   debug PocoUtild optimized PocoUtil
   debug PocoXMLd optimized PocoXML
   ${MYSQL_LIBRARIES}
- ${OPENSSL_LIBRARIES}
+  ${OPENSSL_LIBRARIES}
 	${OS_SPECIFIC_LIBS}
 	sioclient
 	sioclient_tls
