@@ -61,8 +61,8 @@ int config::getDICOMListeningPort()
 
 void config::registerCodecs()
 {
-	DJDecoderRegistration::registerCodecs();
 	DJEncoderRegistration::registerCodecs();
+	DJDecoderRegistration::registerCodecs();
 	DJLSEncoderRegistration::registerCodecs();
 	DJLSDecoderRegistration::registerCodecs();
 	DcmRLEEncoderRegistration::registerCodecs();
@@ -74,10 +74,10 @@ void config::registerCodecs()
 
 void config::deregisterCodecs()
 {
-	DJDecoderRegistration::cleanup();
 	DJEncoderRegistration::cleanup();
-	DJLSDecoderRegistration::cleanup();
+	DJDecoderRegistration::cleanup();
 	DJLSEncoderRegistration::cleanup();
+	DJLSDecoderRegistration::cleanup();
 	DcmRLEEncoderRegistration::cleanup();
 	DcmRLEDecoderRegistration::cleanup();
 	FMJPEG2KEncoderRegistration::cleanup();
