@@ -24,6 +24,8 @@
 #include "cloudclient.h"
 #include "dbpool.h"
 
+#include "store.h"
+
 /// The class that provides the 
 class MySCP : public DcmThreadSCP
 {
@@ -57,6 +59,8 @@ protected:
 	CloudClient &cloudclient;
 	DBPool &dbpool;
 	T_ASC_Association *assoc_;	//copy of the association
+
+	StoreHandler storehandler;
 };
 
 /// Provides the glue code to glue the thread pool, thread worker and the MySCP together

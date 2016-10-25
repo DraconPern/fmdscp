@@ -27,7 +27,7 @@
 
 
 MySCP::MySCP(CloudClient &cloudclient, DBPool &dbpool)
-	: DcmThreadSCP(), cloudclient(cloudclient), dbpool(dbpool)
+	: DcmThreadSCP(), cloudclient(cloudclient), dbpool(dbpool), storehandler(dbpool)
 {
 	// do per association initialization	
 }
@@ -190,9 +190,7 @@ OFCondition MySCP::handleSTORERequest(T_DIMSE_C_StoreRQ &reqMessage,
 		if (status.good())
 		{
 			// call the notification handler
-			StoreHandler storehandler(dbpool);
-			status = storehandler.handleSTORERequest(filename);
-			rspStatusCode = STATUS_Success;
+			rspStatusCode = storehandler.handleSTORERequest(filename);
 		}
 	}
 
