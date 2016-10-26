@@ -81,12 +81,13 @@ Uint16 StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 #endif
 	DCMNET_INFO(msg.str());
 	
-	dfile.getDataset()->chooseRepresentation(EXS_JPEGLSLossless, NULL);
-	if (dfile.getDataset()->canWriteXfer(EXS_JPEGLSLossless))
+	// EXS_JPEGLSLossless may not be thread safe... seems like if we use it, it crashes with heap corruption
+	dfile.getDataset()->chooseRepresentation(EXS_JPEG2000LosslessOnly, NULL);
+	if (dfile.getDataset()->canWriteXfer(EXS_JPEG2000LosslessOnly))
 	{
 		dfile.getDataset()->loadAllDataIntoMemory();
 
-		dfile.saveFile(newpath.c_str(), EXS_JPEGLSLossless);
+		dfile.saveFile(newpath.c_str(), EXS_JPEG2000LosslessOnly);
 
 		DCMNET_INFO("Changed to JPEG LS lossless");
 	}
