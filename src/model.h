@@ -10,7 +10,8 @@
 class PatientStudy
 {
 public:
-	PatientStudy() { id = 0;
+	PatientStudy() {
+		id = NumberOfStudyRelatedInstances = 0;
 	}
 	int id;
 	std::string StudyInstanceUID;

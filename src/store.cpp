@@ -82,12 +82,12 @@ Uint16 StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	DCMNET_INFO(msg.str());
 	
 	// EXS_JPEGLSLossless may not be thread safe... seems like if we use it, it crashes with heap corruption
-	dfile.getDataset()->chooseRepresentation(EXS_JPEG2000LosslessOnly, NULL);
-	if (dfile.getDataset()->canWriteXfer(EXS_JPEG2000LosslessOnly))
+	dfile.getDataset()->chooseRepresentation(EXS_JPEGLSLossless, NULL);
+	if (dfile.getDataset()->canWriteXfer(EXS_JPEGLSLossless))
 	{
 		dfile.getDataset()->loadAllDataIntoMemory();
 
-		dfile.saveFile(newpath.c_str(), EXS_JPEG2000LosslessOnly);
+		dfile.saveFile(newpath.c_str(), EXS_JPEGLSLossless);
 
 		DCMNET_INFO("Changed to JPEG LS lossless");
 	}
@@ -257,7 +257,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		dfile.getDataset()->findAndGetOFString(DCM_ReferringPhysicianName, textbuf);
 		patientstudy.ReferringPhysicianName = textbuf.c_str();
 
-		patientstudy.NumberOfStudyRelatedInstances = 0;
+		// patientstudy.NumberOfStudyRelatedInstances = 0;
 
 		patientstudy.updated_at = Poco::DateTime();
 
@@ -425,7 +425,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		// count number of instances for the study
 		Poco::Data::Statement countinstances(dbconnection);
 
-		countinstances << "SELECT count(*) FROM instances join patient_studies where StudyInstanceUID = ?", into(patientstudy.NumberOfStudyRelatedInstances), use(patientstudy.StudyInstanceUID), now;
+		countinstances << "SELECT count(*) FROM instances join series on series_id = instances.id join patient_studies on patient_study_id = patient_studies.id where StudyInstanceUID = ?", into(patientstudy.NumberOfStudyRelatedInstances), use(patientstudy.StudyInstanceUID), now;
 
 		Poco::Data::Statement update(dbconnection);
 		update << "UPDATE patient_studies SET "			
