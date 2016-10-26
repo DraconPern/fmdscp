@@ -18,9 +18,10 @@ server::server(boost::function< void(void) > shutdownCallback) :
 
 	dcmtk::log4cplus::Logger my_log = dcmtk::log4cplus::Logger::getRoot();
 	my_log.addAppender(logfile);
-	my_log.addAppender(cloud);
+	// my_log.addAppender(cloud);
 
-	OFLog::configure(OFLogger::OFF_LOG_LEVEL);
+	OFLog::configure(OFLogger::INFO_LOG_LEVEL);
+	
 
 	// do server wide init	
 	Poco::Data::MySQL::Connector::registerConnector();

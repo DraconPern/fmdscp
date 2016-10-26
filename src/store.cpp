@@ -46,9 +46,9 @@ using namespace boost::gregorian;
 using namespace boost::posix_time;
 using namespace boost::local_time;
 
-OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
+Uint16 StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 {
-	OFCondition status = EC_IllegalParameter;
+	Uint16 statusCode = STATUS_STORE_Error_CannotUnderstand;
 
 	DcmFileFormat dfile;
 	OFCondition cond = dfile.loadFile(filename.c_str());
@@ -60,9 +60,9 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 
 	if (studyuid.length() == 0 || seriesuid.length() == 0 || sopuid.length() == 0)
 	{
-		// DEBUGLOG(sessionguid, DB_ERROR, L"No SOP UID\r\n");
+		DCMNET_ERROR("No SOP UID");
 		boost::filesystem::remove(filename);
-		return OFCondition(OFM_dcmqrdb, 1, OF_error, "One or more uid is blank");;
+		return STATUS_STORE_Refused_OutOfResources;
 	}
 
 	boost::filesystem::path newpath = config::getStoragePath();
@@ -104,16 +104,14 @@ OFCondition StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	
 	// now try to add the file into the database
 	if(!AddDICOMFileInfoToDatabase(newpath))
-	{
-		status = OFCondition(OFM_dcmqrdb, 1, OF_error, "Database error");
-	}
-	else
-		status = EC_Normal;
+		return STATUS_STORE_Refused_OutOfResources;
+	
+	statusCode = STATUS_Success;
 
 	// delete the temp file
 	boost::filesystem::remove(filename);
 	
-	return status;
+	return statusCode;
 }
 
 OFCondition StoreHandler::UploadToS3(boost::filesystem::path filename, std::string studyuid, std::string sopuid, std::string seriesuid)
@@ -168,6 +166,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	if(dfile.loadFile(filename.c_str()).bad())
 		return false;
 
+	dfile.getDataset()->convertToUTF8();
+
 	OFDate datebuf;
 	OFTime timebuf;
 	OFString textbuf;
@@ -186,7 +186,9 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	{
 
 		Poco::Data::Session dbconnection(dbpool.get());
-			
+		
+		if (patientstudy.StudyInstanceUID != studyuid)
+		{
 			std::vector<PatientStudy> patientstudies;
 			Poco::Data::Statement patientstudiesselect(dbconnection);
 			patientstudiesselect << "SELECT id,"
@@ -209,90 +211,92 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 
 			patientstudiesselect.execute();
 
-			if(patientstudies.size() == 0)
+			if (patientstudies.size() == 0)
 			{
 				// insert
 				patientstudies.push_back(PatientStudy());
 			}
+
+			patientstudy = patientstudies[0];
+		}
+
+		patientstudy.StudyInstanceUID = studyuid;
+
+		dfile.getDataset()->findAndGetOFString(DCM_PatientName, textbuf);
+		patientstudy.PatientName = textbuf.c_str();
 			
-			PatientStudy &patientstudy = patientstudies[0];
+		dfile.getDataset()->findAndGetOFString(DCM_StudyID, textbuf);
+		patientstudy.StudyID = textbuf.c_str();
 
-			patientstudy.StudyInstanceUID = studyuid;
+		dfile.getDataset()->findAndGetOFString(DCM_AccessionNumber, textbuf);
+		patientstudy.AccessionNumber = textbuf.c_str();
 
-			dfile.getDataset()->findAndGetOFString(DCM_PatientName, textbuf);
-			patientstudy.PatientName = textbuf.c_str();
+		dfile.getDataset()->findAndGetOFString(DCM_PatientID, textbuf);
+		patientstudy.PatientID = textbuf.c_str();
 			
-			dfile.getDataset()->findAndGetOFString(DCM_StudyID, textbuf);
-			patientstudy.StudyID = textbuf.c_str();
-
-			dfile.getDataset()->findAndGetOFString(DCM_AccessionNumber, textbuf);
-			patientstudy.AccessionNumber = textbuf.c_str();
-
-			dfile.getDataset()->findAndGetOFString(DCM_PatientID, textbuf);
-			patientstudy.PatientID = textbuf.c_str();
+		getDateTime(dfile.getDataset(), DCM_StudyDate, DCM_StudyTime, patientstudy.StudyDate);
 			
-			getDateTime(dfile.getDataset(), DCM_StudyDate, DCM_StudyTime, patientstudy.StudyDate);
-			
-			// handle modality list...
-			std::string modalitiesinstudy = patientstudy.ModalitiesInStudy;
-			std::set<std::string> modalityarray;
-			if(modalitiesinstudy.length() > 0)
-				boost::split(modalityarray, modalitiesinstudy, boost::is_any_of("\\"));
-			dfile.getDataset()->findAndGetOFStringArray(DCM_Modality, textbuf);
-			modalityarray.insert(textbuf.c_str());
-			patientstudy.ModalitiesInStudy = boost::join(modalityarray, "\\");
+		// handle modality list...
+		std::string modalitiesinstudy = patientstudy.ModalitiesInStudy;
+		std::set<std::string> modalityarray;
+		if(modalitiesinstudy.length() > 0)
+			boost::split(modalityarray, modalitiesinstudy, boost::is_any_of("\\"));
+		dfile.getDataset()->findAndGetOFStringArray(DCM_Modality, textbuf);
+		modalityarray.insert(textbuf.c_str());
+		patientstudy.ModalitiesInStudy = boost::join(modalityarray, "\\");
 
-			dfile.getDataset()->findAndGetOFString(DCM_StudyDescription, textbuf);
-			patientstudy.StudyDescription = textbuf.c_str();
+		dfile.getDataset()->findAndGetOFString(DCM_StudyDescription, textbuf);
+		patientstudy.StudyDescription = textbuf.c_str();
 
-			dfile.getDataset()->findAndGetOFString(DCM_PatientSex, textbuf);
-			patientstudy.PatientSex = textbuf.c_str();
+		dfile.getDataset()->findAndGetOFString(DCM_PatientSex, textbuf);
+		patientstudy.PatientSex = textbuf.c_str();
 
-			getDateTime(dfile.getDataset(), DCM_PatientBirthDate, DCM_PatientBirthTime, patientstudy.PatientBirthDate);
+		getDateTime(dfile.getDataset(), DCM_PatientBirthDate, DCM_PatientBirthTime, patientstudy.PatientBirthDate);
 
-			dfile.getDataset()->findAndGetOFString(DCM_ReferringPhysicianName, textbuf);
-			patientstudy.ReferringPhysicianName = textbuf.c_str();
+		dfile.getDataset()->findAndGetOFString(DCM_ReferringPhysicianName, textbuf);
+		patientstudy.ReferringPhysicianName = textbuf.c_str();
 
-			patientstudy.NumberOfStudyRelatedInstances = 0;
+		patientstudy.NumberOfStudyRelatedInstances = 0;
 
-			patientstudy.updated_at = Poco::DateTime();
+		patientstudy.updated_at = Poco::DateTime();
 
-			if(patientstudy.id != 0)
-			{
-				Poco::Data::Statement update(dbconnection);
-				update << "UPDATE patient_studies SET "
-					"id = ?,"
-					"StudyInstanceUID = ?,"
-					"StudyID = ?,"
-					"AccessionNumber = ?,"
-					"PatientName = ?,"
-					"PatientID = ?,"
-					"StudyDate = ?,"
-					"ModalitiesInStudy = ?,"
-					"StudyDescription = ?,"
-					"PatientSex = ?,"
-					"PatientBirthDate = ?,"
-					"ReferringPhysicianName = ?,"
-					"NumberOfStudyRelatedInstances = ?,"
-					"createdAt = ?, updatedAt = ?"
-					" WHERE id = ?",
-					use(patientstudy),
-					use(patientstudy.id);
-				update.execute();
-			}
-			else
-			{				
-				patientstudy.created_at = Poco::DateTime();
+		if(patientstudy.id != 0)
+		{
+			Poco::Data::Statement update(dbconnection);
+			update << "UPDATE patient_studies SET "
+				"id = ?,"
+				"StudyInstanceUID = ?,"
+				"StudyID = ?,"
+				"AccessionNumber = ?,"
+				"PatientName = ?,"
+				"PatientID = ?,"
+				"StudyDate = ?,"
+				"ModalitiesInStudy = ?,"
+				"StudyDescription = ?,"
+				"PatientSex = ?,"
+				"PatientBirthDate = ?,"
+				"ReferringPhysicianName = ?,"
+				"NumberOfStudyRelatedInstances = ?,"
+				"createdAt = ?, updatedAt = ?"
+				" WHERE id = ?",
+				use(patientstudy),
+				use(patientstudy.id);
+			update.execute();
+		}
+		else
+		{				
+			patientstudy.created_at = Poco::DateTime();
 
-				Poco::Data::Statement insert(dbconnection);
-				insert << "INSERT INTO patient_studies (id, StudyInstanceUID, StudyID, AccessionNumber, PatientName, PatientID, StudyDate, ModalitiesInStudy, StudyDescription, PatientSex, PatientBirthDate, ReferringPhysicianName, NumberOfStudyRelatedInstances, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-					use(patientstudy);
-				insert.execute();
+			Poco::Data::Statement insert(dbconnection);
+			insert << "INSERT INTO patient_studies (id, StudyInstanceUID, StudyID, AccessionNumber, PatientName, PatientID, StudyDate, ModalitiesInStudy, StudyDescription, PatientSex, PatientBirthDate, ReferringPhysicianName, NumberOfStudyRelatedInstances, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				use(patientstudy);
+			insert.execute();
 
-				dbconnection << "SELECT LAST_INSERT_ID()", into(patientstudy.id), now;
-			}
+			dbconnection << "SELECT LAST_INSERT_ID()", into(patientstudy.id), now;
+		}
 		
-		
+		if (series.SeriesInstanceUID != seriesuid)
+		{
 			// update the series table			
 			std::vector<Series> series_list;
 			Poco::Data::Statement seriesselect(dbconnection);
@@ -303,67 +307,66 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				"SeriesNumber,"
 				"SeriesDate,"
 				"patient_study_id,"
-				"createdAt,updatedAt"				
+				"createdAt,updatedAt"
 				" FROM series WHERE SeriesInstanceUID = ?",
 				into(series_list),
 				use(seriesuid);
 
 			seriesselect.execute();
 
-			if(series_list.size() == 0)
+			if (series_list.size() == 0)
 			{
 				series_list.push_back(Series(patientstudy.id));
 			}
 
-			Series &series = series_list[0];
+			series = series_list[0];
+		}
 
-			series.SeriesInstanceUID = seriesuid;			
+		series.SeriesInstanceUID = seriesuid;			
 
-			dfile.getDataset()->findAndGetOFString(DCM_Modality, textbuf);
-			series.Modality = textbuf.c_str();
+		dfile.getDataset()->findAndGetOFString(DCM_Modality, textbuf);
+		series.Modality = textbuf.c_str();
 
-			dfile.getDataset()->findAndGetOFString(DCM_SeriesDescription, textbuf);
-			series.SeriesDescription = textbuf.c_str();
+		dfile.getDataset()->findAndGetOFString(DCM_SeriesDescription, textbuf);
+		series.SeriesDescription = textbuf.c_str();
 
-			dfile.getDataset()->findAndGetSint32(DCM_SeriesNumber, numberbuf);
-			series.SeriesNumber = numberbuf;
+		dfile.getDataset()->findAndGetSint32(DCM_SeriesNumber, numberbuf);
+		series.SeriesNumber = numberbuf;
 
-			getDateTime(dfile.getDataset(), DCM_SeriesDate, DCM_SeriesTime, series.SeriesDate);
+		getDateTime(dfile.getDataset(), DCM_SeriesDate, DCM_SeriesTime, series.SeriesDate);
 			
-			series.updated_at = Poco::DateTime();
+		series.updated_at = Poco::DateTime();
 
-			if(series.id != 0)
-			{
-				Poco::Data::Statement update(dbconnection);
-				update << "UPDATE series SET "
-					"id = ?,"
-					"SeriesInstanceUID = ?,"
-					"Modality = ?,"
-					"SeriesDescription = ?,"
-					"SeriesNumber = ?,"
-					"SeriesDate = ?,"
-					"patient_study_id = ?,"
-					"createdAt = ?, updatedAt = ?"
-					" WHERE id = ?",
-					use(series),
-					use(series.id);
-				update.execute();
-			}
-			else
-			{				
-				series.created_at = Poco::DateTime();		
+		if(series.id != 0)
+		{
+			Poco::Data::Statement update(dbconnection);
+			update << "UPDATE series SET "
+				"id = ?,"
+				"SeriesInstanceUID = ?,"
+				"Modality = ?,"
+				"SeriesDescription = ?,"
+				"SeriesNumber = ?,"
+				"SeriesDate = ?,"
+				"patient_study_id = ?,"
+				"createdAt = ?, updatedAt = ?"
+				" WHERE id = ?",
+				use(series),
+				use(series.id);
+			update.execute();
+		}
+		else
+		{				
+			series.created_at = Poco::DateTime();		
 
-				Poco::Data::Statement insert(dbconnection);
-				insert << "INSERT INTO series (id, SeriesInstanceUID, Modality, SeriesDescription, SeriesNumber, SeriesDate, patient_study_id, createdAt, updatedAt) VALUES(?, ? , ? , ? , ? , ? , ? , ? , ?)",
-					use(series);
-				insert.execute();
+			Poco::Data::Statement insert(dbconnection);
+			insert << "INSERT INTO series (id, SeriesInstanceUID, Modality, SeriesDescription, SeriesNumber, SeriesDate, patient_study_id, createdAt, updatedAt) VALUES(?, ? , ? , ? , ? , ? , ? , ? , ?)",
+				use(series);
+			insert.execute();
 
-				dbconnection << "SELECT LAST_INSERT_ID()", into(series.id), now;
-			}
-		
-		
-		// update the images table
-		
+			dbconnection << "SELECT LAST_INSERT_ID()", into(series.id), now;
+		}
+				
+		// update the images table		
 		std::vector<Instance> instances;
 		Poco::Data::Statement instanceselect(dbconnection);
 		instanceselect << "SELECT id,"
@@ -415,7 +418,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 				use(instance);
 			insert.execute();
 
-			dbconnection << "SELECT LAST_INSERT_ID()", into(series.id), now;
+			dbconnection << "SELECT LAST_INSERT_ID()", into(instance.id), now;
 		}		
 		
 		// count number of instances for the study
@@ -424,23 +427,10 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		countinstances << "SELECT count(*) FROM instances join patient_studies where StudyInstanceUID = ?", into(patientstudy.NumberOfStudyRelatedInstances), use(patientstudy.StudyInstanceUID), now;
 
 		Poco::Data::Statement update(dbconnection);
-		update << "UPDATE patient_studies SET "
-			"id = ?,"
-			"StudyInstanceUID = ?,"
-			"StudyID = ?,"
-			"AccessionNumber = ?,"
-			"PatientName = ?,"
-			"PatientID = ?,"
-			"StudyDate = ?,"
-			"ModalitiesInStudy = ?,"
-			"StudyDescription = ?,"
-			"PatientSex = ?,"
-			"PatientBirthDate = ?,"
-			"ReferringPhysicianName = ?,"
-			"NumberOfStudyRelatedInstances = ?,"
-			"createdAt = ?, updatedAt = ?"
+		update << "UPDATE patient_studies SET "			
+			"NumberOfStudyRelatedInstances = ?"			
 			" WHERE id = ?",
-			use(patientstudy),
+			use(patientstudy.NumberOfStudyRelatedInstances),
 			use(patientstudy.id);
 		update.execute();
 	}
