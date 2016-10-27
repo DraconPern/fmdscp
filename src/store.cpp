@@ -425,11 +425,11 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		// count number of instances for the study
 		Poco::Data::Statement countinstances(dbconnection);
 
-		countinstances << "SELECT count(*) FROM instances join series on series_id = instances.id join patient_studies on patient_study_id = patient_studies.id where StudyInstanceUID = ?", into(patientstudy.NumberOfStudyRelatedInstances), use(patientstudy.StudyInstanceUID), now;
+		countinstances << "SELECT count(*) FROM instances join series on series_id = instances.id join patient_studies on patient_study_id = patient_studies.id where patient_studies.id = ?", into(patientstudy.NumberOfStudyRelatedInstances), use(patientstudy.id), now;
 
 		Poco::Data::Statement update(dbconnection);
 		update << "UPDATE patient_studies SET "			
-			"NumberOfStudyRelatedInstances = ?"			
+			"NumberOfStudyRelatedInstances = ?"
 			" WHERE id = ?",
 			use(patientstudy.NumberOfStudyRelatedInstances),
 			use(patientstudy.id);
