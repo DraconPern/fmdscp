@@ -187,9 +187,15 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	{
 
 		Poco::Data::Session dbconnection(dbpool.get());
-		
+
 		if (patientstudy.StudyInstanceUID != studyuid)
 		{
+			if (patientstudy.StudyInstanceUID.length() > 0)
+			{
+				// we processed an old study... update the count
+				UpdateStudyInstanceCount(patientstudy.StudyInstanceUID, dbconnection);
+			}
+
 			std::vector<PatientStudy> patientstudies;
 			Poco::Data::Statement patientstudiesselect(dbconnection);
 			patientstudiesselect << "SELECT id,"
@@ -257,7 +263,8 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 		dfile.getDataset()->findAndGetOFString(DCM_ReferringPhysicianName, textbuf);
 		patientstudy.ReferringPhysicianName = textbuf.c_str();
 
-		// patientstudy.NumberOfStudyRelatedInstances = 0;
+		// don't set
+		// patientstudy.NumberOfStudyRelatedInstances
 
 		patientstudy.updated_at = Poco::DateTime();
 
@@ -422,18 +429,6 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 			dbconnection << "SELECT LAST_INSERT_ID()", into(instance.id), now;
 		}		
 		
-		// count number of instances for the study
-		Poco::Data::Statement countinstances(dbconnection);
-
-		countinstances << "SELECT count(*) FROM instances join series on series_id = instances.id join patient_studies on patient_study_id = patient_studies.id where patient_studies.id = ?", into(patientstudy.NumberOfStudyRelatedInstances), use(patientstudy.id), now;
-
-		Poco::Data::Statement update(dbconnection);
-		update << "UPDATE patient_studies SET "			
-			"NumberOfStudyRelatedInstances = ?"
-			" WHERE id = ?",
-			use(patientstudy.NumberOfStudyRelatedInstances),
-			use(patientstudy.id);
-		update.execute();
 	}
 	catch(Poco::Data::DataException &e)
 	{
@@ -443,4 +438,31 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
 	}
 
 	return isOk;
+}
+
+
+void StoreHandler::UpdateStudyInstanceCount(std::string StudyInstanceUID, Poco::Data::Session &dbconnection)
+{	
+	// count number of instances for the study
+	Poco::Data::Statement countinstances(dbconnection);
+
+	int NumberOfStudyRelatedInstances = 0;
+	countinstances << "SELECT count(*) FROM instances join series on series_id = series.id join patient_studies on patient_study_id = patient_studies.id where patient_studies.StudyInstanceUID = ?", into(NumberOfStudyRelatedInstances), use(StudyInstanceUID), now;
+
+	Poco::Data::Statement update(dbconnection);
+	update << "UPDATE patient_studies SET "
+		"NumberOfStudyRelatedInstances = ?"
+		" WHERE StudyInstanceUID = ?",
+		use(NumberOfStudyRelatedInstances),
+		use(StudyInstanceUID);
+	update.execute();
+}
+
+void StoreHandler::notifyAssociationEnd()
+{
+	if (patientstudy.StudyInstanceUID.length() > 0)
+	{
+		Poco::Data::Session dbconnection(dbpool.get());
+		UpdateStudyInstanceCount(patientstudy.StudyInstanceUID, dbconnection);
+	}
 }

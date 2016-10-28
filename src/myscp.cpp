@@ -228,6 +228,11 @@ OFCondition MySCP::handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage,
 	return status;
 }
 
+void MySCP::notifyAssociationTermination()
+{
+	storehandler.notifyAssociationEnd();
+}
+
 OFCondition MyDcmSCPPool::MySCPWorker::setAssociation(T_ASC_Association* assoc)
 {
 	// this call is still in the listening thread, make a log before we pass it

@@ -55,6 +55,8 @@ protected:
 	virtual OFCondition handleFINDRequest(T_DIMSE_C_FindRQ &reqMessage, const T_ASC_PresentationContextID presID);
 	virtual OFCondition handleMOVERequest(T_DIMSE_C_MoveRQ &reqMessage, const T_ASC_PresentationContextID presID);
 
+	virtual void notifyAssociationTermination();
+
 	boost::uuids::uuid uuid_;
 	CloudClient &cloudclient;
 	DBPool &dbpool;

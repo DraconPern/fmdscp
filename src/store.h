@@ -28,7 +28,11 @@ public:
 	Uint16 handleSTORERequest(boost::filesystem::path filename);
 	bool AddDICOMFileInfoToDatabase(boost::filesystem::path filename);
 	OFCondition UploadToS3(boost::filesystem::path filename, std::string sopuid, std::string seriesuid, std::string studyuid);
+
+	void notifyAssociationEnd();
 protected:
+	void UpdateStudyInstanceCount(std::string StudyInstanceUID, Poco::Data::Session &dbconnection);
+
 	PatientStudy patientstudy;
 	Series series;
 
