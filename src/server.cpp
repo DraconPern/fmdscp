@@ -65,14 +65,14 @@ void server::stop()
 {
 	setStop(true);
 
-	// stop webserver
-	httpserver.stop();
-
 	// tell senderservice to stop
 	senderService.stop();
-	
+
 	// tell scp to stop
 	storageSCP.stopAfterCurrentAssociations();
+
+	// stop webserver
+	httpserver.stop();
 
 	// stop socketio to cloud
 	cloudclient.stop();
