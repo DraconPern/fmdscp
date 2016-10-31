@@ -98,25 +98,32 @@ protected:
 		}
 
 		if (!_helpRequested)
-		{			
-			boost::asio::ssl::detail::openssl_init<> _openssl_init;
+		{
+			try
+			{
+				boost::asio::ssl::detail::openssl_init<> _openssl_init;
 
-			Aws::SDKOptions options;
-			options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
-			Aws::InitAPI(options);
+				Aws::SDKOptions options;
+				options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
+				Aws::InitAPI(options);
 
-			boost::filesystem::path::codecvt();  // ensure VC++ does not race during initialization.
+				boost::filesystem::path::codecvt();  // ensure VC++ does not race during initialization.
 
-			server s(boost::bind(ServerApplication::terminate));
-			s.run_async();
-			
-			// wait for OS to tell us to stop
-			waitForTerminationRequest();
+				server s(boost::bind(ServerApplication::terminate));
+				s.run_async();
 
-			// stop server			
-			s.stop();
+				// wait for OS to tell us to stop
+				waitForTerminationRequest();
 
-			Aws::ShutdownAPI(options);
+				// stop server			
+				s.stop();
+
+				Aws::ShutdownAPI(options);
+			}
+			catch (...)
+			{
+
+			}
 		}
 		return Application::EXIT_OK;
 	}
