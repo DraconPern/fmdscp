@@ -15,6 +15,8 @@
 
 #include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
 #include "dcmtk/ofstd/ofstd.h"
+#include "dcmtk/dcmdata/dctk.h"
+
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
 #define UNICODE 1
@@ -26,7 +28,7 @@ class StoreHandler
 public:	
 	StoreHandler(DBPool &dbpool) : dbpool(dbpool) {};
 	Uint16 handleSTORERequest(boost::filesystem::path filename);
-	bool AddDICOMFileInfoToDatabase(boost::filesystem::path filename);
+	bool AddDICOMFileInfoToDatabase(DcmFileFormat &dfile);
 	OFCondition UploadToS3(boost::filesystem::path filename, std::string sopuid, std::string seriesuid, std::string studyuid);
 
 	void notifyAssociationEnd();

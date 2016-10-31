@@ -104,7 +104,7 @@ Uint16 StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	// UploadToS3(newpath, sopuid.c_str(), seriesuid.c_str(), studyuid.c_str());
 	
 	// now try to add the file into the database
-	if(!AddDICOMFileInfoToDatabase(newpath))
+	if(!AddDICOMFileInfoToDatabase(dfile))
 		return STATUS_STORE_Refused_OutOfResources;
 	
 	statusCode = STATUS_Success;
@@ -157,16 +157,8 @@ OFCondition StoreHandler::UploadToS3(boost::filesystem::path filename, std::stri
 
 }
 
-bool StoreHandler::AddDICOMFileInfoToDatabase(boost::filesystem::path filename)
+bool StoreHandler::AddDICOMFileInfoToDatabase(DcmFileFormat &dfile)
 {
-	// now try to add the file into the database
-	if(!boost::filesystem::exists(filename))
-		return false;
-
-	DcmFileFormat dfile;
-	if(dfile.loadFile(filename.c_str()).bad())
-		return false;
-
 	dfile.getDataset()->convertToUTF8();
 
 	OFDate datebuf;
