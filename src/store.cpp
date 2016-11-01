@@ -81,15 +81,32 @@ Uint16 StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 #endif
 	DCMNET_INFO(msg.str());
 	
-	// EXS_JPEGLSLossless may not be thread safe... seems like if we use it, it crashes with heap corruption
+	
+	DcmXfer origxfer(dfile.getDataset()->getOriginalXfer());
+
+	// if it's already compressed..
+	if (origxfer.getXfer() != EXS_JPEGLSLossless && origxfer.isEncapsulated())
+	{
+		// uncompress
+		dfile.getDataset()->chooseRepresentation(EXS_LittleEndianExplicit, NULL);
+	}
+
 	dfile.getDataset()->chooseRepresentation(EXS_JPEGLSLossless, NULL);
 	if (dfile.getDataset()->canWriteXfer(EXS_JPEGLSLossless))
 	{
 		dfile.getDataset()->loadAllDataIntoMemory();
 
-		dfile.saveFile(newpath.c_str(), EXS_JPEGLSLossless);
+		if (dfile.saveFile(newpath.c_str(), EXS_JPEGLSLossless).good())
+		{
+			DCMNET_INFO("Changed to JPEG LS lossless");
+		}
+		else
+		{
+			boost::system::error_code ec;
+			boost::filesystem::copy(filename, newpath, ec);
 
-		DCMNET_INFO("Changed to JPEG LS lossless");
+			DCMNET_INFO("Copied because wasn't able to change to JPEG LS lossless");
+		}
 	}
 	else
 	{
