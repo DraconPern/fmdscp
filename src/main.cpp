@@ -89,6 +89,20 @@ protected:
 		helpFormatter.format(std::cout);
 	}
 
+	bool checksystem()
+	{
+		std::string errormsg;
+		DBPool dbpool;
+		if (!config::test(errormsg, dbpool))
+		{
+			DCMNET_ERROR(errormsg);
+			DCMNET_INFO("Exiting");
+			std::cerr << errormsg;
+			return false;
+		}		
+		return true;
+	}
+
 	int main(const ArgVec& args)
 	{
 		if (args.size() > 0)
@@ -99,31 +113,30 @@ protected:
 
 		if (!_helpRequested)
 		{
-			try
+			boost::asio::ssl::detail::openssl_init<> _openssl_init;
+
+			Aws::SDKOptions options;
+			options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
+			Aws::InitAPI(options);
+
+			boost::filesystem::path::codecvt();  // ensure VC++ does not race during initialization.
+
+			if (!checksystem())
 			{
-				boost::asio::ssl::detail::openssl_init<> _openssl_init;
-
-				Aws::SDKOptions options;
-				options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Info;
-				Aws::InitAPI(options);
-
-				boost::filesystem::path::codecvt();  // ensure VC++ does not race during initialization.
-
-				server s(boost::bind(ServerApplication::terminate));
-				s.run_async();
-
-				// wait for OS to tell us to stop
-				waitForTerminationRequest();
-
-				// stop server			
-				s.stop();
-
 				Aws::ShutdownAPI(options);
+				return Application::EXIT_OK;
 			}
-			catch (...)
-			{
 
-			}
+			server s(boost::bind(ServerApplication::terminate));
+			s.run_async();
+
+			// wait for OS to tell us to stop
+			waitForTerminationRequest();
+
+			// stop server			
+			s.stop();
+
+			Aws::ShutdownAPI(options);		
 		}
 		return Application::EXIT_OK;
 	}

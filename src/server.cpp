@@ -17,7 +17,7 @@ server::server(boost::function< void(void) > shutdownCallback) :
 	dcmtk::log4cplus::SharedAppenderPtr cloud(new CloudAppender(cloudclient));
 
 	dcmtk::log4cplus::Logger my_log = dcmtk::log4cplus::Logger::getRoot();
-	my_log.removeAllAppenders();
+	// my_log.removeAllAppenders();
 	my_log.addAppender(logfile);
 	// my_log.addAppender(cloud);
 
@@ -28,16 +28,6 @@ server::server(boost::function< void(void) > shutdownCallback) :
 	Poco::Data::MySQL::Connector::registerConnector();
 
 	config::registerCodecs();
-	
-	std::string errormsg;
-	if(!config::test(errormsg, dbpool))
-	{		
-		DCMNET_ERROR(errormsg);
-		DCMNET_INFO("Exiting");
-		
-		throw new std::exception(errormsg.c_str());
-	}
-
 }
 
 server::~server()
