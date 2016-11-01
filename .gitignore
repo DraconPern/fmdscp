@@ -1,3 +1,6 @@
+dcmtk/
+openjpeg/
+fmjpeg2koj/
 build-Debug/
 build-Release/
 .DS_Store
