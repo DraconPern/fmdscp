@@ -3,6 +3,7 @@
 #include "Poco/Util/WinRegistryConfiguration.h"
 #include "poco/Path.h"
 #include <Poco/Data/Session.h>
+#include <boost/lexical_cast.hpp>
 
 using namespace Poco;
 using namespace Poco::Util;
@@ -59,6 +60,16 @@ int config::getDICOMListeningPort()
 	return pConf->getInt("DICOMListeningPort", 104);
 }
 
+std::string config::getFrontEnd()
+{
+	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
+	std::string host = pConf->getString("FrontEndHost", "localhost");
+	int port = pConf->getInt("FrontEndPort", 3000);
+
+	std::string frontend = "http://" + host + ":" + boost::lexical_cast<std::string>(port);
+	return frontend;
+}
+
 void config::registerCodecs()
 {
 	DJEncoderRegistration::registerCodecs();
@@ -88,7 +99,7 @@ std::string config::getConnectionString()
 {
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
 
-	return pConf->getString("ConnectionString", "host=mysql;port=3306;user=root;password=root;db=test");
+	return pConf->getString("ConnectionString", "host=localhost;port=3306;user=root;password=root;db=pacs");
 }
 
 bool config::test(std::string &errormsg, DBPool &dbpool)

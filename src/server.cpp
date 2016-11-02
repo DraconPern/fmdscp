@@ -40,7 +40,7 @@ server::~server()
 void server::run_async()
 {	
 	// connect to cloud
-	cloudclient.connect("http://localhost:3000");
+	cloudclient.connect(config::getFrontEnd());
 
 	// add scp
 	threads.create_thread(boost::bind(&MyDcmSCPPool::listen, &storageSCP));
