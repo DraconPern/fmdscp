@@ -9,6 +9,7 @@
 #include <codecvt>
 #include "model.h"
 #include "util.h"
+#include "jwtpp.h"
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -59,6 +60,10 @@ HttpServer::HttpServer(boost::function< void(void) > shutdownCallback, CloudClie
 
 void HttpServer::Version(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
 {
+	// jwt test
+	jwt jtest;
+	int value = jtest.jwt_decode("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ", "secret");
+	
 	boost::property_tree::ptree pt, children;
 
 	std::ostringstream ver;

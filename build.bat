@@ -23,7 +23,7 @@ cd zlib
 git pull
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake.exe .. -G %GENERATOR% -DCMAKE_C_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Od" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\zlib\%TYPE%
+cmake.exe .. -G %GENERATOR% -DCMAKE_C_FLAGS_RELEASE="/MT /O2" -DCMAKE_C_FLAGS_DEBUG="/MTd /Od" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\zlib\%TYPE%
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 IF "%TYPE%" == "Release" copy /Y %DEVSPACE%\zlib\Release\lib\zlibstatic.lib %DEVSPACE%\zlib\Release\lib\zlib_o.lib
@@ -34,7 +34,7 @@ git clone https://github.com/DraconPern/libiconv-cmake.git
 cd libiconv-cmake
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake.exe .. -G %GENERATOR% -DBUILD_SHARED_LIBS=0 -DCMAKE_C_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Od" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\libiconv\%TYPE%
+cmake.exe .. -G %GENERATOR% -DBUILD_SHARED_LIBS=0 -DCMAKE_C_FLAGS_RELEASE="/MT /O2" -DCMAKE_C_FLAGS_DEBUG="/MTd /Od" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\libiconv\%TYPE%
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 IF "%TYPE%" == "Debug"   copy /Y %DEVSPACE%\libiconv\Debug\lib\libiconv.lib %DEVSPACE%\libiconv\Debug\lib\libiconv_d.lib
@@ -53,6 +53,10 @@ call ms\do_ms.bat
 call ms\do_win64a.bat
 )
 nmake -f ms\nt.mak install
+IF "%TYPE%" == "Debug"   copy /Y %DEVSPACE%\openssl\Debug\lib\libeay32.lib %DEVSPACE%\openssl\Debug\lib\dcmtkeay_d.lib
+IF "%TYPE%" == "Debug"   copy /Y %DEVSPACE%\openssl\Debug\lib\ssleay32.lib %DEVSPACE%\openssl\Debug\lib\dcmtkssl_d.lib
+IF "%TYPE%" == "Release" copy /Y %DEVSPACE%\openssl\Release\lib\libeay32.lib %DEVSPACE%\openssl\Release\lib\dcmtkeay_o.lib
+IF "%TYPE%" == "Release" copy /Y %DEVSPACE%\openssl\Release\lib\ssleay32.lib %DEVSPACE%\openssl\Release\lib\dcmtkssl_o.lib
 SET OPENSSL_ROOT_DIR=%DEVSPACE%\openssl\%TYPE%
 SET PATH=%OLDPATH%
 
@@ -73,8 +77,8 @@ cd openjpeg
 git pull
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G %GENERATOR% -DBUILD_THIRDPARTY=1 -DBUILD_SHARED_LIBS=0 -DCMAKE_C_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_C_FLAGS_DEBUG="/D_DEBUG /MTd /Od" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\openjpeg\%TYPE%
-msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
+cmake .. -G %GENERATOR% -DBUILD_THIRDPARTY=1 -DBUILD_SHARED_LIBS=0 -DCMAKE_C_FLAGS_RELEASE="/MT /O2" -DCMAKE_C_FLAGS_DEBUG="/MTd /Od" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\openjpeg\%TYPE%
+msbuild /maxcpucount:8/P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
 cd %DEVSPACE%
@@ -83,7 +87,7 @@ cd fmjpeg2koj
 git pull
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G %GENERATOR% -DBUILD_SHARED_LIBS=OFF -DBUILD_THIRDPARTY=ON -DCMAKE_CXX_FLAGS_RELEASE="/MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od" -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DDCMTK_DIR=%DEVSPACE%\dcmtk\%TYPE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\fmjpeg2koj\%TYPE%
+cmake .. -G %GENERATOR% -DBUILD_SHARED_LIBS=OFF -DBUILD_THIRDPARTY=ON -DCMAKE_CXX_FLAGS_RELEASE="/Zi /MT /O2" -DCMAKE_CXX_FLAGS_DEBUG="/MTd /Od" -DOPENJPEG=%DEVSPACE%\openjpeg\%TYPE% -DDCMTK_DIR=%DEVSPACE%\dcmtk\%TYPE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\fmjpeg2koj\%TYPE%
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
@@ -103,7 +107,7 @@ unzip -n mysql-connector-c-6.1.6-src.zip
 cd mysql-connector-c-6.1.6-src
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G %GENERATOR% -DCMAKE_CXX_FLAGS_RELEASE="/Zi /MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
+cmake .. -G %GENERATOR% -DCMAKE_CXX_FLAGS_RELEASE="/Zi /MT /O2" -DCMAKE_CXX_FLAGS_DEBUG="/MTd /Od" -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 SET MYSQL_DIR=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%
@@ -124,7 +128,7 @@ git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-b
 cd poco
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G %GENERATOR% -DPOCO_STATIC=ON -DENABLE_NETSSL=OFF -DENABLE_CRYPTO=OFF -DCMAKE_CXX_FLAGS_RELEASE="/Zi /MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od /Zi" -DMYSQL_LIB=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%\lib\mysqlclient -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\poco\%TYPE%
+cmake .. -G %GENERATOR% -DPOCO_STATIC=ON -DENABLE_NETSSL=OFF -DENABLE_CRYPTO=OFF -DCMAKE_CXX_FLAGS_RELEASE="/Zi /MT /O2" -DCMAKE_CXX_FLAGS_DEBUG="/MTd /Od" -DMYSQL_LIB=%DEVSPACE%\mysql-connector-c-6.1.6-src\%TYPE%\lib\mysqlclient -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\poco\%TYPE%
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
@@ -136,7 +140,7 @@ REM remove problematic line
 powershell "gci . CMakeLists.txt | ForEach { (Get-Content $_ | ForEach {$_ -replace 'install\(FILES \${Boost_LIBRARIES\}', 'install(FILES ${Boost_LIBRARIES_DISABLE}'}) | Set-Content $_ }"
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G %GENERATOR% -DCMAKE_BUILD_TYPE=%TYPE% -DBOOST_ROOT=%DEVSPACE%\boost_1_61_0 -DBOOST_VER="" -DCMAKE_CXX_FLAGS_RELEASE="/Zi /MT /O2 /D NDEBUG" -DCMAKE_CXX_FLAGS_DEBUG="/D_DEBUG /MTd /Od"
+cmake .. -G %GENERATOR% -DCMAKE_BUILD_TYPE=%TYPE% -DBOOST_ROOT=%DEVSPACE%\boost_1_61_0 -DBOOST_VER="" -DCMAKE_CXX_FLAGS_RELEASE="/Zi /MT /O2" -DCMAKE_CXX_FLAGS_DEBUG="/MTd /Od"
 msbuild /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
