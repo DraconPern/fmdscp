@@ -17,7 +17,7 @@ server::server(boost::function< void(void) > shutdownCallback) :
 	dcmtk::log4cplus::SharedAppenderPtr cloud(new CloudAppender(cloudclient));
 
 	dcmtk::log4cplus::Logger my_log = dcmtk::log4cplus::Logger::getRoot();
-	// my_log.removeAllAppenders();
+	my_log.removeAllAppenders();
 	my_log.addAppender(logfile);
 	// my_log.addAppender(cloud);
 
