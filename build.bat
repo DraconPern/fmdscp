@@ -57,6 +57,11 @@ IF "%TYPE%" == "Debug"   copy /Y %DEVSPACE%\openssl\Debug\lib\libeay32.lib %DEVS
 IF "%TYPE%" == "Debug"   copy /Y %DEVSPACE%\openssl\Debug\lib\ssleay32.lib %DEVSPACE%\openssl\Debug\lib\dcmtkssl_d.lib
 IF "%TYPE%" == "Release" copy /Y %DEVSPACE%\openssl\Release\lib\libeay32.lib %DEVSPACE%\openssl\Release\lib\dcmtkeay_o.lib
 IF "%TYPE%" == "Release" copy /Y %DEVSPACE%\openssl\Release\lib\ssleay32.lib %DEVSPACE%\openssl\Release\lib\dcmtkssl_o.lib
+REM fake dll for dcmtk
+copy /Y %DEVSPACE%\openssl\README %DEVSPACE%\openssl\Release\bin\dcmtkeay.dll
+copy /Y %DEVSPACE%\openssl\README %DEVSPACE%\openssl\Release\bin\dcmtkssl.dll
+copy /Y %DEVSPACE%\openssl\README %DEVSPACE%\openssl\Debug\bin\dcmtkeay.dll
+copy /Y %DEVSPACE%\openssl\README %DEVSPACE%\openssl\Debug\bin\dcmtkssl.dll
 SET OPENSSL_ROOT_DIR=%DEVSPACE%\openssl\%TYPE%
 SET PATH=%OLDPATH%
 
@@ -67,7 +72,7 @@ git pull
 REM git checkout -f 5371e1d84526e7544ab7e70fb47e3cdb4e9231b2
 mkdir build-%TYPE%
 cd build-%TYPE%
-cmake .. -G %GENERATOR% -DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1 -DCMAKE_CXX_FLAGS_RELEASE="/Zi /DDCMTK_LOG4CPLUS_DISABLE_ERROR" -DCMAKE_CXX_FLAGS_DEBUG="/DDCMTK_LOG4CPLUS_DISABLE_ERROR" -DDCMTK_WITH_ZLIB=1 -DWITH_ZLIBINC=%DEVSPACE%\zlib\%TYPE% -DDCMTK_WITH_ICONV=1 -DWITH_LIBICONVINC=%DEVSPACE%\libiconv\%TYPE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\dcmtk\%TYPE%
+cmake .. -G %GENERATOR% -DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1 -DCMAKE_CXX_FLAGS_RELEASE="/Zi /DDCMTK_LOG4CPLUS_DISABLE_ERROR" -DCMAKE_CXX_FLAGS_DEBUG="/DDCMTK_LOG4CPLUS_DISABLE_ERROR" -DDCMTK_WITH_ZLIB=1 -DWITH_ZLIBINC=%DEVSPACE%\zlib\%TYPE% -DDCMTK_WITH_ICONV=1 -DWITH_LIBICONVINC=%DEVSPACE%\libiconv\%TYPE% -DDCMTK_WITH_OPENSSL=1 -DWITH_OPENSSLINC=%DEVSPACE%\openssl\%TYPE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\dcmtk\%TYPE%
 msbuild /maxcpucount:8 /P:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%
 
