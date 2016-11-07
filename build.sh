@@ -55,7 +55,7 @@ cd $EVSPACE
 wget -c https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
 unzip -n mysql-connector-c-6.1.6-src.zip
 cd mysql-connector-c-6.1.6-src
-mkdir build-$TYPE
+mkdir -p build-$TYPE
 cd build-$TYPE
 cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=$TYPE -DCMAKE_INSTALL_PREFIX=$DEVSPACE/mysql-connector-c-6.1.6-src/$TYPE
 make -j8 install
@@ -65,7 +65,7 @@ cd $DEVSPACE
 [[ -d aws-sdk-cpp ]] || git clone https://github.com/awslabs/aws-sdk-cpp.git
 cd aws-sdk-cpp
 git pull
-mkdir build-$TYPE
+mkdir -p build-$TYPE
 cd build-$TYPE
 AWSMODULE="s3;transfer"
 cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=$TYPE -DBUILD_ONLY=$AWSMODULE -DCMAKE_INSTALL_PREFIX=$DEVSPACE/aws-sdk-cpp/$TYPE
@@ -74,7 +74,7 @@ make -j8 install
 cd $DEVSPACE
 [[ -d poco ]] || git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch --depth=1
 cd poco
-mkdir build-$TYPE
+mkdir -p build-$TYPE
 cd build-$TYPE
 cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=$TYPE -DPOCO_STATIC=ON -DENABLE_NETSSL=OFF -DENABLE_CRYPTO=OFF -DMYSQL_LIB=$DEVSPACE/mysql-connector-c-6.1.6-src/$TYPE/lib/mysqlclient -DCMAKE_INSTALL_PREFIX=$DEVSPACE/poco/$TYPE
 make -j8 install
@@ -83,7 +83,7 @@ make -j8 install
 cd $DEVSPACE
 [[ -d socket.io-client-cpp ]] || git clone --recurse-submodules --depth=1 https://github.com/socketio/socket.io-client-cpp.git
 cd socket.io-client-cpp
-mkdir build-$TYPE
+mkdir -p build-$TYPE
 cd build-$TYPE
 cmake .. -DCMAKE_BUILD_TYPE=$TYPE -DCMAKE_BUILD_TYPE=$TYPE -DBOOST_ROOT=$DEVSPACE/boost_1_61_0 -DBOOST_VER=""
 make -j8 install
