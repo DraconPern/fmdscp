@@ -1,7 +1,7 @@
 #include "config.h"
 
 #include "Poco/Util/WinRegistryConfiguration.h"
-#include "poco/Path.h"
+#include <Poco/Path.h>
 #include <Poco/Data/Session.h>
 #include <boost/lexical_cast.hpp>
 
