@@ -35,7 +35,7 @@ find_package(DCMTK REQUIRED CONFIG HINTS ${DCMTK_DIR})
 find_package(ZLIB REQUIRED ${ZLIB_ROOT})
 
 #include openjpeg
-find_package(openjpeg HINTS ${OPENJPEG})
+find_package(OpenJPEG REQUIRED HINTS ${OPENJPEG})
 add_definitions(-DOPJ_STATIC)
 
 #include fmjpeg2koj
