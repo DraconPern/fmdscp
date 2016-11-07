@@ -13,7 +13,6 @@
 #include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
 #include "dcmtk/oflog/appender.h"
 #include "dcmtk/oflog/spi/logevent.h"
-using namespace dcmtk::log4cplus;
 
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
@@ -21,16 +20,16 @@ using namespace dcmtk::log4cplus;
 #endif
 
 
-class NDCAsFilenameAppender : public Appender
+class NDCAsFilenameAppender : public dcmtk::log4cplus::Appender
 {
 public:
-	NDCAsFilenameAppender(const tstring& log_dir);
+	NDCAsFilenameAppender(const boost::filesystem::path& log_dir);
 	virtual ~NDCAsFilenameAppender();
 
 	virtual void close();
 
 protected:
-    virtual void append(const spi::InternalLoggingEvent& event);
+	virtual void append(const dcmtk::log4cplus::spi::InternalLoggingEvent& event);
 
 	boost::filesystem::path path_;
 };

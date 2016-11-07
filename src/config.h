@@ -10,6 +10,7 @@ class config
 public:
 	static boost::filesystem::path getTempPath();
 	static boost::filesystem::path getStoragePath();
+	static boost::filesystem::path getLogPath();
 	static int getDICOMListeningPort();
 	static std::string getFrontEnd();
 	static void registerCodecs();

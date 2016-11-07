@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include "Poco/Util/WinRegistryConfiguration.h"
+#include "Poco/Util/IniFileConfiguration.h"
 #include <Poco/Path.h>
 #include <Poco/Data/Session.h>
 #include <boost/lexical_cast.hpp>
@@ -38,8 +39,11 @@ using namespace Poco::Util;
 
 boost::filesystem::path config::getTempPath()
 {
+#ifdef _WIN32
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
-
+#else
+	AutoPtr<IniFileConfiguration> pConf(new IniFileConfiguration("/etc/fmdscp.cnf"));
+#endif
 	std::string p = pConf->getString("TempPath", boost::filesystem::temp_directory_path().string());
 
 	return Path::expand(p);
@@ -47,22 +51,56 @@ boost::filesystem::path config::getTempPath()
 
 boost::filesystem::path config::getStoragePath()
 {
+#ifdef _WIN32
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
 
 	std::string p = pConf->getString("StoragePath", "C:\\PACS\\Storage");
+#else
+	AutoPtr<IniFileConfiguration> pConf(new IniFileConfiguration("/etc/fmdscp.cnf"));
+
+	std::string p = pConf->getString("StoragePath", "\var\lib\fmdscp");
+#endif
+
 	return Path::expand(p);
 }
 
+
+boost::filesystem::path config::getLogPath()
+{
+#ifdef _WIN32
+	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
+
+	std::string p = pConf->getString("LogPath", "C:\\PACS\\Log");
+#else
+	AutoPtr<IniFileConfiguration> pConf(new IniFileConfiguration("/etc/fmdscp.cnf"));
+
+	std::string p = pConf->getString("LogPath", "\var\log\fmdscp");
+#endif
+
+	return Path::expand(p);
+}
+
+
 int config::getDICOMListeningPort()
 {
+#ifdef _WIN32
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
+#else
+	AutoPtr<IniFileConfiguration> pConf(new IniFileConfiguration("/etc/fmdscp.cnf"));
+#endif
+
 
 	return pConf->getInt("DICOMListeningPort", 104);
 }
 
 std::string config::getFrontEnd()
 {
+#ifdef _WIN32
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
+#else
+	AutoPtr<IniFileConfiguration> pConf(new IniFileConfiguration("/etc/fmdscp.cnf"));
+#endif
+
 	std::string host = pConf->getString("FrontEndHost", "localhost");
 	int port = pConf->getInt("FrontEndPort", 3000);
 
@@ -97,7 +135,11 @@ void config::deregisterCodecs()
 
 std::string config::getConnectionString()
 {
+#ifdef _WIN32
 	AutoPtr<WinRegistryConfiguration> pConf(new WinRegistryConfiguration("HKEY_LOCAL_MACHINE\\SOFTWARE\\FrontMotion\\fmdscp"));
+#else
+	AutoPtr<IniFileConfiguration> pConf(new IniFileConfiguration("/etc/fmdscp.cnf"));
+#endif
 
 	return pConf->getString("ConnectionString", "host=localhost;port=3306;user=root;password=root;db=pacs");
 }

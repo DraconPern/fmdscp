@@ -2,11 +2,9 @@
 #include <fstream>
 #include <iostream>
 
-using namespace std;
-
-NDCAsFilenameAppender::NDCAsFilenameAppender(const tstring& log_dir)
+NDCAsFilenameAppender::NDCAsFilenameAppender(const boost::filesystem::path& log_dir)
 {
-	path_ = log_dir.c_str();
+	path_ = log_dir;
 }
 
 NDCAsFilenameAppender::~NDCAsFilenameAppender()
@@ -19,7 +17,7 @@ void NDCAsFilenameAppender::close()
 
 }
 
-void NDCAsFilenameAppender::append(const spi::InternalLoggingEvent& event)
+void NDCAsFilenameAppender::append(const dcmtk::log4cplus::spi::InternalLoggingEvent& event)
 {
 	// file open and output 
 	boost::filesystem::path filename = path_;
@@ -27,7 +25,7 @@ void NDCAsFilenameAppender::append(const spi::InternalLoggingEvent& event)
 		filename /= (event.getNDC() + ".txt").c_str();
 	else
 		filename /= "_listener.txt";
-	ofstream myfile;
-	myfile.open(filename.c_str(), ios::app | ios::out);
+	std::ofstream myfile;
+	myfile.open(filename.c_str(), std::ios::app | std::ios::out);
 	layout->formatAndAppend(myfile, event);    
 }

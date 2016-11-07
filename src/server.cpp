@@ -13,7 +13,7 @@ server::server(boost::function< void(void) > shutdownCallback) :
 	cloudclient(shutdownCallback)
 {
 	// configure logging
-	dcmtk::log4cplus::SharedAppenderPtr logfile(new NDCAsFilenameAppender("C:\\PACS\\Log"));
+	dcmtk::log4cplus::SharedAppenderPtr logfile(new NDCAsFilenameAppender(config::getLogPath().native()));
 	dcmtk::log4cplus::SharedAppenderPtr cloud(new CloudAppender(cloudclient));
 
 	dcmtk::log4cplus::Logger my_log = dcmtk::log4cplus::Logger::getRoot();
