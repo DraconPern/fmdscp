@@ -102,7 +102,11 @@ void SenderService::run_internal()
 		}
 		else
 		{
+#ifdef _WIN32
 			Sleep(200);
+#else
+			usleep(200);
+#endif
 		}
 
 		// look at the senders and delete any that's already done
@@ -131,7 +135,11 @@ void SenderService::run_internal()
 				itr++;
 			}
 		}
+#ifdef _WIN32
 		Sleep(200);
+#else
+		usleep(200);
+#endif
 	}
 }
 
