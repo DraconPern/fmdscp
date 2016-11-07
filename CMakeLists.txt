@@ -151,8 +151,8 @@ TARGET_LINK_LIBRARIES(fmdscp
   ${OPENSSL_LIBRARIES}
 	sioclient
 	sioclient_tls
-	aws-cpp-sdk-core
-	aws-cpp-sdk-s3
 	aws-cpp-sdk-transfer
+	aws-cpp-sdk-s3
+	aws-cpp-sdk-core
 	${OS_SPECIFIC_LIBS}
 	)
