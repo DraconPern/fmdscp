@@ -105,11 +105,7 @@ std::string config::getFrontEnd()
 	AutoPtr<IniFileConfiguration> pConf(new IniFileConfiguration("/etc/fmdscp.cnf"));
 #endif
 
-	std::string host = pConf->getString("FrontEndHost", "localhost");
-	int port = pConf->getInt("FrontEndPort", 3000);
-
-	std::string frontend = "http://" + host + ":" + boost::lexical_cast<std::string>(port);
-	return frontend;
+	return pConf->getString("FrontEnd", "http://localhost:3000");
 }
 
 void config::registerCodecs()
