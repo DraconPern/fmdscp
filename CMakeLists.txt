@@ -120,7 +120,7 @@ IF(WIN32)
 ELSE()
 	IF(APPLE)
 	ELSE()
-		SET(OS_SPECIFIC_LIBS curl dl )
+		SET(OS_SPECIFIC_LIBS uuid curl dl )
 	ENDIF()
 ENDIF()
 
