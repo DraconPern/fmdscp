@@ -29,7 +29,7 @@ public:
 protected:	
 	boost::function< void(void) > shutdownCallback;
 	CloudClient &cloudclient;
-	destinations_controller destinations_controller;
+	DestinationsController destinationscontroller;
 	SenderService &senderservice;
 	DBPool &dbpool;
 };

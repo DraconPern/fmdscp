@@ -6,10 +6,10 @@
 #include "cloudclient.h"
 #include "dbpool.h"
 
-class destinations_controller
+class DestinationsController
 {
 public:
-	destinations_controller(CloudClient &cloudclient, DBPool &dbpool, std::unordered_map < std::string, std::unordered_map < std::string,
+	DestinationsController(CloudClient &cloudclient, DBPool &dbpool, std::unordered_map < std::string, std::unordered_map < std::string,
 		std::function<void(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response>, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request>)> > > &resource);
 		
 	void api_destinations_list(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request);

@@ -13,18 +13,18 @@
 #include "Poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
-destinations_controller::destinations_controller(CloudClient &cloudclient, DBPool &dbpool, std::unordered_map<std::string, std::unordered_map<std::string,
+DestinationsController::DestinationsController(CloudClient &cloudclient, DBPool &dbpool, std::unordered_map<std::string, std::unordered_map<std::string,
 	std::function<void(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response>, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request>)> > > &resource) :
 	cloudclient(cloudclient), dbpool(dbpool)
 {
-	resource["^/api/destinations"]["GET"] = boost::bind(&destinations_controller::api_destinations_list, this, _1, _2);
-	resource["^/api/destinations"]["POST"] = boost::bind(&destinations_controller::api_destinations_create, this, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["GET"] = boost::bind(&destinations_controller::api_destinations_get, this, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["POST"] = boost::bind(&destinations_controller::api_destinations_update, this, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)/delete"]["POST"] = boost::bind(&destinations_controller::api_destinations_delete, this, _1, _2);
+	resource["^/api/destinations"]["GET"] = boost::bind(&DestinationsController::api_destinations_list, this, _1, _2);
+	resource["^/api/destinations"]["POST"] = boost::bind(&DestinationsController::api_destinations_create, this, _1, _2);
+	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["GET"] = boost::bind(&DestinationsController::api_destinations_get, this, _1, _2);
+	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["POST"] = boost::bind(&DestinationsController::api_destinations_update, this, _1, _2);
+	resource["^/api/destinations/([0123456789abcdef\\-]+)/delete"]["POST"] = boost::bind(&DestinationsController::api_destinations_delete, this, _1, _2);
 }
 
-void destinations_controller::api_destinations_list(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
+void DestinationsController::api_destinations_list(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
 {		
 	std::vector<Destination> destination_list;
 	try
@@ -75,7 +75,7 @@ void destinations_controller::api_destinations_list(std::shared_ptr<SimpleWeb::S
 }
 
 
-void destinations_controller::api_destinations_get(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
+void DestinationsController::api_destinations_get(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
 {	
 	std::string idstr = request->path_match[1];
 
@@ -135,7 +135,7 @@ void destinations_controller::api_destinations_get(std::shared_ptr<SimpleWeb::Se
 	}
 }
 
-void destinations_controller::api_destinations_create(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
+void DestinationsController::api_destinations_create(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
 {	
 	std::map<std::string, std::string> queries;
 	decode_query(request->content.string(), queries);
@@ -187,7 +187,7 @@ void destinations_controller::api_destinations_create(std::shared_ptr<SimpleWeb:
 	}
 }
 
-void destinations_controller::api_destinations_update(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
+void DestinationsController::api_destinations_update(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
 {
 	std::string idstr = request->path_match[1];
 	
@@ -272,7 +272,7 @@ void destinations_controller::api_destinations_update(std::shared_ptr<SimpleWeb:
 	}
 }
 
-void destinations_controller::api_destinations_delete(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
+void DestinationsController::api_destinations_delete(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
 {	
 	std::string querystring = request->path_match[1];
 
