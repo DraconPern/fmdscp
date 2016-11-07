@@ -34,7 +34,7 @@
 #define UNICODE 1
 #endif
 
-#include "poco/Data/Session.h"
+#include "Poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
 HttpServer::HttpServer(boost::function< void(void) > shutdownCallback, CloudClient &cloudclient, SenderService &senderservice, DBPool &dbpool) :

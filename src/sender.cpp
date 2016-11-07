@@ -3,7 +3,7 @@
 #include <boost/lexical_cast.hpp>
 #include <codecvt>
 #include "config.h"
-#include "poco/Data/Session.h"
+#include "Poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
 // work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
