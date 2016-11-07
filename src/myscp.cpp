@@ -185,7 +185,11 @@ OFCondition MySCP::handleSTORERequest(T_DIMSE_C_StoreRQ &reqMessage,
 			DCMNET_WARN("file already exists, overwriting: " << filename);
 
 		// receive dataset directly to file
+#ifdef _WIN32
 		std::string p = filename.string(std::codecvt_utf8<boost::filesystem::path::value_type>());
+#else
+		std::string p = filename.string();
+#endif
 		status = receiveSTORERequest(reqMessage, presID, p.c_str());
 		if (status.good())
 		{
