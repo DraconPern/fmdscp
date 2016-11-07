@@ -120,7 +120,7 @@ IF(WIN32)
 ELSE()
 	IF(APPLE)
 	ELSE()
-		SET(OS_SPECIFIC_LIBS dl )
+		SET(OS_SPECIFIC_LIBS curl dl )
 	ENDIF()
 ENDIF()
 
@@ -149,11 +149,10 @@ TARGET_LINK_LIBRARIES(fmdscp
 	debug PocoFoundationd optimized PocoFoundation
   ${MYSQL_LIBRARIES}
   ${OPENSSL_LIBRARIES}
-	${OS_SPECIFIC_LIBS}
 	sioclient
 	sioclient_tls
 	aws-cpp-sdk-core
 	aws-cpp-sdk-s3
 	aws-cpp-sdk-transfer
-	curl
+	${OS_SPECIFIC_LIBS}
 	)
