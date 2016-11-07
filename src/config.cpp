@@ -1,7 +1,11 @@
 #include "config.h"
 
+#ifdef _WIN32
 #include "Poco/Util/WinRegistryConfiguration.h"
+#else
 #include "Poco/Util/IniFileConfiguration.h"
+#endif
+
 #include <Poco/Path.h>
 #include <Poco/Data/Session.h>
 #include <boost/lexical_cast.hpp>
