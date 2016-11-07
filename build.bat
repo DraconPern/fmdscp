@@ -123,7 +123,7 @@ cd aws-sdk-cpp
 git pull
 mkdir build-%TYPE%
 cd build-%TYPE%
-SET AWSMODULE="s3;transfer"
+SET AWSMODULE="s3;transfer;dynamodb"
 cmake .. -G %GENERATOR% -DFORCE_SHARED_CRT=OFF -DBUILD_SHARED_LIBS=OFF -DBUILD_ONLY=%AWSMODULE% -DCMAKE_INSTALL_PREFIX=%DEVSPACE%\aws-sdk-cpp\%TYPE%
 msbuild /maxcpucount:8 /p:Configuration=%TYPE% INSTALL.vcxproj
 if ERRORLEVEL 1 exit /B %ERRORLEVEL%

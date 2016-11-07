@@ -62,7 +62,7 @@ make -j8 install
 MYSQL_DIR=$DEVSPACE/mysql-connector-c-6.1.6-src/$TYPE
 
 cd $DEVSPACE
-git clone https://github.com/awslabs/aws-sdk-cpp.git
+[[ -d aws-sdk-cpp ]] || git clone https://github.com/awslabs/aws-sdk-cpp.git
 cd aws-sdk-cpp
 git pull
 mkdir build-$TYPE
@@ -72,7 +72,7 @@ cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=$TYPE -DBUILD_ONLY=$AWSMODUL
 make -j8 install
 
 cd $DEVSPACE
-git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch --depth=1
+[[ -d poco ]] || git clone https://github.com/pocoproject/poco.git --branch poco-1.6.1 --single-branch --depth=1
 cd poco
 mkdir build-$TYPE
 cd build-$TYPE
@@ -81,7 +81,7 @@ make -j8 install
 
 
 cd $DEVSPACE
-git clone --recurse-submodules --depth=1 https://github.com/socketio/socket.io-client-cpp.git
+[[ -d socket.io-client-cpp ]] || git clone --recurse-submodules --depth=1 https://github.com/socketio/socket.io-client-cpp.git
 cd socket.io-client-cpp
 mkdir build-$TYPE
 cd build-$TYPE
@@ -89,7 +89,7 @@ cmake .. -DCMAKE_BUILD_TYPE=$TYPE -DCMAKE_BUILD_TYPE=$TYPE -DBOOST_ROOT=$DEVSPAC
 make -j8 install
 
 cd $DEVSPACE
-git clone https://github.com/eidheim/Simple-Web-Server.git
+[[ -d Simple-Web-Server ]] || git clone https://github.com/eidheim/Simple-Web-Server.git
 cd Simple-Web-Server
 git pull
 
