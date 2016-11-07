@@ -430,7 +430,8 @@ boost::property_tree::ptree jwt::jwt_b64_decode(std::string src)
 	buf.resize(len);
 
 	boost::property_tree::ptree result;
-	boost::property_tree::read_json(std::stringstream(buf), result);
+	std::stringstream strstm(buf);
+	boost::property_tree::read_json(strstm, result);
 	return result;
 }
 
