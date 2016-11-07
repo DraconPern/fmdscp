@@ -4,7 +4,7 @@ project(fmdscp)
 
 set(VERSION "1.1.1")
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 add_definitions(-DFMDSCP_VERSION="${VERSION}")
 
