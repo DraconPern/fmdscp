@@ -46,7 +46,7 @@ find_package(MySQL REQUIRED)
 
 #include poco
 SET(poco_DIR ${POCO}/lib/cmake/Poco)
-find_package(poco REQUIRED HINTS ${POCO})
+find_package(Poco REQUIRED HINTS ${POCO})
 add_definitions(-DPOCO_STATIC)
 add_definitions(-DPOCO_NO_AUTOMATIC_LIBS)
 
