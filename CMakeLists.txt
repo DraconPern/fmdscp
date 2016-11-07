@@ -32,7 +32,7 @@ endif(WIN32)
 find_package(DCMTK REQUIRED CONFIG HINTS ${DCMTK_DIR})
 
 #include zlib
-find_package(zlib REQUIRED ${ZLIB_ROOT})
+find_package(ZLIB REQUIRED ${ZLIB_ROOT})
 
 #include openjpeg
 find_package(openjpeg HINTS ${OPENJPEG})
