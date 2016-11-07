@@ -51,7 +51,7 @@ elif [ "$TYPE" = "Debug" ] ; then
   ./b2 $COMMONb2Flag $BOOSTModule variant=debug
 fi
 
-cd $EVSPACE
+cd $DEVSPACE
 wget -c https://dev.mysql.com/get/Downloads/Connector-C/mysql-connector-c-6.1.6-src.zip
 unzip -n mysql-connector-c-6.1.6-src.zip
 cd mysql-connector-c-6.1.6-src
