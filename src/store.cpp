@@ -181,7 +181,7 @@ bool StoreHandler::AddDICOMFileInfoToDatabase(DcmFileFormat &dfile)
 	OFDate datebuf;
 	OFTime timebuf;
 	OFString textbuf;
-	long numberbuf;
+	Sint32 numberbuf;
 
 	std::string sopuid, seriesuid, studyuid;
 	dfile.getDataset()->findAndGetOFString(DCM_SOPInstanceUID, textbuf);
