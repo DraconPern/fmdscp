@@ -133,7 +133,7 @@ TARGET_LINK_LIBRARIES(fmdscp
 	${LIBICONV_LIBRARIES}
 	${DCMTK_LIBRARIES}
 	${Boost_LIBRARIES}
-	${Poco_LIBRARIES}
+	#${Poco_LIBRARIES}
 	debug PocoDatad optimized PocoData
   #debug PocoDataODBCd optimized PocoDataODBC
   #debug PocoDataSQLited optimized PocoDataSQLite
