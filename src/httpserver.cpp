@@ -54,7 +54,7 @@ HttpServer::HttpServer(boost::function< void(void) > shutdownCallback, CloudClie
 	resource["^/api/outsessions/cancel"]["POST"] = boost::bind(&HttpServer::CancelSend, this, _1, _2);
 	resource["^/api/outsessions"]["GET"] = boost::bind(&HttpServer::GetOutSessions, this, _1, _2);
 	resource["^/api/version"]["GET"] = boost::bind(&HttpServer::Version, this, _1, _2);
-	resource["^/api/shutdown"]["POST"] = boost::bind(&HttpServer::Shutdown, this, _1, _2);
+// 	resource["^/api/shutdown"]["POST"] = boost::bind(&HttpServer::Shutdown, this, _1, _2);
 	default_resource["GET"] = boost::bind(&HttpServer::NotFound, this, _1, _2);
 }
 

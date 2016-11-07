@@ -8,7 +8,6 @@
 #define _UNDEFINEDUNICODE
 #endif
 
-#include <winsock2.h>	// include winsock2 before network includes
 #include "dcmtk/config/osconfig.h"  /* make sure OS specific configuration is included first */
 #include "dcmtk/dcmnet/scpthrd.h"
 #include "dcmtk/dcmnet/scppool.h"

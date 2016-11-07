@@ -1,4 +1,3 @@
-#include <winsock2.h>
 #include "sender.h"
 #include <boost/thread/mutex.hpp>
 #include <boost/lexical_cast.hpp>

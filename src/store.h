@@ -1,7 +1,6 @@
 #ifndef __STORE_H__
 #define __STORE_H__
 
-#include <winsock2.h>	// include winsock2 before network includes
 #include <boost/filesystem.hpp>
 #include "dbpool.h"
 #include "model.h"
