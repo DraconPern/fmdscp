@@ -58,7 +58,7 @@ boost::filesystem::path config::getStoragePath()
 #else
 	AutoPtr<IniFileConfiguration> pConf(new IniFileConfiguration("/etc/fmdscp.cnf"));
 
-	std::string p = pConf->getString("StoragePath", "\var\lib\fmdscp");
+	std::string p = pConf->getString("StoragePath", "/var/lib/fmdscp");
 #endif
 
 	return Path::expand(p);
@@ -74,7 +74,7 @@ boost::filesystem::path config::getLogPath()
 #else
 	AutoPtr<IniFileConfiguration> pConf(new IniFileConfiguration("/etc/fmdscp.cnf"));
 
-	std::string p = pConf->getString("LogPath", "\var\log\fmdscp");
+	std::string p = pConf->getString("LogPath", "/var/log/fmdscp");
 #endif
 
 	return Path::expand(p);
