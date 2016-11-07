@@ -8,8 +8,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 add_definitions(-DFMDSCP_VERSION="${VERSION}")
 
-set (CMAKE_CXX_STANDARD 11)
-
 if(WIN32)
 	#VC++ stuff
 	add_definitions(-D_WIN32_WINNT=0x0501)
@@ -113,6 +111,9 @@ if(WIN32)
 endif()
 
 ADD_EXECUTABLE(fmdscp MACOSX_BUNDLE ${fmdscp_SRCS})
+
+set_property(TARGET fmdscp PROPERTY CXX_STANDARD 11)
+set_property(TARGET fmdscp PROPERTY CXX_STANDARD_REQUIRED ON)
 
 IF(WIN32)
   SET(OS_SPECIFIC_LIBS netapi32 wsock32 odbc32 Rpcrt4 Iphlpapi Wininet Userenv Winhttp Bcrypt)
