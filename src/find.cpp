@@ -49,7 +49,7 @@ typedef enum { dt_string, dt_integer, dt_date} dbtype;
 struct DICOM_SQLMapping
 {
 	DcmTagKey dicomtag;
-	char *columnName;
+	const char *columnName;
 	dbtype dataType;
 	bool useLike;		// only valid for strings
 };
