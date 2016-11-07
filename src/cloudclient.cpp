@@ -65,7 +65,7 @@ void CloudClient::OnConnection()
 	//socket()->emit("something", username);
 }
 
-void CloudClient::sendlog(std::string &context, std::string &message)
+void CloudClient::sendlog(const std::string &context, const std::string &message)
 {
 	message::ptr o = object_message::create();
 	o->get_map()["context"] = string_message::create(context);

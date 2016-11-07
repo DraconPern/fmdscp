@@ -17,7 +17,7 @@ public:
 
 	void stop();
 
-	void sendlog(std::string &context, std::string &message);
+	void sendlog(const std::string &context, const std::string &message);
 	void send_updateoutsessionitem(OutgoingSession &outgoingsession, std::string &destination_name);
 
 	// Initiate sending to cloud.  cloud will ask for chunks from us with OnUpload
