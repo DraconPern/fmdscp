@@ -15,9 +15,7 @@ cd $DEVSPACE
 [[ -d openssl ]] || git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch --depth 1
 cd openssl
 git pull
-mkdir -p build-$TYPE
-cd build-$TYPE
-../config --prefix=$DEVSPACE/openssl/$TYPE --openssldir=$DEVSPACE/openssl/$TYPE/openssl no-shared
+./config --prefix=$DEVSPACE/openssl/$TYPE --openssldir=$DEVSPACE/openssl/$TYPE/openssl no-shared
 make -j8 install
 
 cd $DEVSPACE
