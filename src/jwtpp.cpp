@@ -301,7 +301,7 @@ int jwt::jwt_sign_sha_pem(BIO *out, const EVP_MD *alg, const std::string &str)
 	int ret = EINVAL;
 	size_t slen;
 
-	bufkey = BIO_new_mem_buf(key.c_str(), key.length());
+	bufkey = BIO_new_mem_buf(reinterpret_cast<const unsigned char *>(key.c_str()), key.length());
 	if (bufkey == NULL) {
 		ret = ENOMEM;
 		goto jwt_sign_sha_pem_done;

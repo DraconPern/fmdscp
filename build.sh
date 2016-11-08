@@ -12,12 +12,21 @@ BUILD_DIR=`pwd`
 DEVSPACE=`pwd`
 
 cd $DEVSPACE
+[[ -d openssl ]] || git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch --depth 1
+cd openssl
+git pull
+mkdir -p build-$TYPE
+cd build-$TYPE
+../config --prefix=$DEVSPACE/openssl/$TYPE --openssldir=$DEVSPACE/openssl/$TYPE/openssl no-shared
+make -j8 install
+
+cd $DEVSPACE
 [[ -d dcmtk ]] || git clone git://git.dcmtk.org/dcmtk.git
 cd dcmtk
 git checkout -f 5371e1d84526e7544ab7e70fb47e3cdb4e9231b2
 mkdir -p build-$TYPE
 cd build-$TYPE
-cmake .. -DCMAKE_BUILD_TYPE=$TYPE -DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1 -DDCMTK_WITH_TIFF=OFF -DDCMTK_WITH_PNG=OFF -DDCMTK_WITH_OPENSSL=ON -DDCMTK_WITH_XML=OFF -DDCMTK_WITH_ZLIB=ON -DDCMTK_WITH_SNDFILE=OFF -DDCMTK_WITH_ICONV=ON -DDCMTK_WITH_WRAP=OFF -DCMAKE_INSTALL_PREFIX=$DEVSPACE/dcmtk/$TYPE
+cmake .. -DCMAKE_BUILD_TYPE=$TYPE -DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1 -DDCMTK_WITH_TIFF=OFF -DDCMTK_WITH_PNG=OFF -DDCMTK_WITH_OPENSSL=ON -DWITH_OPENSSLINC=$DEVSPACE/openssl/$TYPE/openssl -DDCMTK_WITH_XML=OFF -DDCMTK_WITH_ZLIB=ON -DDCMTK_WITH_SNDFILE=OFF -DDCMTK_WITH_ICONV=ON -DDCMTK_WITH_WRAP=OFF -DCMAKE_INSTALL_PREFIX=$DEVSPACE/dcmtk/$TYPE
 make -j8 install
 
 cd $DEVSPACE
