@@ -16,7 +16,7 @@ cd $DEVSPACE
 cd openssl
 git pull
 ./config --prefix=$DEVSPACE/openssl/$TYPE --openssldir=$DEVSPACE/openssl/$TYPE/openssl no-shared
-make -j8 install
+make install
 
 cd $DEVSPACE
 [[ -d dcmtk ]] || git clone git://git.dcmtk.org/dcmtk.git
