@@ -110,7 +110,7 @@ if(WIN32)
 
 endif()
 
-ADD_EXECUTABLE(fmdscp MACOSX_BUNDLE ${fmdscp_SRCS})
+ADD_EXECUTABLE(fmdscp ${fmdscp_SRCS})
 
 set_property(TARGET fmdscp PROPERTY CXX_STANDARD 11)
 set_property(TARGET fmdscp PROPERTY CXX_STANDARD_REQUIRED ON)
@@ -122,12 +122,6 @@ ELSE()
 	ELSE()
 		SET(OS_SPECIFIC_LIBS uuid curl dl )
 	ENDIF()
-ENDIF()
-
-if(APPLE)
-  set_target_properties(fmdscp PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/src/osx/Info.plist)
-  set_target_properties(fmdscp PROPERTIES MACOSX_BUNDLE_ICON_FILE dovo)
-	SET_SOURCE_FILES_PROPERTIES(${CMAKE_SOURCE_DIR}/src/osx/dovo.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 ENDIF()
 
 TARGET_LINK_LIBRARIES(fmdscp
