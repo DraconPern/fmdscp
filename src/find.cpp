@@ -15,6 +15,7 @@ using namespace Poco::Data::Keywords;
 #include "dcmtk/config/osconfig.h"   /* make sure OS specific configuration is included first */
 #include "dcmtk/dcmnet/diutil.h"
 #include "dcmtk/dcmdata/dcdeftag.h"
+#include "dcmtk/dcmnet/scu.h"
 
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
@@ -93,8 +94,11 @@ void Study_DICOMQueryToSQL(std::string tablename, const DICOM_SQLMapping *sqlmap
 
 void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail)
 {	
-	// Determine the data source's current status.
-	DIC_US dbstatus = STATUS_Pending;
+	if (cancelled)
+	{
+		response->DimseStatus = STATUS_FIND_Cancel_MatchingTerminatedDueToCancelRequest;
+		return;
+	}
 
 	// If this is the first time this callback function is called, we need to do open the recordset
 	if ( responseCount == 1 )
@@ -112,77 +116,26 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 			return;
 		}
 
-		try
+		if (!QueryDatabase(requestIdentifiers))
 		{
-			// open the db
-			Poco::Data::Session dbconnection(dbpool.get());
-			Poco::Data::Statement st(dbconnection);						
-
-			// storage of parameters since they must exist until all result are returned
-			std::vector<boost::shared_ptr<std::string> > shared_string;
-			std::vector<boost::shared_ptr<std::tm> > shared_tm;
-			std::vector<boost::shared_ptr<int> > shared_int;
-
-			OFString retrievelevel;			
-			requestIdentifiers->findAndGetOFString(DCM_QueryRetrieveLevel, retrievelevel);
-			if (retrievelevel == "STUDY")
-			{																				
-				querylevel = patientstudyroot;								
-				st << "" , into(patientstudies);
-				Study_DICOMQueryToSQL("patient_studies", PatientStudyLevelMapping, requestIdentifiers, st, shared_string, shared_int, shared_tm);
-				st.execute();				
-				patientstudies_itr = patientstudies.begin();
-			} 
-			else if (retrievelevel == "SERIES")
-			{
-				querylevel = seriesroot;
-				st << "" , into(series);
-				Study_DICOMQueryToSQL("series", SeriesLevelMapping, requestIdentifiers, st, shared_string, shared_int, shared_tm);			
-				st.execute();											
-				series_itr = series.begin();
-			}
-			else if(retrievelevel == "IMAGE")
-			{
-				querylevel = instanceroot;				
-				st << "" , into(instances);
-				Study_DICOMQueryToSQL("instances", InstanceLevelMapping, requestIdentifiers, st, shared_string, shared_int, shared_tm);						
-				st.execute();			
-				instances_itr = instances.begin();
-			}			
-			else
-				dbstatus = STATUS_FIND_Failed_UnableToProcess;		
-		}
-		catch(std::exception &e)
-		{
-			DCMNET_ERROR(e.what());
-			dbstatus = STATUS_FIND_Failed_UnableToProcess;		
+			response->DimseStatus = STATUS_FIND_Failed_UnableToProcess;
+			return;
 		}
 	}
-
-	// If we encountered a C-CANCEL-RQ and if we have pending
-	// responses, the search shall be cancelled
-	if (cancelled && DICOM_PENDING_STATUS(dbstatus))
-	{
-		dbstatus = STATUS_FIND_Cancel_MatchingTerminatedDueToCancelRequest;
-
-		// normally we close the db, but we queried in one go.		
+	
+	DIC_US dbstatus = STATUS_Pending;
+	
+	if(querylevel == patientstudyroot)
+	{			
+		dbstatus = GetNextStudy(requestIdentifiers, responseIdentifiers);						
 	}
-
-	// If the dbstatus is "pending" try to select another matching record.
-	if (DICOM_PENDING_STATUS(dbstatus))
+	else if(querylevel == seriesroot)
 	{
-		if(querylevel == patientstudyroot)
-		{			
-			dbstatus = FindStudyLevel(requestIdentifiers, responseIdentifiers);						
-		}
-		else if(querylevel == seriesroot)
-		{
-			dbstatus = FindSeriesLevel(requestIdentifiers, responseIdentifiers);
-		}
-		else if(querylevel == instanceroot)		
-		{
-			dbstatus = FindInstanceLevel(requestIdentifiers, responseIdentifiers);
-		}
+		dbstatus = GetNextSeries(requestIdentifiers, responseIdentifiers);
+	}
+	else if(querylevel == instanceroot)		
+	{
+		dbstatus = GetNextInstance(requestIdentifiers, responseIdentifiers);
 	}
 
 	DCMNET_INFO("Find SCP Response " << responseCount << " [status: " << DU_cfindStatusString( (Uint16)dbstatus ) << "]");
@@ -197,15 +150,74 @@ void FindHandler::FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmD
 		DCMNET_INFO(log.str());		
 	}
 
-	// Set response status
-	response->DimseStatus = dbstatus;
-
-	// Delete status detail information if there is some
-	if ( *statusDetail != NULL )
+	if (dbstatus == STATUS_Success)
 	{
-		delete *statusDetail;
-		*statusDetail = NULL;
+		// local query is done.  do migration query
+		/*if (config.)
+		
+		// clear out the old stuff
+		patientstudies.clear();
+		series.clear();
+		instances.clear();
+
+		if (QueryMigrateSCP(requestIdentifiers))
+			dbstatus = STATUS_Pending;
+			*/
 	}
+
+	// Set response status
+	response->DimseStatus = dbstatus;	
+}
+
+bool FindHandler::QueryDatabase(DcmDataset *requestIdentifiers)
+{	
+	try
+	{
+		// open the db
+		Poco::Data::Session dbconnection(dbpool.get());
+		Poco::Data::Statement st(dbconnection);
+
+		// storage of parameters since they must exist until all result are returned
+		std::vector<boost::shared_ptr<std::string> > shared_string;
+		std::vector<boost::shared_ptr<std::tm> > shared_tm;
+		std::vector<boost::shared_ptr<int> > shared_int;
+
+		OFString retrievelevel;
+		requestIdentifiers->findAndGetOFString(DCM_QueryRetrieveLevel, retrievelevel);
+		if (retrievelevel == "STUDY")
+		{
+			querylevel = patientstudyroot;
+			st << "", into(patientstudies);
+			Study_DICOMQueryToSQL("patient_studies", PatientStudyLevelMapping, requestIdentifiers, st, shared_string, shared_int, shared_tm);
+			st.execute();
+			patientstudies_itr = patientstudies.begin();
+		}
+		else if (retrievelevel == "SERIES")
+		{
+			querylevel = seriesroot;
+			st << "", into(series);
+			Study_DICOMQueryToSQL("series", SeriesLevelMapping, requestIdentifiers, st, shared_string, shared_int, shared_tm);
+			st.execute();
+			series_itr = series.begin();
+		}
+		else if (retrievelevel == "IMAGE")
+		{
+			querylevel = instanceroot;
+			st << "", into(instances);
+			Study_DICOMQueryToSQL("instances", InstanceLevelMapping, requestIdentifiers, st, shared_string, shared_int, shared_tm);
+			st.execute();
+			instances_itr = instances.begin();
+		}
+		else
+			return false;
+	}
+	catch (std::exception &e)
+	{
+		DCMNET_ERROR(e.what());
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -315,6 +327,15 @@ void blah(std::string &member, const DcmTag &tag, DcmDataset *requestIdentifiers
 		responseIdentifiers->putAndInsertString(tag, member.c_str());
 }
 
+void blah2(std::string &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
+{	
+	OFString p;
+	if (responseIdentifiers->findAndGetOFString(tag, p).good())
+	{				
+		member = p.c_str();
+	}
+}
+
 void blah(int &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
 {
 	DcmElement *element;		
@@ -340,6 +361,14 @@ void blah(int &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDat
 	}
 }
 
+void blah2(int &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
+{
+	Sint32 v;
+	if (responseIdentifiers->findAndGetSint32(tag, v).good())
+	{		
+		member = v;		
+	}
+}
 
 void blah(Poco::DateTime &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
 {
@@ -364,7 +393,29 @@ void blah(Poco::DateTime &member, const DcmTag &tag, DcmDataset *requestIdentifi
 	}
 }
 
-DIC_US FindHandler::FindStudyLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
+void blah2(Poco::DateTime &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
+{
+	DcmElement *element;
+	if (responseIdentifiers->findAndGetElement(tag, element).good())
+	{		
+		if (element->getVR() == EVR_DA)
+		{
+			DcmDate *dcmdate = (DcmDate *)element;
+			OFDate datebuf;
+			if (dcmdate->getOFDate(datebuf).good())
+				member.assign(datebuf.getYear(), datebuf.getMonth(), datebuf.getDay());
+		}
+		else if (element->getVR() == EVR_TM)
+		{
+			OFTime timebuf;
+			DcmTime *dcmtime = (DcmTime *)element;
+			if (dcmtime->getOFTime(timebuf).good())
+				member.assign(0, 0, 0, timebuf.getHour(), timebuf.getMinute(), timebuf.getMinute());
+		}
+	}
+}
+
+DIC_US FindHandler::GetNextStudy(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
 {    
 	if(patientstudies_itr != patientstudies.end())
 	{
@@ -413,7 +464,7 @@ DIC_US FindHandler::FindStudyLevel(DcmDataset *requestIdentifiers, DcmDataset **
 }
 
 
-DIC_US FindHandler::FindSeriesLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
+DIC_US FindHandler::GetNextSeries(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
 {   
 	if(series_itr != series.end())
 	{
@@ -440,7 +491,7 @@ DIC_US FindHandler::FindSeriesLevel(DcmDataset *requestIdentifiers, DcmDataset *
 	return STATUS_FIND_Failed_UnableToProcess;
 }
 
-DIC_US  FindHandler::FindInstanceLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
+DIC_US  FindHandler::GetNextInstance(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers)
 {        
 	if(instances_itr != instances.end())
 	{
@@ -462,4 +513,106 @@ DIC_US  FindHandler::FindInstanceLevel(DcmDataset *requestIdentifiers, DcmDatase
 
 
 	return STATUS_FIND_Failed_UnableToProcess;
+}
+
+
+bool FindHandler::QueryMigrateSCP(DcmDataset *requestIdentifiers, Destination &destination)
+{
+	class MyDcmSCU : public DcmSCU
+	{
+	public:
+		MyDcmSCU(FindHandler &finder) : finder(finder) {}		
+		FindHandler &finder;
+		OFCondition handleFINDResponse(const T_ASC_PresentationContextID presID,
+			QRResponse *response,
+			OFBool &waitForNextResponse)
+		{
+			OFCondition ret = DcmSCU::handleFINDResponse(presID, response, waitForNextResponse);
+
+			if (ret.good() && response->m_dataset != NULL)
+			{
+				if (finder.querylevel == patientstudyroot)
+				{
+					PatientStudy patientstudy;
+					blah2(patientstudy.StudyInstanceUID, DCM_StudyInstanceUID, response->m_dataset);
+					blah2(patientstudy.StudyID, DCM_StudyID, response->m_dataset);
+					blah2(patientstudy.AccessionNumber, DCM_AccessionNumber, response->m_dataset);
+					blah2(patientstudy.PatientName, DCM_PatientName, response->m_dataset);
+					blah2(patientstudy.PatientID, DCM_PatientID, response->m_dataset);
+					blah2(patientstudy.StudyID, DCM_StudyID, response->m_dataset);
+					blah2(patientstudy.StudyDate, DCM_StudyDate, response->m_dataset);
+					blah2(patientstudy.StudyDate, DCM_StudyTime, response->m_dataset);
+					blah2(patientstudy.ModalitiesInStudy, DCM_ModalitiesInStudy, response->m_dataset);
+					blah2(patientstudy.StudyDescription, DCM_StudyDescription, response->m_dataset);
+					blah2(patientstudy.PatientSex, DCM_PatientSex, response->m_dataset);
+					blah2(patientstudy.PatientBirthDate, DCM_PatientBirthDate, response->m_dataset);
+					blah2(patientstudy.ReferringPhysicianName, DCM_ReferringPhysicianName, response->m_dataset);
+					blah2(patientstudy.NumberOfStudyRelatedInstances, DCM_NumberOfStudyRelatedInstances, response->m_dataset);
+
+					finder.patientstudies.push_back(patientstudy);
+				}
+				else if (finder.querylevel == seriesroot)
+				{
+					Series series;
+					blah2(series.SeriesInstanceUID, DCM_SeriesInstanceUID, response->m_dataset);
+					blah2(series.Modality, DCM_Modality, response->m_dataset);
+					blah2(series.SeriesDescription, DCM_SeriesDescription, response->m_dataset);
+					blah2(series.SeriesNumber, DCM_SeriesNumber, response->m_dataset);
+					blah2(series.SeriesDate, DCM_SeriesDate, response->m_dataset);
+					blah2(series.SeriesDate, DCM_SeriesTime, response->m_dataset);
+
+					finder.series.push_back(series);
+				}
+				else if (finder.querylevel == instanceroot)
+				{
+					Instance instance;
+					blah2(instance.SOPInstanceUID, DCM_SOPInstanceUID, response->m_dataset);
+					blah2(instance.InstanceNumber, DCM_InstanceNumber, response->m_dataset);
+
+					finder.instances.push_back(instance);
+				}
+			}
+
+
+			return ret;
+		}
+	};
+
+	MyDcmSCU scu(*this);
+	
+	scu.setVerbosePCMode(true);
+	scu.setAETitle(destination.sourceAE.c_str());
+	scu.setPeerHostName(destination.destinationhost.c_str());
+	scu.setPeerPort(destination.destinationport);
+	scu.setPeerAETitle(destination.destinationAE.c_str());
+	scu.setACSETimeout(30);
+	scu.setDIMSETimeout(60);
+	scu.setDatasetConversionMode(true);
+
+	OFList<OFString> defaulttransfersyntax;
+	defaulttransfersyntax.push_back(UID_LittleEndianExplicitTransferSyntax);
+
+	scu.addPresentationContext(UID_FINDStudyRootQueryRetrieveInformationModel, defaulttransfersyntax);
+
+	OFCondition cond;
+
+	if (scu.initNetwork().bad())
+		return false;
+
+	if (scu.negotiateAssociation().bad())
+		return false;
+
+	T_ASC_PresentationContextID pid = scu.findAnyPresentationContextID(UID_FINDStudyRootQueryRetrieveInformationModel, UID_LittleEndianExplicitTransferSyntax);
+
+	DcmDataset query(*requestIdentifiers);
+	query.putAndInsertString(DCM_StudyInstanceUID, "", false);
+	query.putAndInsertString(DCM_PatientName, "", false);
+	query.putAndInsertString(DCM_PatientID, "", false);
+	query.putAndInsertString(DCM_StudyDate, "", false);
+	query.putAndInsertString(DCM_StudyDescription, "", false);
+	query.putAndInsertSint16(DCM_NumberOfStudyRelatedInstances, 0, false);
+	scu.sendFINDRequest(pid, &query, NULL);
+
+	scu.releaseAssociation();
+
 }

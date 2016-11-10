@@ -29,15 +29,13 @@ class FindHandler
 public:
 	FindHandler(std::string aetitle, DBPool &dbpool);
 	static void FindCallback(void *callbackData, OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail);
-protected:
-	void FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail);
-	bool QueryPatientStudyLevel(DcmDataset *requestIdentifiers);
-	bool QuerySeriesLevel(DcmDataset *requestIdentifiers);
-	bool QueryInstanceLevel(DcmDataset *requestIdentifiers);
 
-	DIC_US FindStudyLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
-	DIC_US FindSeriesLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
-	DIC_US FindInstanceLevel(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
+	void FindCallback(OFBool cancelled, T_DIMSE_C_FindRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_FindRSP *response, DcmDataset **responseIdentifiers, DcmDataset **statusDetail);
+	bool QueryDatabase(DcmDataset *requestIdentifiers);
+
+	DIC_US GetNextStudy(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
+	DIC_US GetNextSeries(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
+	DIC_US GetNextInstance(DcmDataset *requestIdentifiers, DcmDataset **responseIdentifiers);
 		
 	std::string aetitle;
 	QueryLevel querylevel;
@@ -49,6 +47,9 @@ protected:
 	std::vector<Instance >::iterator instances_itr;
 
 	DBPool &dbpool;
+
+	// migration query
+	bool QueryMigrateSCP(DcmDataset *requestIdentifiers, Destination &destination);
 };
 
 #endif
