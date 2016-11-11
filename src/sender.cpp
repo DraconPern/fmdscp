@@ -174,7 +174,7 @@ void Sender::DoSend()
 
 	if (IsCanceled())
 	{
-		SetStatus("Canceled");
+		SetStatus(boost::lexical_cast<std::string>(totalfiles)+" of " + boost::lexical_cast<std::string>(totalfiles)+" sent. Canceled");
 		DCMNET_INFO("Canceled");
 	}
 }
