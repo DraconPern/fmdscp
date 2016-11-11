@@ -134,7 +134,7 @@ void Sender::DoSend()
 		unsentcountafter = instances.size();
 		
 		// only do a sleep if there's more to send, we didn't send anything out, and we still want to retry
-		if (unsentcountafter > 0 && unsentcountbefore == unsentcountafter && retry < 10000)
+		if (unsentcountafter > 0 && unsentcountbefore == unsentcountafter && retry < 10)
 		{
 			retry++;
 
@@ -161,7 +161,16 @@ void Sender::DoSend()
 			retry = 0;
 		}
 	}
-	while (!IsCanceled() && unsentcountafter > 0 && retry < 10000);	 
+	while (!IsCanceled() && unsentcountafter > 0 && retry < 10);	 
+
+	if (unsentcountafter == 0)
+	{
+		SetStatus(boost::lexical_cast<std::string>(totalfiles) + " of " + boost::lexical_cast<std::string>(totalfiles)+" sent. Done.");
+	}
+	else
+	{
+		SetStatus(boost::lexical_cast<std::string>(totalfiles - instances.size()) + " of " + boost::lexical_cast<std::string>(totalfiles)+" sent. Skipped some. Done.");
+	}
 
 	if (IsCanceled())
 	{
@@ -185,6 +194,7 @@ int Sender::SendABatch()
 	scu.setDatasetConversionMode(true);
 
 	OFList<OFString> defaulttransfersyntax;
+	defaulttransfersyntax.push_back(UID_LittleEndianImplicitTransferSyntax);
 	defaulttransfersyntax.push_back(UID_LittleEndianExplicitTransferSyntax);
 
 	// for every class..
@@ -247,6 +257,12 @@ int Sender::SendABatch()
 		
 		// out found.. change to 
 		T_ASC_PresentationContextID pid = scu.findAnyPresentationContextID(sopclassuid, fileTransfer.getXferID());
+		if (pid == 0)
+		{
+			DCMNET_INFO("Unable to find any usable presentation context. Skipping.\n");
+			itr++;
+			continue;
+		}
 
 		cond = scu.sendSTORERequest(pid, "", dcmff.getDataset(), status);
 		if (cond.good())
@@ -270,9 +286,7 @@ int Sender::SendABatch()
 		else
 			return 1;
 		
-		SetStatus(boost::lexical_cast<std::string>(totalfiles - instances.size()) + " of " + boost::lexical_cast<std::string>(totalfiles)+" sent");
-
-		DCMNET_INFO("\n");
+		SetStatus(boost::lexical_cast<std::string>(totalfiles - instances.size()) + " of " + boost::lexical_cast<std::string>(totalfiles)+" sent");		
 	}
 
 	scu.releaseAssociation();
