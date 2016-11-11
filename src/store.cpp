@@ -58,6 +58,8 @@ Uint16 StoreHandler::handleSTORERequest(boost::filesystem::path filename)
 	dfile.getDataset()->findAndGetOFString(DCM_SeriesInstanceUID, seriesuid);
 	dfile.getDataset()->findAndGetOFString(DCM_SOPInstanceUID, sopuid);
 
+	DCMNET_INFO("StudyInstanceUID = " << studyuid);
+
 	if (studyuid.length() == 0 || seriesuid.length() == 0 || sopuid.length() == 0)
 	{
 		DCMNET_ERROR("No SOP UID");
