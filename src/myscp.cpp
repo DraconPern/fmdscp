@@ -90,6 +90,9 @@ OFCondition MySCP::negotiateAssociation()
 		}
 	}
 
+	OFString info;
+	ASC_dumpParameters(info, assoc_->params, ASC_ASSOC_RQ);
+	DCMNET_INFO(info);
 	return result;
 }
 
@@ -269,11 +272,11 @@ OFCondition MyDcmSCPPool::MySCPWorker::workerListen(T_ASC_Association* const ass
 MyDcmSCPPool::MyDcmSCPPool(CloudClient &cloudclient, DBPool &dbpool) : cloudclient(cloudclient), dbpool(dbpool)
 {
 	setMaxThreads(50);
-	getConfig().setConnectionBlockingMode(DUL_NOBLOCK);
-	getConfig().setConnectionTimeout(1);
-	getConfig().setDIMSEBlockingMode(DIMSE_NONBLOCKING);
-	getConfig().setDIMSETimeout(1);
-	getConfig().setACSETimeout(1);
+	getConfig().setConnectionBlockingMode(DUL_BLOCK);
+	getConfig().setConnectionTimeout(33);
+	getConfig().setDIMSEBlockingMode(DIMSE_BLOCKING);
+	getConfig().setDIMSETimeout(33);
+	getConfig().setACSETimeout(63);
 
 	getConfig().setHostLookupEnabled(true);
 	getConfig().setAETitle("FMDSCP");
