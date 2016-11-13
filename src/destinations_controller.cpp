@@ -10,6 +10,24 @@
 #include "model.h"
 #include "util.h"
 
+
+// work around the fact that dcmtk doesn't work in unicode mode, so all string operation needs to be converted from/to mbcs
+#ifdef _UNICODE
+#undef _UNICODE
+#undef UNICODE
+#define _UNDEFINEDUNICODE
+#endif
+
+#include "dcmtk/ofstd/ofstd.h"
+#include "dcmtk/oflog/oflog.h"
+#include "dcmtk/dcmnet/scu.h"
+
+#ifdef _UNDEFINEDUNICODE
+#define _UNICODE 1
+#define UNICODE 1
+#endif
+
+
 #include "Poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
@@ -22,6 +40,7 @@ DestinationsController::DestinationsController(CloudClient &cloudclient, DBPool 
 	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["GET"] = boost::bind(&DestinationsController::api_destinations_get, this, _1, _2);
 	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["POST"] = boost::bind(&DestinationsController::api_destinations_update, this, _1, _2);
 	resource["^/api/destinations/([0123456789abcdef\\-]+)/delete"]["POST"] = boost::bind(&DestinationsController::api_destinations_delete, this, _1, _2);
+	resource["^/api/destinations/([0123456789abcdef\\-]+)/echo"]["GET"] = boost::bind(&DestinationsController::api_destinations_echo, this, _1, _2);
 }
 
 void DestinationsController::api_destinations_list(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
@@ -311,3 +330,81 @@ void DestinationsController::api_destinations_delete(std::shared_ptr<SimpleWeb::
 	}
 }
 
+
+void DestinationsController::api_destinations_echo(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)
+{
+	std::string idstr = request->path_match[1];
+
+	std::vector<Destination> destination_list;
+	try
+	{
+		int id = boost::lexical_cast<int>(idstr);
+
+		Poco::Data::Session dbconnection(dbpool.get());
+
+		Poco::Data::Statement stselect(dbconnection);
+		stselect << "SELECT id,"
+			"name,"
+			"destinationhost,"
+			"destinationport,"
+			"destinationAE,"
+			"sourceAE,"
+			"createdAt,updatedAt"
+			" FROM destinations WHERE id = ?",
+			into(destination_list),
+			use(id);
+		stselect.execute();
+
+		if (destination_list.size() >= 1)
+		{
+			Destination &destination = destination_list[0];
+			DcmSCU echoscu;
+
+			echoscu.setVerbosePCMode(false);
+			echoscu.setAETitle(destination.sourceAE.c_str());
+			echoscu.setPeerHostName(destination.destinationhost.c_str());
+			echoscu.setPeerPort(destination.destinationport);
+			echoscu.setPeerAETitle(destination.destinationAE.c_str());
+
+			OFList<OFString> transfersyntax;
+			transfersyntax.push_back(UID_LittleEndianExplicitTransferSyntax);
+			transfersyntax.push_back(UID_LittleEndianImplicitTransferSyntax);
+			echoscu.addPresentationContext(UID_VerificationSOPClass, transfersyntax);
+
+			OFCondition cond;
+			echoscu.initNetwork();
+			echoscu.negotiateAssociation();
+			cond = echoscu.sendECHORequest(0);
+			echoscu.releaseAssociation();
+
+			boost::property_tree::ptree pt;
+			if (cond.good())
+			{
+				pt.add("result", "Success");
+			}
+			else
+			{
+				pt.add("result", "Failure");
+			}
+
+			std::ostringstream buf;
+			boost::property_tree::json_parser::write_json(buf, pt, true);
+			std::string content = buf.str();
+			*response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+			return;
+		}
+		else
+		{
+			std::string content = "Destination not found";
+			*response << std::string("HTTP/1.1 404 Not found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+			return;
+		}
+	}
+	catch (Poco::Data::DataException &e)
+	{
+		std::string content = "Database Error";
+		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
+		cloudclient.sendlog(std::string("dberror"), e.displayText());
+		return;
+	}
+}
