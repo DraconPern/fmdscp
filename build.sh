@@ -24,11 +24,12 @@ fi
 
 if [ "$unamestr" == 'Linux' ] ; then
 cd $DEVSPACE
-[[ -d libiconv-cmake ]] || git clone https://github.com/DraconPern/libiconv-cmake.git
-cd libiconv-cmake
+[[ -f libiconv-1.14.tar.gz ]] || wget -c https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.14.tar.gz
+tar -xzf libiconv-1.14.tar.gz
+cd libiconv-1.14
 mkdir -p build-$TYPE
 cd build-$TYPE
-../configure
+../configure --prefix=$DEVSPACE/libiconv/$TYPE
 make install
 fi
 
