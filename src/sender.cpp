@@ -194,7 +194,6 @@ int Sender::SendABatch()
 	scu.setDatasetConversionMode(true);
 
 	OFList<OFString> defaulttransfersyntax;
-	defaulttransfersyntax.push_back(UID_LittleEndianImplicitTransferSyntax);
 	defaulttransfersyntax.push_back(UID_LittleEndianExplicitTransferSyntax);
 
 	// for every class..
