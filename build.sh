@@ -26,6 +26,7 @@ if [ "$unamestr" == 'Linux' ] ; then
 cd $DEVSPACE
 [[ -d libiconv ]] || git clone git://git.savannah.gnu.org/libiconv.git
 cd libiconv
+./autogen.sh
 mkdir -p build-$TYPE
 cd build-$TYPE
 ../configure --prefix=$DEVSPACE/libiconv/$TYPE --enable-static=yes --enable-shared=no
