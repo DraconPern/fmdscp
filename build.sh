@@ -30,7 +30,7 @@ cd libiconv-1.14
 mkdir -p build-$TYPE
 cd build-$TYPE
 ../configure --prefix=$DEVSPACE/libiconv/$TYPE --enable-static=yes --enable-shared=no
-make install
+make install-lib
 fi
 
 cd $DEVSPACE
