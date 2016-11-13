@@ -10,12 +10,17 @@ fi
 
 BUILD_DIR=`pwd`
 DEVSPACE=`pwd`
+unamestr=`uname`
 
 cd $DEVSPACE
 [[ -d openssl ]] || git clone https://github.com/openssl/openssl.git --branch OpenSSL_1_0_2-stable --single-branch --depth 1
 cd openssl
 git pull
+if [ "$unamestr" == 'Darwin' ] ; then
+./Configure darwin64-x86_64-cc  --prefix=$DEVSPACE/openssl/$TYPE --openssldir=$DEVSPACE/openssl/$TYPE/openssl no-shared
+elif [ "$unamestr" == 'Linux'] ; then
 ./config --prefix=$DEVSPACE/openssl/$TYPE --openssldir=$DEVSPACE/openssl/$TYPE/openssl no-shared
+fi
 make install
 export OPENSSL_ROOT_DIR=$DEVSPACE/openssl/$TYPE
 
