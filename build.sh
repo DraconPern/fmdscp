@@ -24,7 +24,7 @@ fi
 
 if [ "$unamestr" == 'Linux' ] ; then
 cd $DEVSPACE
-git clone https://github.com/DraconPern/libiconv-cmake.git
+[[ -d libiconv-cmake ]] || git clone https://github.com/DraconPern/libiconv-cmake.git
 cd libiconv-cmake
 mkdir -p build-$TYPE
 cd build-$TYPE
