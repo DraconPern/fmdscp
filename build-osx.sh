@@ -15,4 +15,4 @@ export MACOSX_DEPLOYMENT_TARGET=10.9
 ./build.sh $1
 
 cd $BUILD_DIR/build-$TYPE
-hdiutil create -volname dovo -srcfolder $BUILD_DIR/build-$TYPE/dovo.app -ov -format UDZO dovo.dmg
+# hdiutil create -volname dovo -srcfolder $BUILD_DIR/build-$TYPE/dovo.app -ov -format UDZO dovo.dmg
