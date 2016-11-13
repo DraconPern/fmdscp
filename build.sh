@@ -28,7 +28,7 @@ git clone https://github.com/DraconPern/libiconv-cmake.git
 cd libiconv-cmake
 mkdir -p build-$TYPE
 cd build-$TYPE
-cmake .. -DCMAKE_BUILD_TYPE=$TYPE -DCMAKE_INSTALL_PREFIX=$DEVSPACE/libiconv/$TYPE
+../configure
 make install
 fi
 
