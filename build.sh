@@ -18,7 +18,7 @@ cd openssl
 git pull
 if [ "$unamestr" == 'Darwin' ] ; then
 ./Configure darwin64-x86_64-cc  --prefix=$DEVSPACE/openssl/$TYPE --openssldir=$DEVSPACE/openssl/$TYPE/openssl no-shared
-elif [ "$unamestr" == 'Linux'] ; then
+elif [ "$unamestr" == 'Linux' ] ; then
 ./config --prefix=$DEVSPACE/openssl/$TYPE --openssldir=$DEVSPACE/openssl/$TYPE/openssl no-shared
 fi
 make install
