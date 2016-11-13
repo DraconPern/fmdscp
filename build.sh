@@ -24,9 +24,8 @@ fi
 
 if [ "$unamestr" == 'Linux' ] ; then
 cd $DEVSPACE
-[[ -f libiconv-1.14.tar.gz ]] || wget -c https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.14.tar.gz
-tar -xzf libiconv-1.14.tar.gz
-cd libiconv-1.14
+[[ -d libiconv ]] || git clone git://git.savannah.gnu.org/libiconv.git
+cd libiconv
 mkdir -p build-$TYPE
 cd build-$TYPE
 ../configure --prefix=$DEVSPACE/libiconv/$TYPE --enable-static=yes --enable-shared=no
