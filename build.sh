@@ -26,6 +26,9 @@ if [ "$unamestr" == 'Linux' ] ; then
 cd $DEVSPACE
 [[ -d libiconv ]] || git clone git://git.savannah.gnu.org/libiconv.git
 cd libiconv
+alias autoconf='autoconf-2.69'
+alias aclocal='aclocal-1.15'
+alias automake='automake-1.15'
 ./autogen.sh
 mkdir -p build-$TYPE
 cd build-$TYPE
