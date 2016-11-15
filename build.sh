@@ -22,27 +22,13 @@ make install
 export OPENSSL_ROOT_DIR=$DEVSPACE/openssl/$TYPE
 fi
 
-if [ "$unamestr" == 'Linux' ] ; then
-cd $DEVSPACE
-[[ -d libiconv ]] || git clone git://git.savannah.gnu.org/libiconv.git
-cd libiconv
-alias autoconf-2.69='autoconf'
-alias aclocal-1.15='aclocal'
-alias automake-1.15='automake'
-./autogen.sh
-mkdir -p build-$TYPE
-cd build-$TYPE
-../configure --prefix=$DEVSPACE/libiconv/$TYPE --enable-static=yes --enable-shared=no
-make install-lib
-fi
-
 cd $DEVSPACE
 [[ -d dcmtk ]] || git clone git://git.dcmtk.org/dcmtk.git
 cd dcmtk
 git checkout -f 5371e1d84526e7544ab7e70fb47e3cdb4e9231b2
 mkdir -p build-$TYPE
 cd build-$TYPE
-cmake .. -DCMAKE_BUILD_TYPE=$TYPE -DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1 -DDCMTK_WITH_TIFF=OFF -DDCMTK_WITH_PNG=OFF -DDCMTK_WITH_OPENSSL=ON -DWITH_OPENSSLINC=$DEVSPACE/openssl/$TYPE -DDCMTK_WITH_XML=OFF -DDCMTK_WITH_ZLIB=ON -DDCMTK_WITH_SNDFILE=OFF -DDCMTK_WITH_ICONV=ON -DWITH_ICONVINC=$DEVSPACE/libiconv/$TYPE -DDCMTK_WITH_WRAP=OFF -DCMAKE_INSTALL_PREFIX=$DEVSPACE/dcmtk/$TYPE
+cmake .. -DCMAKE_BUILD_TYPE=$TYPE -DDCMTK_WIDE_CHAR_FILE_IO_FUNCTIONS=1 -DDCMTK_WITH_TIFF=OFF -DDCMTK_WITH_PNG=OFF -DDCMTK_WITH_OPENSSL=ON -DWITH_OPENSSLINC=$DEVSPACE/openssl/$TYPE -DDCMTK_WITH_XML=OFF -DDCMTK_WITH_ZLIB=ON -DDCMTK_WITH_SNDFILE=OFF -DDCMTK_WITH_ICONV=ON -DDCMTK_WITH_WRAP=OFF -DCMAKE_INSTALL_PREFIX=$DEVSPACE/dcmtk/$TYPE
 make -j8 install
 
 cd $DEVSPACE
@@ -65,7 +51,7 @@ make -j8 install
 
 cd $DEVSPACE
 [[ -f boost_1_61_0.zip ]] || wget -c http://downloads.sourceforge.net/project/boost/boost/1.61.0/boost_1_61_0.zip
-unzip -n boost_1_61_0.zip
+unzip -nq boost_1_61_0.zip
 cd boost_1_61_0
 ./bootstrap.sh
 COMMONb2Flag="-j 4 link=static runtime-link=static stage"
