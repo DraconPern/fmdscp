@@ -108,6 +108,10 @@ protected:
 		if (args.size() > 0)
 		{
 			displayHelp();
+
+			for (int i = 0; i < args.size(); i++)
+				std::cout << "Unknown option: " << args[i] << std::endl;
+
 			return Application::EXIT_OK;
 		}
 
