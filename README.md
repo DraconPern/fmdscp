@@ -13,6 +13,7 @@ Source https://github.com/DraconPern/fmdscp
 
 ## Development notes
 The program is http://utf8everywhere.org/
+Linux should optionally have openssl, and libiconv
 
 ## Requirements
 - CMake http://www.cmake.org/download/
