@@ -78,7 +78,7 @@ cd aws-sdk-cpp
 git pull
 mkdir -p build-$TYPE
 cd build-$TYPE
-AWSMODULE="s3;transfer;dynamodb"
+AWSMODULE="s3;transfer"
 cmake .. -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=$TYPE -DBUILD_ONLY=$AWSMODULE -DCMAKE_INSTALL_PREFIX=$DEVSPACE/aws-sdk-cpp/$TYPE
 make -j8 install
 
