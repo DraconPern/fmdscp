@@ -27,7 +27,7 @@
 #include "dcmtk/dcmnet/diutil.h"
 #include "dcmtk/oflog/ndc.h"
 #include "dcmtk/dcmimgle/dcmimage.h"
-#include "dcmtk/dcmjpeg/dipijpeg.h"  // jpeg 
+#include "dcmtk/dcmjpeg/dipijpeg.h"  // jpeg
 #include "dcmtk/dcmsr/dsrdoc.h"
 #ifdef _UNDEFINEDUNICODE
 #define _UNICODE 1
@@ -44,12 +44,12 @@ HttpServer::HttpServer(boost::function< void(void) > shutdownCallback, CloudClie
 	senderservice(senderservice),
 	dbpool(dbpool),
 	destinationscontroller(cloudclient, dbpool, resource)
-{			
+{
 	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO_URI, this, _1, _2);
 	resource["^/api/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);
 	resource["^/api/studies/([0123456789\\.]+)"]["GET"] = boost::bind(&HttpServer::StudyInfo, this, _1, _2);
 	resource["^/image\\?(.+)$"]["GET"] = boost::bind(&HttpServer::GetImage, this, _1, _2);
-	
+
 	resource["^/api/studies/([0123456789\\.]+)/send"]["POST"] = boost::bind(&HttpServer::SendStudy, this, _1, _2);
 	resource["^/api/outsessions/cancel"]["POST"] = boost::bind(&HttpServer::CancelSend, this, _1, _2);
 	resource["^/api/outsessions"]["GET"] = boost::bind(&HttpServer::GetOutSessions, this, _1, _2);
@@ -63,7 +63,7 @@ void HttpServer::Version(std::shared_ptr<HttpServer::Response> response, std::sh
 	// jwt test
 	jwt jtest;
 	int value = jtest.jwt_decode("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ", "secret");
-	
+
 	boost::property_tree::ptree pt, children;
 
 	std::ostringstream ver;
@@ -101,13 +101,13 @@ bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 bool SendAsHTML(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid);
 
 void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
-{	
+{
 
 	std::string content;
 	std::string querystring = request->path_match[1];
 
-	std::map<std::string, std::string> queries;	
-	decode_query(querystring, queries);	
+	std::map<std::string, std::string> queries;
+	decode_query(querystring, queries);
 	if(queries["requestType"] != "WADO")
 	{
 		content = "Not a WADO request";
@@ -115,7 +115,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 		return;
 	}
 
-	if(queries.find("studyUID") == queries.end() || queries.find("seriesUID") == queries.end() || queries.find("objectUID") == queries.end())	
+	if(queries.find("studyUID") == queries.end() || queries.find("seriesUID") == queries.end() || queries.find("objectUID") == queries.end())
 	{
 		content = "Required fields studyUID, seriesUID, or objectUID missing.";
 		*response << std::string("HTTP/1.1 400 Bad Request\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
@@ -175,7 +175,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 			"createdAt,updatedAt"
 			" FROM series WHERE SeriesInstanceUID = ?",
 			into(series_list),
-			use(queries["seriesUID"]);	
+			use(queries["seriesUID"]);
 
 		seriesselect.execute();
 		if(series_list.size() != 1)
@@ -190,7 +190,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 			"SOPInstanceUID,"
 			"InstanceNumber,"
 			"series_id,"
-			"createdAt,updatedAt"			
+			"createdAt,updatedAt"
 			" FROM instances WHERE SOPInstanceUID = ?",
 			into(instances),
 			use(queries["objectUID"]);
@@ -198,14 +198,14 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 		instanceselect.execute();
 		if(instances.size() != 1)
 		{
-			content = "Unable to find instance";		
+			content = "Unable to find instance";
 			*response << std::string("HTTP/1.1 404 Not Found\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 			return;
 		}
 	}
 	catch(Poco::Data::DataException &e)
 	{
-		content = "Database Error";		
+		content = "Database Error";
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
@@ -213,7 +213,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 
 	boost::filesystem::path sourcepath = config::getStoragePath();
 	sourcepath /= patient_studies_list[0].StudyInstanceUID;
-	sourcepath /= series_list[0].SeriesInstanceUID;	
+	sourcepath /= series_list[0].SeriesInstanceUID;
 	sourcepath /= instances[0].SOPInstanceUID + ".dcm";
 
 	DcmFileFormat dfile;
@@ -221,15 +221,15 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 
 	if(cond.bad())
 	{
-		content = "Problem loading instance";		
+		content = "Problem loading instance";
 		*response << std::string("HTTP/1.1 500 Internal Server Error\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		return;
 	}
 
 	if(queries["anonymize"] == "yes")
 	{
-		content = "anonymization not supported";			
-		*response << std::string("HTTP/1.1 406 Not Acceptable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;		
+		content = "anonymization not supported";
+		*response << std::string("HTTP/1.1 406 Not Acceptable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		return;
 	}
 
@@ -252,7 +252,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 
 		if(!ok)
 			SendAsDICOM(dfile, *response, instances[0].SOPInstanceUID);
-	}	
+	}
 	else if(contenttype == "application/dicom")
 	{
 		SendAsDICOM(dfile, *response, instances[0].SOPInstanceUID);
@@ -265,7 +265,7 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 				NotAcceptable(response, request);
 		}
 		else
-			NotAcceptable(response, request);			
+			NotAcceptable(response, request);
 	}
 	else if(contenttype == "image/jpeg")
 	{
@@ -301,16 +301,16 @@ bool SendAsDICOM(DcmFileFormat &dfile, HttpServer::Response& response, std::stri
 		if(boost::filesystem::file_size(newpath) > 0)
 		{
 			std::ifstream source(newpath.string(), std::ios::binary);
-			response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << boost::filesystem::file_size(newpath) << "\r\n" 
+			response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << boost::filesystem::file_size(newpath) << "\r\n"
 				<< "Content-Type: application/dicom\r\n"
 				<< "Content-disposition: attachment; filename=\"" << sopuid << ".dcm" << "\"\r\n"
 				<< "\r\n";
 
 			std::istreambuf_iterator<char> begin_source(source);
 			std::istreambuf_iterator<char> end_source;
-			std::ostreambuf_iterator<char> begin_dest(response); 
+			std::ostreambuf_iterator<char> begin_dest(response);
 			std::copy(begin_source, end_source, begin_dest);
-		}		
+		}
 	}
 	catch(...)
 	{
@@ -356,13 +356,13 @@ bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 	int result = imagetouse->writePluginFormat(&plugin, newpath.string(std::codecvt_utf8<boost::filesystem::path::value_type>()).c_str());
 #else
 	int result = imagetouse->writePluginFormat(&plugin, newpath.c_str());
-#endif					
+#endif
 
 	if (scaledimage)
 		delete scaledimage;
 
 	if(result == 0)
-		return false;	
+		return false;
 
 
 
@@ -371,22 +371,22 @@ bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 		if(boost::filesystem::file_size(newpath) > 0)
 		{
 			std::ifstream source(newpath.string(), std::ios::binary);
-			response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << boost::filesystem::file_size(newpath) << "\r\n" 
+			response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << boost::filesystem::file_size(newpath) << "\r\n"
 				<< "Content-Type: image/jpeg\r\n"
 				<< "Content-disposition: filename=\"" << sopuid << ".jpg" << "\"\r\n"
 				<< "\r\n";
 
 			std::istreambuf_iterator<char> begin_source(source);
 			std::istreambuf_iterator<char> end_source;
-			std::ostreambuf_iterator<char> begin_dest(response); 
+			std::ostreambuf_iterator<char> begin_dest(response);
 			std::copy(begin_source, end_source, begin_dest);
-		}		
+		}
 
 		boost::system::error_code ecode;
 		boost::filesystem::remove(newpath, ecode);
 	}
 	catch(...)
-	{		
+	{
 		return false;
 	}
 
@@ -401,11 +401,11 @@ bool SendAsPDF(DcmFileFormat &dfile, HttpServer::Response& response, std::string
 	if(cond.bad())
 		return false;
 
-	response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << size << "\r\n" 
+	response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << size << "\r\n"
 		<< "Content-Type: application/pdf\r\n"
 		<< "Content-disposition: attachment; filename=\"" << sopuid << ".pdf" << "\"\r\n"
 		<< "\r\n";
-	std::ostreambuf_iterator<char> begin_dest(response); 
+	std::ostreambuf_iterator<char> begin_dest(response);
 	std::copy(&bytes[0], &bytes[size], begin_dest);
 
 	return true;
@@ -420,12 +420,12 @@ bool SendAsHTML(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 	std::stringstream strbuf;
 	dsrdoc.renderHTML(strbuf);
 
-	response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << strbuf.str().size() << "\r\n" 
+	response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << strbuf.str().size() << "\r\n"
 		<< "Content-Type: text/html\r\n"
 		<< "Content-disposition: filename=\"" << sopuid << ".pdf" << "\"\r\n"
 		<< "\r\n";
 
-	response << strbuf.str();		
+	response << strbuf.str();
 	return true;
 }
 
@@ -433,11 +433,11 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 {
 	std::string querystring = request->path_match[1];
 
-	std::map<std::string, std::string> queries;	
-	decode_query(querystring, queries);	
-	
+	std::map<std::string, std::string> queries;
+	decode_query(querystring, queries);
+
 	// check for Accept = application / dicom + json
-	
+
 	std::vector<PatientStudy> patient_studies_list;
 	try
 	{
@@ -514,7 +514,7 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 			// don't perform search
 		}
 
-		
+
 		/*if (patient_studies_list.size() == 0)
 		{
 			content = "Unable to find study";
@@ -538,8 +538,8 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 			child.add("NumberOfStudyRelatedInstances", patient_studies_list[i].NumberOfStudyRelatedInstances);
 			children.push_back(std::make_pair("", child));
 		}
-		
-		pt.add_child("studies", children);		
+
+		pt.add_child("studies", children);
 
 		std::ostringstream buf;
 		boost::property_tree::json_parser::write_json(buf, pt, true);
@@ -553,13 +553,13 @@ void HttpServer::SearchForStudies(std::shared_ptr<HttpServer::Response> response
 		*response << std::string("HTTP/1.1 503 Service Unavailable\r\nContent-Length: ") << content.length() << "\r\n\r\n" << content;
 		cloudclient.sendlog(std::string("dberror"), e.displayText());
 		return;
-	}		
+	}
 }
 
 void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::shared_ptr<HttpServer::Request> request)
 {
 	std::string studyinstanceuid = request->path_match[1];
-	
+
 	try
 	{
 		std::vector<PatientStudy> patient_studies_list;
@@ -622,7 +622,7 @@ void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::
 				into(series_list),
 				use(patient_studies_list[i].id);
 
-			seriesselect.execute();			
+			seriesselect.execute();
 
 			boost::property_tree::ptree seriesarray;
 			for (int i = 0; i < series_list.size(); i++)
@@ -633,7 +633,7 @@ void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::
 				seriesitem.add("SeriesDescription", series_list[i].SeriesDescription);
 				seriesitem.add("SeriesNumber", series_list[i].SeriesNumber);
 				seriesitem.add("SeriesDate", ToJSON(series_list[i].SeriesDate));
-				
+
 				std::vector<Instance> instance_list;
 				Poco::Data::Statement instanceselect(dbconnection);
 				instanceselect << "SELECT id,"
@@ -649,7 +649,7 @@ void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::
 
 				boost::property_tree::ptree imagesarray;
 				for (int j = 0; j < instance_list.size(); j++)
-				{					
+				{
 					boost::property_tree::ptree imageitem;
 					imageitem.put("", instance_list[j].SOPInstanceUID);
 					imagesarray.push_back(std::make_pair("", imageitem));
@@ -662,7 +662,7 @@ void HttpServer::StudyInfo(std::shared_ptr<HttpServer::Response> response, std::
 			studyitem.add_child("series", seriesarray);
 
 			pt.add_child("study", studyitem);
-		}		
+		}
 
 		std::ostringstream buf;
 		boost::property_tree::json_parser::write_json(buf, pt, true);
@@ -692,7 +692,7 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 		return;
 	}
 
-	std::string studyinstanceuid = request->path_match[1];	
+	std::string studyinstanceuid = request->path_match[1];
 	std::string destinationid = queries["destination"];
 
 	try
@@ -865,10 +865,12 @@ void HttpServer::GetOutSessions(std::shared_ptr<HttpServer::Response> response, 
 			"uuid,"
 			"queued,"
 			"StudyInstanceUID,"
-			"PatientID,"
 			"PatientName,"
+			"PatientID,"
+			"StudyDate,"
+			"ModalitiesInStudy,"
 			"destination_id,"
-			"status,"			
+			"status,"
 			"createdAt,updatedAt"
 			" FROM outgoing_sessions ORDER BY createdAt DESC LIMIT 100",
 			into(out_sessions);
@@ -887,7 +889,7 @@ void HttpServer::GetOutSessions(std::shared_ptr<HttpServer::Response> response, 
 			" FROM destinations",
 			into(destination_list);
 		stselect.execute();
-				
+
 		boost::property_tree::ptree pt, children;
 
 		for (int i = 0; i < out_sessions.size(); i++)
@@ -899,8 +901,10 @@ void HttpServer::GetOutSessions(std::shared_ptr<HttpServer::Response> response, 
 			child.add("id", out_sessions[i].id);
 			child.add("uuid", out_sessions[i].uuid);
 			child.add("StudyInstanceUID", out_sessions[i].StudyInstanceUID);
-			child.add("PatientID", out_sessions[i].PatientID);
 			child.add("PatientName", out_sessions[i].PatientName);
+			child.add("PatientID", out_sessions[i].PatientID);
+			child.add("StudyDate", ToJSON(out_sessions[i].StudyDate));
+			child.add("ModalitiesInStudy", out_sessions[i].ModalitiesInStudy);
 			child.add("destination_id", out_sessions[i].destination_id);
 			if (it != destination_list.end())
 				child.add("destination_name", it->name);
@@ -913,7 +917,7 @@ void HttpServer::GetOutSessions(std::shared_ptr<HttpServer::Response> response, 
 		}
 
 		pt.add_child("sessions", children);
-		
+
 		std::ostringstream buf;
 		boost::property_tree::json_parser::write_json(buf, pt, true);
 		std::string content = buf.str();
