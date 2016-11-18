@@ -36,7 +36,7 @@ bool SenderService::getQueued(OutgoingSession &outgoingsession)
 
 		Poco::Data::Statement queueselect(dbconnection);
 		std::vector<OutgoingSession> sessions;
-		queueselect << "SELECT id, uuid, queued, StudyInstanceUID, PatientName, PatientID, destination_id, status,"
+		queueselect << "SELECT id, uuid, queued, StudyInstanceUID, PatientName, PatientID, StudyDate, ModalitiesInStudy, destination_id, status,"
 			"createdAt,updatedAt"
 			" FROM outgoing_sessions WHERE queued = 1 LIMIT 1",
 			into(sessions);
