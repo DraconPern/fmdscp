@@ -84,6 +84,8 @@ void CloudClient::send_updateoutsessionitem(OutgoingSession &outgoingsession, st
 	o->get_map()["StudyInstanceUID"] = string_message::create(outgoingsession.StudyInstanceUID);
 	o->get_map()["PatientName"] = string_message::create(outgoingsession.PatientName);
 	o->get_map()["PatientID"] = string_message::create(outgoingsession.PatientID);
+	o->get_map()["StudyDate"] = string_message::create(ToJSON(outgoingsession.StudyDate));
+	o->get_map()["ModalitiesInStudy"] = string_message::create(outgoingsession.ModalitiesInStudy);
 	o->get_map()["destination_id"] = string_message::create(boost::lexical_cast<std::string>(outgoingsession.destination_id));
 	o->get_map()["destination_name"] = string_message::create(destination_name);
 	o->get_map()["updatedAt"] = string_message::create(ToJSON(outgoingsession.updated_at));
