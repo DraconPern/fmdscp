@@ -734,15 +734,17 @@ void HttpServer::SendStudy(std::shared_ptr<HttpServer::Response> response, std::
 		out_session.uuid = boost::lexical_cast<std::string>(u);
 		out_session.queued = 1;
 		out_session.StudyInstanceUID = studyinstanceuid;
-		out_session.PatientID = patient_studies_list[0].PatientID;
 		out_session.PatientName = patient_studies_list[0].PatientName;
+		out_session.PatientID = patient_studies_list[0].PatientID;
+		out_session.StudyDate = patient_studies_list[0].StudyDate;
+		out_session.ModalitiesInStudy = patient_studies_list[0].ModalitiesInStudy;
 		out_session.destination_id = boost::lexical_cast<int>(destinationid);
 		out_session.status = "Queued";
 		out_session.created_at = Poco::DateTime();
 		out_session.updated_at = Poco::DateTime();
 
 		Poco::Data::Statement insert(dbconnection);
-		insert << "INSERT INTO outgoing_sessions (id, uuid, queued, StudyInstanceUID, PatientID, PatientName, destination_id, status, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		insert << "INSERT INTO outgoing_sessions (id, uuid, queued, StudyInstanceUID, PatientName, PatientID, StudyDate, ModalitiesInStudy, destination_id, status, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			use(out_session);
 		insert.execute();
 
