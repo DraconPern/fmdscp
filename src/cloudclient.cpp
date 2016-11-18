@@ -32,6 +32,8 @@ void CloudClient::OnNewAccessToken(const std::string& name, message::ptr const& 
 
 void CloudClient::stop()
 {
+	set_reconnect_attempts(0);
+
 	socket()->off_all();
 	socket()->off_error();
 	
