@@ -66,9 +66,11 @@ void MoveHandler::SetStatus(std::string msg)
 	outsessionsselect << "SELECT id,"
 		"uuid,"
 		"queued,"
-		"StudyInstanceUID,"
-		"PatientID,"
+		"StudyInstanceUID,"		
 		"PatientName,"
+		"PatientID,"
+		"StudyDate,"
+		"ModalitiesInStudy,"
 		"destination_id,"
 		"status,"
 		"createdAt,updatedAt"
@@ -106,7 +108,7 @@ void MoveHandler::CreateOutgoingSession(std::string StudyInstanceUID, std::strin
 	out_session.updated_at = Poco::DateTime();
 
 	Poco::Data::Statement insert(dbconnection);
-	insert << "INSERT INTO outgoing_sessions (id, uuid, queued, StudyInstanceUID, PatientID, PatientName, destination_id, status, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	insert << "INSERT INTO outgoing_sessions (id, uuid, queued, StudyInstanceUID, PatientName, PatientID, StudyDate, ModalitiesInStudy, destination_id, status, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		use(out_session);
 	insert.execute();
 
