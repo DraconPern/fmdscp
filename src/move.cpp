@@ -92,23 +92,25 @@ void MoveHandler::SetStatus(std::string msg)
 	}
 }
 
-void MoveHandler::CreateOutgoingSession(std::string StudyInstanceUID, std::string PatientID, std::string PatientName)
+void MoveHandler::CreateOutgoingSession(std::string StudyInstanceUID, std::string PatientID, std::string PatientName, Poco::DateTime StudyDate, std::string ModalitiesInStudy)
 {
 	Poco::Data::Session dbconnection(dbpool.get());
 	
 	OutgoingSession out_session;	
 	out_session.uuid = boost::lexical_cast<std::string>(uuid);
 	out_session.queued = 0;
-	out_session.StudyInstanceUID = StudyInstanceUID;
-	out_session.PatientID = PatientID;
+	out_session.StudyInstanceUID = StudyInstanceUID;	
 	out_session.PatientName = PatientName;
+	out_session.PatientID = PatientID;
+	out_session.StudyDate = StudyDate;
+	out_session.ModalitiesInStudy = ModalitiesInStudy;
 	out_session.destination_id = boost::lexical_cast<int>(destination.id);	
 	out_session.status = "Starting...";
 	out_session.created_at = Poco::DateTime();
 	out_session.updated_at = Poco::DateTime();
 
 	Poco::Data::Statement insert(dbconnection);
-	insert << "INSERT INTO outgoing_sessions (id, uuid, queued, StudyInstanceUID, PatientName, PatientID, StudyDate, ModalitiesInStudy, destination_id, status, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	insert << "INSERT INTO outgoing_sessions (id, uuid, queued, StudyInstanceUID, PatientName, PatientID, StudyDate, ModalitiesInStudy, destination_id, status, createdAt, updatedAt) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		use(out_session);
 	insert.execute();
 
@@ -136,8 +138,9 @@ void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmD
 			if (studyuid.size() <= 0)
 				throw STATUS_MOVE_Failed_IdentifierDoesNotMatchSOPClass;
 
-			std::string PatientID, PatientName;
-			if (!GetFilesToSend(studyuid.c_str(), instances, PatientID, PatientName))
+			std::string PatientID, PatientName, ModalitiesInStudy;
+			Poco::DateTime StudyDate;
+			if (!GetFilesToSend(studyuid.c_str(), instances, PatientID, PatientName, StudyDate, ModalitiesInStudy))
 				throw STATUS_MOVE_Failed_UnableToProcess;
 
 			totalfiles = instances.size();
@@ -154,7 +157,7 @@ void MoveHandler::MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmD
 			if (!findDestination(destination.destinationAE, destination))
 				throw STATUS_MOVE_Failed_MoveDestinationUnknown;
 			
-			CreateOutgoingSession(studyuid.c_str(), PatientID, PatientName);
+			CreateOutgoingSession(studyuid.c_str(), PatientID, PatientName, StudyDate, ModalitiesInStudy);
 
 			DCMNET_INFO("Destination: " << destination.destinationhost << ":" << destination.destinationport
 				<< " Destination AE: " << destination.destinationAE << " Source AE: " << destination.sourceAE);
@@ -234,7 +237,7 @@ void MoveHandler::addFailedUIDInstance(const char *sopInstance)
     }
 }
 
-bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalpathmap &result, std::string &PatientName, std::string &PatientID)
+bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalpathmap &result, std::string &PatientName, std::string &PatientID, Poco::DateTime &StudyDate, std::string &ModalitiesInStudy)
 {
 	try
 	{
@@ -271,6 +274,8 @@ bool MoveHandler::GetFilesToSend(std::string studyinstanceuid, naturalpathmap &r
 
 		PatientID = patient_studies_list[0].PatientID;
 		PatientName = patient_studies_list[0].PatientName;
+		StudyDate = patient_studies_list[0].StudyDate;
+		ModalitiesInStudy = patient_studies_list[0].ModalitiesInStudy;
 
 		std::vector<Series> series_list;
 		Poco::Data::Statement seriesselect(dbconnection);
