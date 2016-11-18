@@ -62,8 +62,10 @@ void Sender::SetStatus(std::string msg)
 		"uuid,"
 		"queued,"
 		"StudyInstanceUID,"
-		"PatientID,"
 		"PatientName,"
+		"PatientID,"
+		"StudyDate,"
+		"ModalitiesInStudy,"
 		"destination_id,"
 		"status,"
 		"createdAt,updatedAt"
@@ -134,7 +136,7 @@ void Sender::DoSend()
 		unsentcountafter = instances.size();
 		
 		// only do a sleep if there's more to send, we didn't send anything out, and we still want to retry
-		if (unsentcountafter > 0 && unsentcountbefore == unsentcountafter && retry < 10)
+		if (unsentcountafter > 0 && unsentcountbefore == unsentcountafter && retry < 10000)
 		{
 			retry++;
 
@@ -161,7 +163,7 @@ void Sender::DoSend()
 			retry = 0;
 		}
 	}
-	while (!IsCanceled() && unsentcountafter > 0 && retry < 10);	 
+	while (!IsCanceled() && unsentcountafter > 0 && retry < 10000);	 
 
 	if (unsentcountafter == 0)
 	{
