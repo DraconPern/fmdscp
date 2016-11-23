@@ -33,9 +33,9 @@ protected:
 	void Initialize(Destination &destination);
 	void SetFileList(const naturalpathmap &instances);
 	void SetStatus(std::string msg);
-	void CreateOutgoingSession(std::string StudyInstanceUID, std::string PatientID, std::string PatientName);
+	void CreateOutgoingSession(std::string StudyInstanceUID, std::string PatientID, std::string PatientName, Poco::DateTime StudyDate, std::string ModalitiesInStudy);
 	void MoveCallback(OFBool cancelled, T_DIMSE_C_MoveRQ *request, DcmDataset *requestIdentifiers, int responseCount, T_DIMSE_C_MoveRSP *response, DcmDataset **statusDetail, DcmDataset **responseIdentifiers);
-	bool GetFilesToSend(std::string studyinstanceuid, naturalpathmap &result, std::string &PatientName, std::string &PatientID);
+	bool GetFilesToSend(std::string studyinstanceuid, naturalpathmap &result, std::string &PatientName, std::string &PatientID, Poco::DateTime &StudyDate, std::string &ModalitiesInStudy);
 	bool findDestination(std::string destinationAE, Destination &destination);
 	void addFailedUIDInstance(const char *sopInstance);
 	OFCondition buildSubAssociation(T_DIMSE_C_MoveRQ *request, Destination &destination);
