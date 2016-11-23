@@ -251,11 +251,13 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 			ok = SendAsJPEG(dfile, *response, instances[0].SOPInstanceUID, width);
 
 		if(!ok)
-			SendAsDICOM(dfile, *response, instances[0].SOPInstanceUID);
+			if(!SendAsDICOM(dfile, *response, instances[0].SOPInstanceUID))
+				NotAcceptable(response, request);
 	}
 	else if(contenttype == "application/dicom")
 	{
-		SendAsDICOM(dfile, *response, instances[0].SOPInstanceUID);
+		if(!SendAsDICOM(dfile, *response, instances[0].SOPInstanceUID))
+			NotAcceptable(response, request);
 	}
 	else if(contenttype == "application/pdf")
 	{
@@ -278,7 +280,8 @@ void HttpServer::WADO_URI(std::shared_ptr<HttpServer::Response> response, std::s
 			NotAcceptable(response, request);
 	}
 	else
-		SendAsDICOM(dfile, *response, instances[0].SOPInstanceUID);
+		if(!SendAsDICOM(dfile, *response, instances[0].SOPInstanceUID))
+			NotAcceptable(response, request);
 }
 
 bool SendAsDICOM(DcmFileFormat &dfile, HttpServer::Response& response, std::string sopuid)
@@ -351,20 +354,22 @@ bool SendAsJPEG(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 		imagetouse = scaledimage;
 	}
 
+	int result = 0;
+	if (imagetouse)
+	{
 #ifdef _WIN32
-	// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
-	int result = imagetouse->writePluginFormat(&plugin, newpath.string(std::codecvt_utf8<boost::filesystem::path::value_type>()).c_str());
+		// on Windows, boost::filesystem::path is a wstring, so we need to convert to utf8
+		result = imagetouse->writePluginFormat(&plugin, newpath.string(std::codecvt_utf8<boost::filesystem::path::value_type>()).c_str());
 #else
-	int result = imagetouse->writePluginFormat(&plugin, newpath.c_str());
+		result = imagetouse->writePluginFormat(&plugin, newpath.c_str());
 #endif
+	}
 
 	if (scaledimage)
 		delete scaledimage;
 
 	if(result == 0)
 		return false;
-
-
 
 	try
 	{
@@ -417,8 +422,13 @@ bool SendAsHTML(DcmFileFormat &dfile, HttpServer::Response& response, std::strin
 
 	DSRDocument dsrdoc;
 	OFCondition result = dsrdoc.read(*dfile.getDataset());
+
+	if (result.bad())
+		return false;
+
 	std::stringstream strbuf;
-	dsrdoc.renderHTML(strbuf);
+	if(dsrdoc.renderHTML(strbuf).bad())
+		return false;
 
 	response << std::string("HTTP/1.1 200 Ok\r\nContent-Length: ") << strbuf.str().size() << "\r\n"
 		<< "Content-Type: text/html\r\n"
