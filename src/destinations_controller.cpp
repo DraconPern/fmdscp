@@ -31,16 +31,15 @@
 #include "Poco/Data/Session.h"
 using namespace Poco::Data::Keywords;
 
-DestinationsController::DestinationsController(CloudClient &cloudclient, DBPool &dbpool, std::unordered_map<std::string, std::unordered_map<std::string,
-	std::function<void(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response>, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request>)> > > &resource) :
+DestinationsController::DestinationsController(CloudClient &cloudclient, DBPool &dbpool, SimpleWeb::Server<SimpleWeb::HTTP> &httpserver) :
 	cloudclient(cloudclient), dbpool(dbpool)
 {
-	resource["^/api/destinations"]["GET"] = boost::bind(&DestinationsController::api_destinations_list, this, _1, _2);
-	resource["^/api/destinations"]["POST"] = boost::bind(&DestinationsController::api_destinations_create, this, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["GET"] = boost::bind(&DestinationsController::api_destinations_get, this, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)"]["POST"] = boost::bind(&DestinationsController::api_destinations_update, this, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)/delete"]["POST"] = boost::bind(&DestinationsController::api_destinations_delete, this, _1, _2);
-	resource["^/api/destinations/([0123456789abcdef\\-]+)/echo"]["GET"] = boost::bind(&DestinationsController::api_destinations_echo, this, _1, _2);
+	httpserver.resource["^/api/destinations"]["GET"] = boost::bind(&DestinationsController::api_destinations_list, this, _1, _2);
+	httpserver.resource["^/api/destinations"]["POST"] = boost::bind(&DestinationsController::api_destinations_create, this, _1, _2);
+	httpserver.resource["^/api/destinations/([0123456789abcdef\\-]+)"]["GET"] = boost::bind(&DestinationsController::api_destinations_get, this, _1, _2);
+	httpserver.resource["^/api/destinations/([0123456789abcdef\\-]+)"]["POST"] = boost::bind(&DestinationsController::api_destinations_update, this, _1, _2);
+	httpserver.resource["^/api/destinations/([0123456789abcdef\\-]+)/delete"]["POST"] = boost::bind(&DestinationsController::api_destinations_delete, this, _1, _2);
+	httpserver.resource["^/api/destinations/([0123456789abcdef\\-]+)/echo"]["GET"] = boost::bind(&DestinationsController::api_destinations_echo, this, _1, _2);
 }
 
 void DestinationsController::api_destinations_list(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request)

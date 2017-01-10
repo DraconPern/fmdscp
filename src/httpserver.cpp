@@ -43,7 +43,7 @@ HttpServer::HttpServer(boost::function< void(void) > shutdownCallback, CloudClie
 	cloudclient(cloudclient),
 	senderservice(senderservice),
 	dbpool(dbpool),
-	destinationscontroller(cloudclient, dbpool, resource)
+	destinationscontroller(cloudclient, dbpool, *this)
 {
 	resource["^/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::WADO_URI, this, _1, _2);
 	resource["^/api/studies\\?(.+)$"]["GET"] = boost::bind(&HttpServer::SearchForStudies, this, _1, _2);

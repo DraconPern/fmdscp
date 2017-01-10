@@ -9,8 +9,7 @@
 class DestinationsController
 {
 public:
-	DestinationsController(CloudClient &cloudclient, DBPool &dbpool, std::unordered_map < std::string, std::unordered_map < std::string,
-		std::function<void(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response>, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request>)> > > &resource);
+	DestinationsController(CloudClient &cloudclient, DBPool &dbpool, SimpleWeb::Server<SimpleWeb::HTTP> &httpserver);
 		
 	void api_destinations_list(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request);
 	void api_destinations_get(std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Response> response, std::shared_ptr<SimpleWeb::ServerBase<SimpleWeb::HTTP>::Request> request);
