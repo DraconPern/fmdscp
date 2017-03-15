@@ -320,14 +320,14 @@ void Study_DICOMQueryToSQL(std::string tablename, const DICOM_SQLMapping *sqlmap
 	DCMNET_INFO("Generated SQL: " << st.toString());	
 }
 
-void blah(std::string &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
+void findAndInsert(std::string &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
 {
 	DcmElement *element;		
 	if(requestIdentifiers->findAndGetElement(tag, element).good())
 		responseIdentifiers->putAndInsertString(tag, member.c_str());
 }
 
-void blah2(std::string &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
+void findAndGet(std::string &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
 {	
 	OFString p;
 	if (responseIdentifiers->findAndGetOFString(tag, p).good())
@@ -336,12 +336,12 @@ void blah2(std::string &member, const DcmTag &tag, DcmDataset *responseIdentifie
 	}
 }
 
-void blah(int &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
+void findAndInsert(int &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
 {
 	DcmElement *element;		
 	if(requestIdentifiers->findAndGetElement(tag, element).good())
 	{
-		DcmElement *e = newDicomElement(tag);
+		DcmElement *e = DcmItem::newDicomElement(tag);
 		if(e->getVR() == EVR_IS)
 		{
 			std::stringstream mycountstr;
@@ -361,7 +361,7 @@ void blah(int &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDat
 	}
 }
 
-void blah2(int &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
+void findAndGet(int &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
 {
 	Sint32 v;
 	if (responseIdentifiers->findAndGetSint32(tag, v).good())
@@ -370,12 +370,12 @@ void blah2(int &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
 	}
 }
 
-void blah(Poco::DateTime &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
+void findAndInsert(Poco::DateTime &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDataset *responseIdentifiers)
 {
 	DcmElement *element;		
 	if(requestIdentifiers->findAndGetElement(tag, element).good())
 	{
-		DcmElement *e = newDicomElement(tag);
+		DcmElement *e = DcmItem::newDicomElement(tag);
 		if(e->getVR() == EVR_DA)
 		{
 			OFDate datebuf(member.year(), member.month(), member.day());
@@ -393,7 +393,7 @@ void blah(Poco::DateTime &member, const DcmTag &tag, DcmDataset *requestIdentifi
 	}
 }
 
-void blah2(Poco::DateTime &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
+void findAndGet(Poco::DateTime &member, const DcmTag &tag, DcmDataset *responseIdentifiers)
 {
 	DcmElement *element;
 	if (responseIdentifiers->findAndGetElement(tag, element).good())
@@ -425,20 +425,20 @@ DIC_US FindHandler::GetNextStudy(DcmDataset *requestIdentifiers, DcmDataset **re
 		(*responseIdentifiers)->putAndInsertString(DCM_QueryRetrieveLevel, "STUDY");
 		(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, aetitle.c_str());
 
-		blah(patientstudy.StudyInstanceUID, DCM_StudyInstanceUID, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.StudyID, DCM_StudyID, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.AccessionNumber, DCM_AccessionNumber, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.PatientName, DCM_PatientName, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.PatientID, DCM_PatientID, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.StudyID, DCM_StudyID, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.StudyDate, DCM_StudyDate, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.StudyDate, DCM_StudyTime, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.ModalitiesInStudy, DCM_ModalitiesInStudy, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.StudyDescription, DCM_StudyDescription, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.PatientSex, DCM_PatientSex, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.PatientBirthDate, DCM_PatientBirthDate, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.ReferringPhysicianName, DCM_ReferringPhysicianName, requestIdentifiers, *responseIdentifiers);
-		blah(patientstudy.NumberOfStudyRelatedInstances, DCM_NumberOfStudyRelatedInstances, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.StudyInstanceUID, DCM_StudyInstanceUID, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.StudyID, DCM_StudyID, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.AccessionNumber, DCM_AccessionNumber, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.PatientName, DCM_PatientName, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.PatientID, DCM_PatientID, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.StudyID, DCM_StudyID, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.StudyDate, DCM_StudyDate, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.StudyDate, DCM_StudyTime, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.ModalitiesInStudy, DCM_ModalitiesInStudy, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.StudyDescription, DCM_StudyDescription, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.PatientSex, DCM_PatientSex, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.PatientBirthDate, DCM_PatientBirthDate, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.ReferringPhysicianName, DCM_ReferringPhysicianName, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(patientstudy.NumberOfStudyRelatedInstances, DCM_NumberOfStudyRelatedInstances, requestIdentifiers, *responseIdentifiers);
 		
 		// add non conforming field for PACSSCAN
 		/*
@@ -473,12 +473,12 @@ DIC_US FindHandler::GetNextSeries(DcmDataset *requestIdentifiers, DcmDataset **r
 
 		(*responseIdentifiers)->putAndInsertString(DCM_QueryRetrieveLevel, "SERIES");
 		(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, aetitle.c_str());
-		blah(series.SeriesInstanceUID, DCM_SeriesInstanceUID,  requestIdentifiers, *responseIdentifiers);
-		blah(series.Modality, DCM_Modality,  requestIdentifiers, *responseIdentifiers);
-		blah(series.SeriesDescription, DCM_SeriesDescription,  requestIdentifiers, *responseIdentifiers);
-		blah(series.SeriesNumber, DCM_SeriesNumber,  requestIdentifiers, *responseIdentifiers);
-		blah(series.SeriesDate, DCM_SeriesDate,  requestIdentifiers, *responseIdentifiers);
-		blah(series.SeriesDate, DCM_SeriesTime,  requestIdentifiers, *responseIdentifiers);
+		findAndInsert(series.SeriesInstanceUID, DCM_SeriesInstanceUID,  requestIdentifiers, *responseIdentifiers);
+		findAndInsert(series.Modality, DCM_Modality,  requestIdentifiers, *responseIdentifiers);
+		findAndInsert(series.SeriesDescription, DCM_SeriesDescription,  requestIdentifiers, *responseIdentifiers);
+		findAndInsert(series.SeriesNumber, DCM_SeriesNumber,  requestIdentifiers, *responseIdentifiers);
+		findAndInsert(series.SeriesDate, DCM_SeriesDate,  requestIdentifiers, *responseIdentifiers);
+		findAndInsert(series.SeriesDate, DCM_SeriesTime,  requestIdentifiers, *responseIdentifiers);
 
 		++series_itr;            
 		return STATUS_Pending;
@@ -500,8 +500,8 @@ DIC_US  FindHandler::GetNextInstance(DcmDataset *requestIdentifiers, DcmDataset 
 
 		(*responseIdentifiers)->putAndInsertString(DCM_QueryRetrieveLevel, "IMAGE");
 		(*responseIdentifiers)->putAndInsertString(DCM_RetrieveAETitle, aetitle.c_str());
-		blah(instance.SOPInstanceUID, DCM_SOPInstanceUID, requestIdentifiers, *responseIdentifiers);
-		blah(instance.InstanceNumber, DCM_InstanceNumber, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(instance.SOPInstanceUID, DCM_SOPInstanceUID, requestIdentifiers, *responseIdentifiers);
+		findAndInsert(instance.InstanceNumber, DCM_InstanceNumber, requestIdentifiers, *responseIdentifiers);
 
 		++instances_itr;
 		return STATUS_Pending;
@@ -534,40 +534,40 @@ bool FindHandler::QueryMigrateSCP(DcmDataset *requestIdentifiers, Destination &d
 				if (finder.querylevel == patientstudyroot)
 				{
 					PatientStudy patientstudy;
-					blah2(patientstudy.StudyInstanceUID, DCM_StudyInstanceUID, response->m_dataset);
-					blah2(patientstudy.StudyID, DCM_StudyID, response->m_dataset);
-					blah2(patientstudy.AccessionNumber, DCM_AccessionNumber, response->m_dataset);
-					blah2(patientstudy.PatientName, DCM_PatientName, response->m_dataset);
-					blah2(patientstudy.PatientID, DCM_PatientID, response->m_dataset);
-					blah2(patientstudy.StudyID, DCM_StudyID, response->m_dataset);
-					blah2(patientstudy.StudyDate, DCM_StudyDate, response->m_dataset);
-					blah2(patientstudy.StudyDate, DCM_StudyTime, response->m_dataset);
-					blah2(patientstudy.ModalitiesInStudy, DCM_ModalitiesInStudy, response->m_dataset);
-					blah2(patientstudy.StudyDescription, DCM_StudyDescription, response->m_dataset);
-					blah2(patientstudy.PatientSex, DCM_PatientSex, response->m_dataset);
-					blah2(patientstudy.PatientBirthDate, DCM_PatientBirthDate, response->m_dataset);
-					blah2(patientstudy.ReferringPhysicianName, DCM_ReferringPhysicianName, response->m_dataset);
-					blah2(patientstudy.NumberOfStudyRelatedInstances, DCM_NumberOfStudyRelatedInstances, response->m_dataset);
+					findAndGet(patientstudy.StudyInstanceUID, DCM_StudyInstanceUID, response->m_dataset);
+					findAndGet(patientstudy.StudyID, DCM_StudyID, response->m_dataset);
+					findAndGet(patientstudy.AccessionNumber, DCM_AccessionNumber, response->m_dataset);
+					findAndGet(patientstudy.PatientName, DCM_PatientName, response->m_dataset);
+					findAndGet(patientstudy.PatientID, DCM_PatientID, response->m_dataset);
+					findAndGet(patientstudy.StudyID, DCM_StudyID, response->m_dataset);
+					findAndGet(patientstudy.StudyDate, DCM_StudyDate, response->m_dataset);
+					findAndGet(patientstudy.StudyDate, DCM_StudyTime, response->m_dataset);
+					findAndGet(patientstudy.ModalitiesInStudy, DCM_ModalitiesInStudy, response->m_dataset);
+					findAndGet(patientstudy.StudyDescription, DCM_StudyDescription, response->m_dataset);
+					findAndGet(patientstudy.PatientSex, DCM_PatientSex, response->m_dataset);
+					findAndGet(patientstudy.PatientBirthDate, DCM_PatientBirthDate, response->m_dataset);
+					findAndGet(patientstudy.ReferringPhysicianName, DCM_ReferringPhysicianName, response->m_dataset);
+					findAndGet(patientstudy.NumberOfStudyRelatedInstances, DCM_NumberOfStudyRelatedInstances, response->m_dataset);
 
 					finder.patientstudies.push_back(patientstudy);
 				}
 				else if (finder.querylevel == seriesroot)
 				{
 					Series series;
-					blah2(series.SeriesInstanceUID, DCM_SeriesInstanceUID, response->m_dataset);
-					blah2(series.Modality, DCM_Modality, response->m_dataset);
-					blah2(series.SeriesDescription, DCM_SeriesDescription, response->m_dataset);
-					blah2(series.SeriesNumber, DCM_SeriesNumber, response->m_dataset);
-					blah2(series.SeriesDate, DCM_SeriesDate, response->m_dataset);
-					blah2(series.SeriesDate, DCM_SeriesTime, response->m_dataset);
+					findAndGet(series.SeriesInstanceUID, DCM_SeriesInstanceUID, response->m_dataset);
+					findAndGet(series.Modality, DCM_Modality, response->m_dataset);
+					findAndGet(series.SeriesDescription, DCM_SeriesDescription, response->m_dataset);
+					findAndGet(series.SeriesNumber, DCM_SeriesNumber, response->m_dataset);
+					findAndGet(series.SeriesDate, DCM_SeriesDate, response->m_dataset);
+					findAndGet(series.SeriesDate, DCM_SeriesTime, response->m_dataset);
 
 					finder.series.push_back(series);
 				}
 				else if (finder.querylevel == instanceroot)
 				{
 					Instance instance;
-					blah2(instance.SOPInstanceUID, DCM_SOPInstanceUID, response->m_dataset);
-					blah2(instance.InstanceNumber, DCM_InstanceNumber, response->m_dataset);
+					findAndGet(instance.SOPInstanceUID, DCM_SOPInstanceUID, response->m_dataset);
+					findAndGet(instance.InstanceNumber, DCM_InstanceNumber, response->m_dataset);
 
 					finder.instances.push_back(instance);
 				}

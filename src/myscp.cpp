@@ -98,7 +98,7 @@ OFCondition MySCP::negotiateAssociation()
 
 bool MySCP::IsStorageAbstractSyntax(DIC_UI abstractsyntax)
 {
-	for (int i = 0; i < numberOfAllDcmStorageSOPClassUIDs; i++)
+	for (int i = 0; i < numberOfDcmAllStorageSOPClassUIDs; i++)
 	{
 		if (strcmp(dcmAllStorageSOPClassUIDs[i], abstractsyntax) == 0)
 			return true;
