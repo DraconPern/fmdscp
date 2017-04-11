@@ -341,7 +341,7 @@ void blah(int &member, const DcmTag &tag, DcmDataset *requestIdentifiers, DcmDat
 	DcmElement *element;		
 	if(requestIdentifiers->findAndGetElement(tag, element).good())
 	{
-		DcmElement *e = newDicomElement(tag);
+		DcmElement *e = DcmItem::newDicomElement(tag);
 		if(e->getVR() == EVR_IS)
 		{
 			std::stringstream mycountstr;
@@ -375,7 +375,7 @@ void blah(Poco::DateTime &member, const DcmTag &tag, DcmDataset *requestIdentifi
 	DcmElement *element;		
 	if(requestIdentifiers->findAndGetElement(tag, element).good())
 	{
-		DcmElement *e = newDicomElement(tag);
+		DcmElement *e = DcmItem::newDicomElement(tag);
 		if(e->getVR() == EVR_DA)
 		{
 			OFDate datebuf(member.year(), member.month(), member.day());
