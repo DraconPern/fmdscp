@@ -130,20 +130,17 @@ TARGET_LINK_LIBRARIES(fmdscp
 	${OPENJPEG_LIBRARIES}
 	${ZLIB_LIBRARIES}
 	${LIBICONV_LIBRARIES}
+	${OPENSSL_LIBRARIES}
 	${DCMTK_LIBRARIES}
 	${Boost_LIBRARIES}
-	#${Poco_LIBRARIES}
-  debug PocoDataMySQLd optimized PocoDataMySQL
-	debug PocoDatad optimized PocoData
-  #debug PocoDataODBCd optimized PocoDataODBC
-  #debug PocoDataSQLited optimized PocoDataSQLite
-  debug PocoNetd optimized PocoNet
-  debug PocoUtild optimized PocoUtil
+	${MYSQL_LIBRARIES}
+	debug PocoDataMySQLd optimized PocoDataMySQL
+	debug PocoDatad optimized PocoData  
+	debug PocoNetd optimized PocoNet
+	debug PocoUtild optimized PocoUtil
 	debug PocoJSONd optimized PocoJSON
-  debug PocoXMLd optimized PocoXML
-	debug PocoFoundationd optimized PocoFoundation
-  ${MYSQL_LIBRARIES}
-  ${OPENSSL_LIBRARIES}
+	debug PocoXMLd optimized PocoXML
+	debug PocoFoundationd optimized PocoFoundation		
 	sioclient
 	sioclient_tls
 	aws-cpp-sdk-transfer
