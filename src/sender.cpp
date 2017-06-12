@@ -266,7 +266,7 @@ int Sender::SendABatch()
 		}
 
 		cond = scu.sendSTORERequest(pid, "", dcmff.getDataset(), status);
-		if (cond.good())
+		if (cond.good() && (status == 0 || (status & 0xf000) == 0xb000))
 			instances.erase(itr++);
 		else if ((cond == NET_EC_InvalidSOPClassUID) ||
 			(cond == NET_EC_UnknownStorageSOPClass) ||
